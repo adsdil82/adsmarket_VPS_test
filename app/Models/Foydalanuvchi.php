@@ -1,0 +1,111 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use OwenIt\Auditing\Contracts\Auditable;
+
+class Foydalanuvchi extends Authenticatable implements Auditable
+{
+    use Notifiable;
+    use \OwenIt\Auditing\Auditable;
+
+    protected $table = 'foydalanuvchilar';
+
+    protected $fillable = [
+        'filial_id',
+        'ism_familiya',
+        'email',
+        'password',
+        'rol',
+        'holat',
+        'til',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    protected $casts = [
+        'password' => 'hashed',
+    ];
+
+    // ─── Aloqalar ────────────────────────────────────────────────
+
+    /** Foydalanuvchi qaysi filialda ishlaydi */
+    public function filial(): BelongsTo
+    {
+        return $this->belongsTo(Filial::class, 'filial_id');
+    }
+
+    /** Foydalanuvchi tuzgan shartnomalar */
+    public function kreditlar(): HasMany
+    {
+        return $this->hasMany(RegKredit::class, 'xodim_id');
+    }
+
+    /** Foydalanuvchi qabul qilgan to'lovlar */
+    public function tulovlar(): HasMany
+    {
+        return $this->hasMany(Tulov::class, 'xodim_id');
+    }
+
+    // ─── Rol tekshiruvlari ────────────────────────────────────────
+
+    /** Admin ekanligi */
+    public function isAdmin(): bool
+    {
+        return $this->rol === 'admin';
+    }
+
+    /** Menejer yoki yuqori */
+    public function isMenejerYoki(): bool
+    {
+        return in_array($this->rol, ['admin', 'menejer']);
+    }
+
+    /** Kassir — to'lov qabul qila oladi */
+    public function isKassir(): bool
+    {
+        return in_array($this->rol, ['admin', 'menejer', 'kassir']);
+    }
+
+    /** Hisobchi — faqat ko'rish */
+    public function isHisobchi(): bool
+    {
+        return $this->rol === 'hisobchi';
+    }
+
+    public function isAuditor(): bool
+    {
+        return $this->rol === 'auditor';
+    }
+
+    /** Omborchi yoki yuqori */
+    public function isOmborchi(): bool
+    {
+        return in_array($this->rol, ['admin','menejer','omborchi']);
+    }
+
+    /** Taminotchi moduliga kirish (kassir + omborchi + admin + menejer) */
+    public function isTaminotKira(): bool
+    {
+        return in_array($this->rol, ['admin','menejer','kassir','omborchi']);
+    }
+
+    // ─── Scope'lar ────────────────────────────────────────────────
+
+    public function scopeFaol($query)
+    {
+        return $query->where('holat', 'faol');
+    }
+
+    public function scopeFilialda($query, int $filialId)
+    {
+        return $query->where('filial_id', $filialId);
+    }
+}
