@@ -54,6 +54,8 @@
                     <option value="">Barcha holat</option>
                     <option value="faol" {{ request('holat') === 'faol' ? 'selected' : '' }}>AKTIV</option>
                     <option value="nofaol" {{ request('holat') === 'nofaol' ? 'selected' : '' }}>PASSIV</option>
+                    <option value="sudda" {{ request('holat') === 'sudda' ? 'selected' : '' }}>SUDDA</option>
+                    <option value="yomon" {{ request('holat') === 'yomon' ? 'selected' : '' }}>YOMON</option>
                 </select>
             </div>
             <div class="col-sm-auto">
@@ -78,8 +80,8 @@
                 <a href="{{ route('mijozlar.show', $mijoz) }}" class="fw-bold text-decoration-none">
                     {{ $mijoz->familiya }} {{ $mijoz->ism }}
                 </a>
-                <span class="badge {{ $mijoz->holat === 'faol' ? 'bg-success' : 'bg-secondary' }}">
-                    {{ $mijoz->holat === 'faol' ? 'Faol' : 'Nofaol' }}
+                <span class="badge bg-{{ $mijoz->holat_rangi }}">
+                    {{ $mijoz->holat_nomi }}
                 </span>
             </div>
             @if($mijoz->otasining_ismi)
@@ -149,8 +151,8 @@
                     <td><span class="badge bg-secondary">{{ $mijoz->filial->kod ?? '—' }}</span></td>
                     @endif
                     <td>
-                        <span class="badge {{ $mijoz->holat === 'faol' ? 'bg-success' : 'bg-secondary' }}">
-                            {{ $mijoz->holat === 'faol' ? 'AKTIV' : 'PASSIV' }}
+                        <span class="badge bg-{{ $mijoz->holat_rangi }}">
+                            {{ $mijoz->holat_nomi }}
                         </span>
                     </td>
                     <td class="text-muted small">

@@ -6,7 +6,7 @@
       <div class="modal-header py-2" id="mijozModalHeader" style="background:linear-gradient(135deg,#15803d,#16a34a);cursor:move">
         <div class="d-flex align-items-center gap-2">
           <i class="bi bi-person-search text-white fs-5"></i>
-          <h6 class="modal-title text-white fw-bold mb-0">Mijoz tanlash</h6>
+          <h6 class="modal-title text-white fw-bold mb-0" id="mijozModalTitle">Mijoz tanlash</h6>
         </div>
         {{-- Qidiruv (markazda) --}}
         <div class="mx-3 flex-grow-1" style="max-width:320px">

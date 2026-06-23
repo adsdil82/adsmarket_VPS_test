@@ -77,14 +77,14 @@
             <div class="row g-3 mb-3">
                 <div class="col-sm-6">
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="is_active" id="is-active"
+                        <input class="form-check-input" type="checkbox" name="is_active" id="is-active" value="1"
                                {{ old('is_active', $shablon->is_active ?? true) ? 'checked' : '' }}>
                         <label class="form-check-label" for="is-active">Faol</label>
                     </div>
                 </div>
                 <div class="col-sm-6">
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="is_default" id="is-default"
+                        <input class="form-check-input" type="checkbox" name="is_default" id="is-default" value="1"
                                {{ old('is_default', $shablon->is_default ?? false) ? 'checked' : '' }}>
                         <label class="form-check-label" for="is-default">Default shablon</label>
                     </div>

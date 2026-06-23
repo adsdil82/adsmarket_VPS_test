@@ -4,110 +4,178 @@
 <meta charset="UTF-8">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: DejaVu Sans, Arial, sans-serif; font-size:11px; color:#111; }
-  .page { padding:20mm 15mm; }
-  h2 { text-align:center; font-size:14px; margin-bottom:4px; text-transform:uppercase; }
-  .subtitle { text-align:center; font-size:11px; color:#555; margin-bottom:16px; }
-  table.info { width:100%; border-collapse:collapse; margin-bottom:12px; }
-  table.info td { padding:4px 6px; border:1px solid #ccc; }
-  table.info td:first-child { background:#f5f5f5; font-weight:bold; width:40%; }
-  table.tovar { width:100%; border-collapse:collapse; margin:12px 0; font-size:10px; }
-  table.tovar th { background:#222; color:#fff; padding:5px 6px; text-align:center; }
-  table.tovar td { padding:4px 6px; border:1px solid #ddd; }
-  table.tovar tr:nth-child(even) td { background:#f9f9f9; }
-  .total-row td { font-weight:bold; background:#e8f5e9; }
-  .section { margin:14px 0; }
-  .section h4 { font-size:11px; font-weight:bold; border-bottom:1px solid #999; padding-bottom:3px; margin-bottom:8px; }
-  .imzo { margin-top:30px; }
-  .imzo table { width:100%; }
-  .imzo td { vertical-align:top; padding:6px; }
-  .imzo-line { border-top:1px solid #333; margin-top:40px; font-size:10px; color:#555; text-align:center; }
-  .stamp { width:80px; height:80px; border:2px dashed #999; display:inline-block; text-align:center; font-size:9px; color:#aaa; padding-top:30px; }
-  @media print { .no-print { display:none; } }
+  body { font-family: DejaVu Sans, Arial, sans-serif; font-size:11px; color:#111; line-height:1.5; }
+  .page { padding:14mm 15mm; }
+  .top-row { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px; }
+  .top-row .sana { font-size:11px; }
+  .top-row .filial-manzil { font-size:11px; font-weight:bold; text-align:right; }
+  h2.title { text-align:center; font-size:14px; margin-bottom:2px; text-transform:uppercase; }
+  .subtitle { text-align:center; font-size:10.5px; color:#333; margin-bottom:10px; }
+  h3.bolim { text-align:center; font-size:12px; margin:12px 0 6px; text-transform:uppercase; }
+  p.matn { text-align:justify; margin-bottom:6px; }
+  table.tovar { width:100%; border-collapse:collapse; margin:8px 0; font-size:10.5px; }
+  table.tovar th { border:1px solid #333; padding:4px 5px; text-align:center; background:#f0f0f0; }
+  table.tovar td { border:1px solid #333; padding:4px 5px; }
+  .tovar-jami { text-align:right; font-weight:bold; margin:6px 0 10px; }
+  table.shart { width:100%; border-collapse:collapse; margin:8px 0 4px; font-size:10.5px; }
+  table.shart th { border:1px solid #333; padding:5px; text-align:center; background:#f0f0f0; }
+  table.shart td { border:1px solid #333; padding:5px; text-align:center; }
+  .summa-soz { text-align:center; font-style:italic; font-weight:bold; text-decoration:underline; margin:6px 0 10px; }
+  p.band { margin-bottom:5px; text-align:justify; }
+  .band-sarlavha { font-weight:bold; margin-top:8px; margin-bottom:3px; }
+  table.manzil { width:100%; border-collapse:collapse; margin-top:6px; }
+  table.manzil td { vertical-align:top; padding:0 8px; width:50%; }
+  table.manzil-ichki { width:100%; border-collapse:collapse; font-size:10.5px; }
+  table.manzil-ichki td { border:1px solid #333; padding:4px 6px; }
+  table.manzil-ichki td:first-child { font-weight:bold; width:35%; background:#f7f7f7; }
+  .xaridor-box { border:1px solid #333; padding:6px 8px; font-size:10.5px; }
+  .imzo-row { display:flex; justify-content:space-between; margin-top:14px; }
+  .imzo-kvadrat { border:1px solid #333; padding:4px 10px; display:inline-block; }
+  .rozilik { margin-top:18px; font-size:10.5px; }
+  .page-break { page-break-before: always; }
 </style>
 </head>
 <body>
 <div class="page">
 
-  <h2>NASIYA SHARTNOMASI</h2>
-  <p class="subtitle">№ {{ $kredit->shartnoma_raqam }}</p>
+  @php
+      $mijoz   = $kredit->mijoz;
+      $filial  = $kredit->filial;
+      $kompNomi     = \App\Models\Sozlama::ol('kompaniya_nomi', $filial?->nomi ?? '');
+      $kompManzil   = $filial?->manzil ?: \App\Models\Sozlama::ol('kompaniya_manzil', '');
+      $kompBank     = \App\Models\Sozlama::ol('kompaniya_bank', '');
+      $kompHisob    = \App\Models\Sozlama::ol('kompaniya_hisob', '');
+      $kompMfo      = \App\Models\Sozlama::ol('kompaniya_mfo', '');
+      $kompStir     = \App\Models\Sozlama::ol('kompaniya_inn', '');
+      $kompTelefon  = $filial?->telefon ?: \App\Models\Sozlama::ol('kompaniya_telefon', '');
+      $kompDirektor = \App\Models\Sozlama::ol('kompaniya_direktor', '');
 
-  <div class="section">
-    <table class="info">
-      <tr><td>Shartnoma sanasi</td><td>{{ $kredit->boshlanish_sana?->format('d.m.Y') }}</td></tr>
-      <tr><td>Tugash sanasi</td><td>{{ $kredit->tugash_sana?->format('d.m.Y') }}</td></tr>
-      <tr><td>Mijoz F.I.O.</td><td><strong>{{ $kredit->mijoz?->familiya }} {{ $kredit->mijoz?->ism }} {{ $kredit->mijoz?->otasining_ismi }}</strong></td></tr>
-      <tr><td>Telefon</td><td>{{ $kredit->mijoz?->telefon }}</td></tr>
-      <tr><td>Passport</td><td>{{ $kredit->mijoz?->passport_seriya }} {{ $kredit->mijoz?->passport_raqam }}</td></tr>
-      <tr><td>Filial</td><td>{{ $kredit->filial?->nomi }}</td></tr>
-    </table>
+      // Eski "manzil" matnida tuman nomi allaqachon yozilgan bo'lishi mumkin — takrorlanmasligi uchun tekshiramiz
+      $tumanNomi  = $mijoz?->tuman?->nomi ?? '';
+      $tumanCore  = trim(preg_replace('/\s*(тумани|шахри|шахар)\s*$/iu', '', $tumanNomi));
+      $manzilMatn = $mijoz?->manzil ?? '';
+      $tumanAllaqachonBor = $tumanCore !== '' && mb_stripos($manzilMatn, $tumanCore) !== false;
+
+      $mijozManzil = trim(
+          ($mijoz?->viloyat?->nomi ?? '') . ' ' .
+          (!$tumanAllaqachonBor ? $tumanNomi . ' ' : '') .
+          $manzilMatn
+      );
+      $mijozIshJoyi = trim(($mijoz?->ish_joyi ?? '') . ' ' . ($mijoz?->lavozimi ?? '') . ' ' . ($mijoz?->pinfl ?? ''));
+  @endphp
+
+  <div class="top-row">
+    <div class="sana">{{ $kredit->boshlanish_sana?->format('d.m.Y') }}й.</div>
+    <div class="filial-manzil">{{ $filial?->nomi }} {{ $kompManzil }}</div>
   </div>
 
-  <div class="section">
-    <h4>Moliyaviy shartlar</h4>
-    <table class="info">
-      <tr><td>Jami summa</td><td><strong>{{ number_format($kredit->jami_summa, 0, '.', ' ') }} so'm</strong></td></tr>
-      <tr><td>Boshlang'ich to'lov</td><td>{{ number_format($kredit->boshlangich_tolov, 0, '.', ' ') }} so'm</td></tr>
-      <tr><td>Nasiya summasi</td><td><strong>{{ number_format($kredit->kredit_summa, 0, '.', ' ') }} so'm</strong></td></tr>
-      <tr><td>Muddat</td><td>{{ $kredit->muddati_oy }} oy</td></tr>
-      <tr><td>Foiz stavkasi</td><td>{{ $kredit->foiz_stavka > 0 ? $kredit->foiz_stavka.'%' : 'Foizsiz' }}</td></tr>
-      <tr><td>Oylik to'lov</td><td><strong>{{ number_format($kredit->oylik_tolov_miqdori, 0, '.', ' ') }} so'm</strong></td></tr>
-    </table>
-  </div>
+  <h2 class="title">ШАРТНОМА № {{ $kredit->shartnoma_raqam }}</h2>
+  <p class="subtitle">(Муддатли тўлов шарти билан олди-сотди шартномаси)</p>
 
-  <div class="section">
-    <h4>Tovarlar ro'yxati</h4>
-    <table class="tovar">
-      <thead>
-        <tr><th>#</th><th>Tovar nomi</th><th>Soni</th><th>Narxi (so'm)</th><th>Jami (so'm)</th></tr>
-      </thead>
-      <tbody>
-        @foreach($kredit->tovarlar as $i=>$t)
-        <tr>
-          <td align="center">{{ $i+1 }}</td>
-          <td>{{ $t->nomi }}</td>
-          <td align="center">{{ $t->soni }}</td>
-          <td align="right">{{ number_format($t->narx, 0, '.', ' ') }}</td>
-          <td align="right">{{ number_format($t->jami_narx, 0, '.', ' ') }}</td>
-        </tr>
-        @endforeach
-        <tr class="total-row">
-          <td colspan="4" align="right">Jami:</td>
-          <td align="right">{{ number_format($kredit->jami_summa, 0, '.', ' ') }} so'm</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <h3 class="bolim">1. ШАРТНОМА МАҚСАДИ</h3>
+  <p class="matn">
+    Бир тарафдан ўз Гувоҳномаси асосида фаолият кўрсатувчи <strong>{{ $kompNomi }}</strong>
+    (кейинги ўринларда «Сотувчи») ва
+    <strong>{{ $mijozManzil }}</strong> да яшовчи
+    <strong>{{ $mijoz?->familiya }} {{ $mijoz?->ism }} {{ $mijoz?->otasining_ismi }}</strong>
+    (Паспорт серия {{ $mijoz?->passport_seriya }} {{ $mijoz?->passport_raqam }}
+    {{ $mijoz?->passport_berilgan_joy }} томонидан берилган)
+    {{ $mijozIshJoyi }}
+    (кейинги ўринларда «Харидор») иккинчи томондан ушбу шартномани тарафлар ўртасида ўзаро
+    келишув асосида қуйидагилар тўғрисида тузилди.
+  </p>
+  <p class="matn">
+    1.1. «Сотувчи» қуйидаги маҳсулотларни «Харидор»га маҳсулотни ўзаро келишув асосида
+    {{ $kredit->muddati_oy }} ой (тўлов жадвалида кўрсатилган) муддат давомида қийматини бўлиб
+    тўлаш шарти билан сотади, ушбу маҳсулотлар тўлов шартлари тўлиқ бажарилиб, тўловлар тўлиқ
+    тўлангандан сўнг «Харидор»нинг шахсий мулкига айланади.
+  </p>
 
-  <div class="section">
-    <h4>Shartnoma shartlari</h4>
-    <p style="line-height:1.8">
-      1. Mijoz yuqorida ko'rsatilgan tovarlarni nasiyaga olishini tasdiqlaydi.<br>
-      2. Nasiya summasi {{ number_format($kredit->kredit_summa, 0, '.', ' ') }} so'm bo'lib, {{ $kredit->muddati_oy }} oy muddatida to'lanadi.<br>
-      3. Oylik to'lov miqdori: {{ number_format($kredit->oylik_tolov_miqdori, 0, '.', ' ') }} so'm.<br>
-      4. To'lov kechiktirilgan taqdirda qo'shimcha jarima qo'llaniladi.<br>
-      5. Ushbu shartnoma ikki nusxada tuzildi.
-    </p>
-  </div>
-
-  <div class="imzo">
-    <table>
+  <table class="tovar">
+    <thead>
+      <tr><th>№</th><th>Маҳсулот номи</th><th>Ўлчов бир.</th><th>Миқдори</th><th>Нархи</th><th>Суммаси</th></tr>
+    </thead>
+    <tbody>
+      @foreach($kredit->tovarlar as $i => $t)
       <tr>
-        <td width="50%">
-          <strong>Tashkilot:</strong><br><br>
-          {{ $kredit->filial?->nomi }}<br>
-          Imzo: ___________________<br>
-          M.O. <span class="stamp">M.O.</span>
-        </td>
-        <td width="50%">
-          <strong>Mijoz:</strong><br><br>
-          {{ $kredit->mijoz?->familiya }} {{ $kredit->mijoz?->ism }}<br>
-          Imzo: ___________________<br><br>
-          Sana: ___________________
-        </td>
+        <td align="center">{{ $i + 1 }}</td>
+        <td>{{ $t->nomi }}</td>
+        <td align="center">{{ $t->birlik ?? '' }}</td>
+        <td align="center">{{ $t->soni }}</td>
+        <td align="right">{{ number_format($t->narx, 0, '.', ' ') }}</td>
+        <td align="right">{{ number_format($t->jami_narx, 0, '.', ' ') }}</td>
       </tr>
-    </table>
+      @endforeach
+    </tbody>
+  </table>
+  <p class="tovar-jami">Жами маҳсулот суммаси&nbsp;&nbsp;{{ number_format($kredit->jami_summa, 0, '.', ' ') }}</p>
+
+  <h3 class="bolim">2. ШАРТНОМА ҚИЙМАТИ ВА ТЎЛОВ ШАРТЛАРИ</h3>
+  <p class="matn">2.1. Мазкур шартнома суммаси қуйидаги жадвал бўйича аниқланди;</p>
+  <p class="summa-soz">
+    {{ (int) $kredit->jami_summa }} ({{ \App\Models\RegKredit::summaSozda($kredit->jami_summa) }}) ташкил қилади.
+  </p>
+  <p class="matn">
+    2.2. Сотиб олинаётган маҳсулотнинг қолган суммасини «Харидор» ўз ойлик иш ҳақисидан ёки бошқа
+    даромадлари ҳисобидан ушбу шартномага илова қилинган (тўлов жадвали) бўйича қолган тўлиқ
+    тўлангунига қадар тўлаб боради.
+  </p>
+
+  <table class="shart">
+    <thead>
+      <tr><th>Товар суммаси</th><th>Ойлик тўлови</th><th>Олдиндан тўлови</th><th>Қолдиқ қарз суммаси</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{{ number_format($kredit->jami_summa, 2, '.', ' ') }}</td>
+        <td>{{ number_format($kredit->oylik_tolov_miqdori, 2, '.', ' ') }}</td>
+        <td>{{ number_format($kredit->boshlangich_tolov, 2, '.', ' ') }}</td>
+        <td>{{ number_format($kredit->kredit_summa, 2, '.', ' ') }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  {!! \App\Models\HujjatBand::asosiyMatn('shartnoma') !!}
+  @if($kredit->shartnoma_qoshimcha_band)
+  <p class="band"><strong>6.5.Қўшимча шартлар:</strong></p>
+  <div class="band" style="white-space:pre-wrap;">{{ $kredit->shartnoma_qoshimcha_band }}</div>
+  @endif
+
+  <h3 class="bolim">7. ТОМОНЛАРНИНГ МАНЗИЛЛАРИ</h3>
+  <table class="manzil">
+    <tr>
+      <td>
+        <p style="text-align:center;font-weight:bold;margin-bottom:4px">"Сотувчи":</p>
+        <table class="manzil-ichki">
+          <tr><td>Номи:</td><td>{{ $kompNomi }}</td></tr>
+          <tr><td>Манзили:</td><td>{{ $kompManzil }}</td></tr>
+          <tr><td>Банк номи:</td><td>{{ $kompBank }}</td></tr>
+          <tr><td>Ҳисоб/р:</td><td>{{ $kompHisob }}</td></tr>
+          <tr><td>МФО:</td><td>{{ $kompMfo }}</td></tr>
+          <tr><td>СТИР:</td><td>{{ $kompStir }}</td></tr>
+          <tr><td>Телефони:</td><td>{{ $kompTelefon }}</td></tr>
+          <tr><td>Раҳбари:</td><td>{{ $kompDirektor }}</td></tr>
+        </table>
+      </td>
+      <td>
+        <p style="text-align:center;font-weight:bold;margin-bottom:4px">"Харидор":</p>
+        <div class="xaridor-box">
+          <strong>{{ $mijoz?->familiya }} {{ $mijoz?->ism }} {{ $mijoz?->otasining_ismi }}</strong><br>
+          Паспорт маълумотлари: {{ $mijoz?->passport_seriya }} {{ $mijoz?->passport_raqam }}<br>
+          {{ $mijoz?->passport_berilgan_joy }} томонидан берилган.<br>
+          Яшаш манзили: {{ $mijozManzil }}<br>
+          Тел: {{ $mijoz?->telefon }}
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <div class="imzo-row">
+    <div class="imzo-kvadrat">Сотувчи имзоси</div>
+    <div class="imzo-kvadrat">Харидор имзоси</div>
   </div>
+
+  <p class="rozilik">Шартнома шартлари билан танишиб чиқдим. Ушбу шартнома шартларига розиман_________________</p>
 
 </div>
 </body>

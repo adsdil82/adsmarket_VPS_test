@@ -37,7 +37,14 @@ class NotificationSetting extends Model
     {
         foreach ($data as $key => $value) {
             $record = static::where('channel', $channel)->where('key', $key)->first();
-            if (!$record) continue;
+            if (!$record) {
+                // Qator hali mavjud bo'lmasa — yaratamiz, aks holda qiymat jimgina yo'qoladi
+                $isSecret = (bool) preg_match('/password|token|secret/i', $key);
+                $record = static::create([
+                    'channel' => $channel, 'key' => $key, 'value' => '',
+                    'is_secret' => $isSecret, 'is_active' => true,
+                ]);
+            }
             // Secret bo'lsa encrypt, bo'sh kelsa avvalgisini qoldir
             if ($record->is_secret) {
                 if ($value === '' || $value === null) continue;

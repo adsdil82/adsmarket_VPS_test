@@ -23,6 +23,7 @@
                 </tr>
             </thead>
             <tbody>
+                @php $rollarXarita = $rollar->keyBy('kalit'); @endphp
                 @foreach($foydalanuvchilar as $u)
                 @php
                     $rolRang = match($u->rol) {
@@ -34,13 +35,20 @@
                         'auditor'  => 'dark',
                         default    => 'secondary'
                     };
+                    $rolNomi = $rollarXarita[$u->rol]->nomi ?? $u->rol;
                 @endphp
                 <tr>
                     <td class="text-muted small">{{ $u->id }}</td>
                     <td class="fw-medium">{{ $u->ism_familiya }}</td>
                     <td class="text-muted small">{{ $u->email }}</td>
-                    <td><span class="badge bg-{{ $rolRang }}">{{ $u->rol }}</span></td>
-                    <td class="text-muted small">{{ $u->filial?->nomi ?? '<span class="badge bg-secondary">Barcha</span>' }}</td>
+                    <td><span class="badge bg-{{ $rolRang }}">{{ $rolNomi }}</span></td>
+                    <td class="text-muted small">
+                        @if($u->filial)
+                            {{ $u->filial->nomi }}
+                        @else
+                            <span class="badge bg-secondary">Barcha</span>
+                        @endif
+                    </td>
                     <td>
                         <span class="badge bg-{{ $u->holat === 'faol' ? 'success' : 'secondary' }}">
                             {{ $u->holat === 'faol' ? 'Faol' : 'Nofaol' }}
@@ -48,6 +56,13 @@
                     </td>
                     <td>
                         <div class="d-flex gap-1 flex-wrap">
+                            {{-- Tahrirlash --}}
+                            <button class="btn btn-xs btn-outline-primary py-0 px-1"
+                                    style="font-size:.72rem"
+                                    title="Tahrirlash"
+                                    onclick="tahrirModalOch({{ $u->id }}, '{{ addslashes($u->ism_familiya) }}', '{{ addslashes($u->email) }}', '{{ $u->rol }}', '{{ $u->filial_id }}', '{{ $u->holat }}')">
+                                <i class="bi bi-pencil"></i>
+                            </button>
                             {{-- Holat o'zgartirish --}}
                             @if($u->id !== 1)
                             <form method="POST" action="{{ route('admin.foydalanuvchilar.holat', $u) }}" class="d-inline">
@@ -102,12 +117,9 @@
               <label class="form-label fw-medium">Rol <span class="text-danger">*</span></label>
               <select name="rol" class="form-select" required>
                 <option value="">— Tanlang —</option>
-                <option value="menejer">Menejer</option>
-                <option value="kassir">Kassir</option>
-                <option value="omborchi">Omborchi</option>
-                <option value="hisobchi">Hisobchi</option>
-                <option value="auditor">Auditor</option>
-                <option value="admin">Admin</option>
+                @foreach($rollar as $r)
+                <option value="{{ $r->kalit }}">{{ $r->nomi }}</option>
+                @endforeach
               </select>
             </div>
             <div class="col-6">
@@ -147,6 +159,64 @@
           <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Bekor</button>
           <button type="submit" class="btn btn-sm btn-primary fw-bold">
             <i class="bi bi-check2 me-1"></i>Yaratish
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{{-- === Tahrirlash Modal === --}}
+<div class="modal fade" id="tahrirModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:480px">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-primary text-white">
+        <h6 class="modal-title fw-bold mb-0"><i class="bi bi-pencil me-2"></i>Foydalanuvchini tahrirlash</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" id="tahrir-form">
+        @csrf
+        @method('PUT')
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-medium">Ism Familiya <span class="text-danger">*</span></label>
+            <input type="text" name="ism_familiya" id="th-ism" class="form-control" required minlength="3">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-medium">Email / Login <span class="text-danger">*</span></label>
+            <input type="email" name="email" id="th-email" class="form-control" required>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label fw-medium">Rol <span class="text-danger">*</span></label>
+              <select name="rol" id="th-rol" class="form-select" required>
+                @foreach($rollar as $r)
+                <option value="{{ $r->kalit }}">{{ $r->nomi }}</option>
+                @endforeach
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-medium">Filial</label>
+              <select name="filial_id" id="th-filial" class="form-select">
+                <option value="">Barcha filiallar</option>
+                @foreach($filiallar as $f)
+                <option value="{{ $f->id }}">{{ $f->nomi }}</option>
+                @endforeach
+              </select>
+            </div>
+          </div>
+          <div class="mb-1">
+            <label class="form-label fw-medium">Holat</label>
+            <select name="holat" id="th-holat" class="form-select">
+              <option value="faol">Faol</option>
+              <option value="nofaol">Nofaol</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Bekor</button>
+          <button type="submit" class="btn btn-sm btn-primary fw-bold">
+            <i class="bi bi-check2 me-1"></i>Saqlash
           </button>
         </div>
       </form>
@@ -196,6 +266,16 @@
 
 @push('scripts')
 <script>
+function tahrirModalOch(userId, ism, email, rol, filialId, holat) {
+    document.getElementById('th-ism').value = ism;
+    document.getElementById('th-email').value = email;
+    document.getElementById('th-rol').value = rol;
+    document.getElementById('th-filial').value = filialId || '';
+    document.getElementById('th-holat').value = holat;
+    document.getElementById('tahrir-form').action = '/admin/foydalanuvchilar/' + userId;
+    if (!window._tahrirModal) window._tahrirModal = new bootstrap.Modal(document.getElementById('tahrirModal'));
+    window._tahrirModal.show();
+}
 function parolModalOch(userId, ism) {
     document.getElementById('parol-user-nomi').textContent = 'Foydalanuvchi: ' + ism;
     document.getElementById('parol-form').action = '/admin/foydalanuvchilar/' + userId + '/parol';

@@ -47,22 +47,32 @@
 <form method="POST" action="{{ route('admin.sozlamalar.saqlash') }}">
 @csrf
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <h5 class="fw-bold mb-0"><i class="bi bi-gear me-2 text-secondary"></i>Tizim sozlamalari</h5>
-    <button type="submit" class="btn btn-primary">
-        <i class="bi bi-save me-1"></i> Saqlash
-    </button>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="soz-hammasini-och">
+            <i class="bi bi-arrows-expand me-1"></i>Hammasini ochish
+        </button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="soz-hammasini-yop">
+            <i class="bi bi-arrows-collapse me-1"></i>Hammasini yopish
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save me-1"></i> Saqlash
+        </button>
+    </div>
 </div>
 
-<div class="row g-3">
+<div class="accordion" id="sozlamalarAccordion">
 
     {{-- ── BREND VA TIZIM NOMI ──────────────────────────────────── --}}
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="bi bi-tag me-2 text-primary"></i>Brend va tizim nomi</h6>
-            </div>
-            <div class="card-body">
+    <div class="accordion-item border-0 shadow-sm mb-2">
+        <h2 class="accordion-header">
+            <button type="button" class="accordion-button collapsed fw-bold" data-bs-toggle="collapse" data-bs-target="#soz-brend">
+                <i class="bi bi-tag me-2 text-primary"></i>Brend va tizim nomi
+            </button>
+        </h2>
+        <div id="soz-brend" class="accordion-collapse collapse">
+            <div class="accordion-body">
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label fw-medium">Tizim nomi (Brend) <span class="text-danger">*</span></label>
@@ -78,13 +88,15 @@
     </div>
 
     {{-- ── KOMPANIYA REKVIZITLARI ───────────────────────────────── --}}
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="bi bi-building me-2 text-success"></i>Kompaniya rekvizitlari</h6>
-                <small class="text-muted">Shartnoma, yuk xati, faktura va boshqa hujjatlarda chop etiladi</small>
-            </div>
-            <div class="card-body">
+    <div class="accordion-item border-0 shadow-sm mb-2">
+        <h2 class="accordion-header">
+            <button type="button" class="accordion-button collapsed fw-bold" data-bs-toggle="collapse" data-bs-target="#soz-kompaniya">
+                <i class="bi bi-building me-2 text-success"></i>Kompaniya rekvizitlari
+                <small class="text-muted ms-2 fw-normal">Shartnoma, yuk xati, faktura</small>
+            </button>
+        </h2>
+        <div id="soz-kompaniya" class="accordion-collapse collapse">
+            <div class="accordion-body">
                 <div class="row g-3">
                     <div class="col-md-8">
                         <label class="form-label fw-medium">Kompaniya nomi</label>
@@ -162,13 +174,15 @@
     </div>
 
     {{-- ── INTERFEYS TEMASI ─────────────────────────────────────── --}}
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="bi bi-palette me-2 text-warning"></i>Interfeys temasi</h6>
-                <small class="text-muted">Sidebar rangi va aksent rangi</small>
-            </div>
-            <div class="card-body">
+    <div class="accordion-item border-0 shadow-sm mb-2">
+        <h2 class="accordion-header">
+            <button type="button" class="accordion-button collapsed fw-bold" data-bs-toggle="collapse" data-bs-target="#soz-tema">
+                <i class="bi bi-palette me-2 text-warning"></i>Interfeys temasi
+                <small class="text-muted ms-2 fw-normal">Sidebar rangi va aksent rangi</small>
+            </button>
+        </h2>
+        <div id="soz-tema" class="accordion-collapse collapse">
+            <div class="accordion-body">
                 <input type="hidden" name="tema" id="tema-input" value="{{ old('tema', $soz['tema'] ?? 1) }}">
                 <div class="row g-2">
                     @foreach($temalar as $id => $tema)
@@ -201,17 +215,49 @@
         </div>
     </div>
 
+    {{-- ── OPERATSION KUN NAZORATI ──────────────────────────────────────── --}}
+    <div class="accordion-item border-0 shadow-sm mb-2">
+        <h2 class="accordion-header">
+            <button type="button" class="accordion-button collapsed fw-bold" data-bs-toggle="collapse" data-bs-target="#soz-operatsion-kun">
+                <i class="bi bi-calendar-check me-2 text-danger"></i>Operatsion kun nazorati
+                <small class="text-muted ms-2 fw-normal">Shartnoma sanasini orqaga qaytarish</small>
+            </button>
+        </h2>
+        <div id="soz-operatsion-kun" class="accordion-collapse collapse">
+            <div class="accordion-body pb-2">
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label class="form-label small mb-1">Orqaga sanali shartnoma/to'lov</label>
+                        <select name="orqaga_sana_taqiqlansin" class="form-select form-select-sm">
+                            <option value="1" {{ \App\Models\Sozlama::ol('orqaga_sana_taqiqlansin','1')==='1' ? 'selected' : '' }}>
+                                Taqiqlangan — faqat admin/menejer ruxsat etadi
+                            </option>
+                            <option value="0" {{ \App\Models\Sozlama::ol('orqaga_sana_taqiqlansin','1')==='0' ? 'selected' : '' }}>
+                                Ruxsat — hamma xodim orqaga sana qo'yishi mumkin
+                            </option>
+                        </select>
+                        <div class="form-text">
+                            Yoqilganda, oddiy xodim yangi shartnoma yaratishda "Boshlanish sanasi"ni
+                            o'tgan kunga qo'ya olmaydi (faqat bugungi yoki kelajakdagi kun). Admin va
+                            menejer rollari bu cheklovdan istisno.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {{-- ── HYBRID POCHTA ──────────────────────────────────────────────────── --}}
-    <div class="col-12 mb-4">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white py-2 d-flex align-items-center gap-2">
-                <i class="bi bi-envelope-paper text-primary"></i>
-                <strong>Hybrid Pochta</strong>
-                <span class="badge bg-light text-dark border ms-1">hybrid.pochta.uz</span>
-                <span class="badge bg-secondary ms-auto">Jismoniy pochta xatlari</span>
-            </div>
-            <div class="card-body pb-2">
+    <div class="accordion-item border-0 shadow-sm mb-2">
+        <h2 class="accordion-header">
+            <button type="button" class="accordion-button collapsed fw-bold" data-bs-toggle="collapse" data-bs-target="#soz-hybrid">
+                <i class="bi bi-envelope-paper me-2 text-primary"></i>Hybrid Pochta
+                <span class="badge bg-light text-dark border ms-2 fw-normal">hybrid.pochta.uz</span>
+                <span class="badge bg-secondary ms-2 fw-normal">Jismoniy pochta xatlari</span>
+            </button>
+        </h2>
+        <div id="soz-hybrid" class="accordion-collapse collapse">
+            <div class="accordion-body pb-2">
                 <div class="row g-2">
                     <div class="col-md-4">
                         <label class="form-label small mb-1">Login</label>
@@ -267,18 +313,127 @@
         </div>
     </div>
 
+</div>{{-- /sozlamalarAccordion --}}
 
-    <div class="col-12 mb-4">
-        <div class="d-flex justify-content-end">
-            <button type="submit" class="btn btn-primary px-4">
-                <i class="bi bi-save me-1"></i> Barcha sozlamalarni saqlash
+<div class="d-flex justify-content-end mt-3 mb-4">
+    <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-save me-1"></i> Barcha sozlamalarni saqlash
+    </button>
+</div>
+
+</form>
+
+{{-- ═══ HUJJAT MATNLARI ════════════════════════════════════════════════════ --}}
+<h5 class="fw-bold mb-3 mt-5 border-top pt-4">
+    <i class="bi bi-file-earmark-text me-2 text-primary"></i>Hujjat matnlari
+</h5>
+<div class="accordion" id="hujjatMatnAccordion">
+
+    {{-- Qo'shimcha bandlar --}}
+    <div class="accordion-item border-0 shadow-sm mb-2">
+        <h2 class="accordion-header">
+            <button type="button" class="accordion-button collapsed fw-bold" data-bs-toggle="collapse" data-bs-target="#soz-qoshimcha-band">
+                <i class="bi bi-file-earmark-plus me-2 text-primary"></i>Qo'shimcha bandlar
+                <small class="text-muted ms-2 fw-normal">Faqat yangi shartnomalarga ta'sir qiladi</small>
             </button>
+        </h2>
+        <div id="soz-qoshimcha-band" class="accordion-collapse collapse" data-bs-parent="#hujjatMatnAccordion">
+            <div class="accordion-body">
+                <p class="text-muted small mb-3">
+                    Shartnoma va Kafillik shartnomasi hujjatlarining oxiriga (6-bo'lim, "Boshqa shartlar"dan
+                    keyin) qo'shimcha band sifatida qo'shiladigan matn. <strong>Diqqat:</strong> bu yerda
+                    matnni o'zgartirish faqat <u>shu kundan boshlab yaratiladigan yangi shartnomalarga</u>
+                    ta'sir qiladi — eski (allaqachon yaratilgan) shartnomalar o'zlari yaratilgan paytdagi
+                    matnni saqlab qoladi va o'zgarmaydi.
+                </p>
+                <div class="row g-3">
+                    @foreach(['shartnoma' => 'Shartnoma qo\'shimcha bandlari', 'kafillik' => 'Kafillik shartnomasi qo\'shimcha bandlari'] as $bandTuri => $bandSarlavha)
+                    @php $faolBand = \App\Models\HujjatBand::faolVersiya($bandTuri); @endphp
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <h6 class="fw-bold mb-2">{{ $bandSarlavha }}</h6>
+                                <form method="POST" action="{{ route('admin.hujjatband.saqlash') }}">
+                                    @csrf
+                                    <input type="hidden" name="turi" value="{{ $bandTuri }}">
+                                    <textarea name="matn" class="form-control form-control-sm" rows="6"
+                                              placeholder="Masalan: 7.1. Tovar kafolat muddati 12 oy...">{{ old('matn', $faolBand?->matn ?? '') }}</textarea>
+                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                        <span class="small text-muted">
+                                            @if($faolBand)
+                                                Joriy versiya #{{ $faolBand->id }}
+                                                ({{ $faolBand->created_at?->format('d.m.Y H:i') }})
+                                            @else
+                                                Hali band qo'shilmagan
+                                            @endif
+                                        </span>
+                                        <button type="submit" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-save me-1"></i>Yangi versiya saqlash
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
         </div>
     </div>
 
-</div>
-</form>
+    {{-- Asosiy matnni tahrirlash --}}
+    <div class="accordion-item border-0 shadow-sm mb-2">
+        <h2 class="accordion-header">
+            <button type="button" class="accordion-button collapsed fw-bold" data-bs-toggle="collapse" data-bs-target="#soz-asosiy-matn">
+                <i class="bi bi-pencil-square me-2 text-danger"></i>Asosiy matnni tahrirlash
+                <small class="text-muted ms-2 fw-normal">Saqlanganda BARCHA shartnomalarga (eski va yangi) ta'sir qiladi</small>
+            </button>
+        </h2>
+        <div id="soz-asosiy-matn" class="accordion-collapse collapse" data-bs-parent="#hujjatMatnAccordion">
+            <div class="accordion-body">
+                <p class="text-muted small mb-3">
+                    Hujjatning 3-6 bo'limlari (Tomonlarning huquq va majburiyatlari, Javobgarlik, Fors-major,
+                    Yakunlovchi holat) — to'liq matn. Bu yerni kengaytirish (yangi band qo'shish), band
+                    o'chirish yoki matnni butunlay o'zgartirish mumkin (oddiy HTML:
+                    <code>&lt;h3 class="bolim"&gt;</code> — bo'lim sarlavhasi,
+                    <code>&lt;p class="band"&gt;</code> — band matni).
+                    <strong class="text-danger">Diqqat:</strong> bu — qo'shimcha bandlardan farqli, JONLI
+                    (live) matn — saqlangan zahoti <u>BARCHA shartnomalarga, jumladan eski (allaqachon
+                    yaratilgan) shartnomalarga ham</u> qo'llaniladi, chunki hujjat har safar "Chop etish"
+                    bosilganda shu matndan qayta generatsiya qilinadi.
+                </p>
+                <div class="row g-3">
+                    @foreach(['shartnoma' => 'Shartnoma — asosiy matn (3-6 bo\'lim)', 'kafillik' => 'Kafillik shartnomasi — asosiy matn (3-6 bo\'lim)'] as $matnTuri => $matnSarlavha)
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <h6 class="fw-bold mb-2">{{ $matnSarlavha }}</h6>
+                                <form method="POST" action="{{ route('admin.hujjatmatn.saqlash') }}"
+                                      onsubmit="return confirm('Diqqat: bu o\'zgarish BARCHA shartnomalarga (eski va yangi) ta\'sir qiladi. Davom etilsinmi?');">
+                                    @csrf
+                                    <input type="hidden" name="turi" value="{{ $matnTuri }}">
+                                    <textarea name="matn" class="form-control form-control-sm font-monospace" rows="14"
+                                              style="font-size:11px;">{{ old('matn', \App\Models\HujjatBand::asosiyMatn($matnTuri)) }}</textarea>
+                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                        <a href="#" class="small text-secondary"
+                                           onclick="event.preventDefault(); this.closest('form').querySelector('textarea').value = {{ \Illuminate\Support\Js::from(\App\Models\HujjatBand::asosiyMatnDefault($matnTuri)) }};">
+                                            <i class="bi bi-arrow-counterclockwise me-1"></i>Zavod matniga qaytarish
+                                        </a>
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            <i class="bi bi-save me-1"></i>Saqlash (barcha shartnomalarga qo'llaniladi)
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </div>
 
+</div>{{-- /hujjatMatnAccordion --}}
 
 {{-- ═══ XABARNOMA SOZLAMALARI ════════════════════════════════════════════ --}}
 <h5 class="fw-bold mb-3 mt-5 border-top pt-4">
@@ -425,42 +580,6 @@
         </div>
     </div>
 
-    {{-- Gibrid Pochta Sozlamalari --}}
-    <div class="accordion-item border-0 shadow-sm mb-2">
-        <h2 class="accordion-header">
-            <button class="accordion-button collapsed fw-bold" type="button"
-                    data-bs-toggle="collapse" data-bs-target="#collapseHybrid">
-                <i class="bi bi-envelope-paper me-2" style="color:#8b5cf6"></i>Gibrid Pochta Sozlamalari
-            </button>
-        </h2>
-        <div id="collapseHybrid" class="accordion-collapse collapse" data-bs-parent="#notifAccordion">
-            <div class="accordion-body">
-                @php $hmSoz = \App\Models\NotificationSetting::where('channel','hybrid_mail')->get()->keyBy('key'); @endphp
-                <form method="POST" action="{{ route('admin.notif.hybrid.saqlash') }}">
-                    @csrf
-                    <div class="row g-3">
-                        <div class="col-sm-6"><label class="form-label small fw-medium">API URL</label>
-                            <input type="url" name="api_url" class="form-control form-control-sm" value="{{ $hmSoz['api_url']->value??'' }}"></div>
-                        <div class="col-sm-6"><label class="form-label small fw-medium">Login / Client ID</label>
-                            <input type="text" name="login" class="form-control form-control-sm" value="{{ $hmSoz['login']->value??'' }}"></div>
-                        <div class="col-sm-6"><label class="form-label small fw-medium">Token</label>
-                            <input type="password" name="token" class="form-control form-control-sm" placeholder="{{ ($hmSoz['token']->value??'')?'••••••••':'' }}"></div>
-                        <div class="col-sm-6"><label class="form-label small fw-medium">Jo'natuvchi nomi</label>
-                            <input type="text" name="sender_name" class="form-control form-control-sm" value="{{ $hmSoz['sender_name']->value??'NasiyaPro' }}"></div>
-                    </div>
-                    <div class="d-flex gap-2 mt-3 align-items-center">
-                        <div class="form-check form-switch me-2">
-                            <input class="form-check-input" type="checkbox" name="test_mode"
-                                   {{ ($hmSoz['test_mode']->value??'1')==='1'?'checked':'' }}>
-                            <label class="form-check-label small">Test rejimi</label>
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i>Saqlash</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
 {{-- Viloyat/Tuman nomlarini yangilash --}}
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-header py-2 d-flex align-items-center gap-2"
@@ -507,6 +626,16 @@ function adminTestTelegram() {
         el.textContent=d.ok?'Test yuborildi!':('Xato: '+(d.result?.description||d.error||''));
     });
 }
+document.getElementById('soz-hammasini-och')?.addEventListener('click', () => {
+    document.querySelectorAll('#sozlamalarAccordion .accordion-collapse').forEach(el => {
+        new bootstrap.Collapse(el, { toggle: false }).show();
+    });
+});
+document.getElementById('soz-hammasini-yop')?.addEventListener('click', () => {
+    document.querySelectorAll('#sozlamalarAccordion .accordion-collapse').forEach(el => {
+        new bootstrap.Collapse(el, { toggle: false }).hide();
+    });
+});
 function tanlaTemani(id) {
     document.getElementById('tema-input').value = id;
     document.querySelectorAll('.tema-karta').forEach(k => {

@@ -40,11 +40,15 @@ var _mijozTimer  = null;
 var _mijozPage   = 1;
 var _mijozQ      = '';
 var _mijozPages  = 1;
+var _mijozModalMaqsad = 'mijoz';
 
-function mijozModalOch() {
+function mijozModalOch(maqsad) {
     var elM = document.getElementById('mijozIzlashModal');
     if (!elM) { console.error('mijozIzlashModal topilmadi'); return; }
     if (!_mijozModal) _mijozModal = new bootstrap.Modal(elM, { backdrop: false, keyboard: true });
+    _mijozModalMaqsad = maqsad || 'mijoz';
+    var titleEl = document.getElementById('mijozModalTitle');
+    if (titleEl) titleEl.textContent = _mijozModalMaqsad === 'kafil' ? 'Kafil tanlash' : 'Mijoz tanlash';
     _mijozPage  = 1;
     _mijozQ     = '';
     _mijozPages = 1;
@@ -91,16 +95,56 @@ function _mijozUpdatePagination(page, pages, total) {
 }
 
 function mijozModalTanlash(row) {
+    if (row.dataset.taqiqlangan === '1' && _mijozModalMaqsad === 'mijoz') {
+        alert("Bu mijoz holati «" + row.dataset.holatNomi + "» — yangi shartnoma tuzish taqiqlangan.");
+        return;
+    }
+
+    if (_mijozModalMaqsad === 'kafil') {
+        document.getElementById('kafil_mijoz_id').value  = row.dataset.id;
+        document.getElementById('kafil-tanlangan').value = row.dataset.fio;
+        document.getElementById('kafil-info').innerHTML  = _mijozInfoHtml(row);
+        // Mijoz tanlanganda qo'lda kiritilgan kafil maydonlari endi kerak emas
+        ['kafil_ism', 'kafil_telefon', 'kafil_manzil'].forEach(function(nomi) {
+            var el = document.querySelector('[name="' + nomi + '"]');
+            if (el) el.value = '';
+        });
+        var qolda = document.getElementById('kafil-qolda');
+        if (qolda) qolda.classList.add('d-none');
+        if (_mijozModal) _mijozModal.hide();
+        return;
+    }
+
     document.getElementById('mijoz_id').value        = row.dataset.id;
     document.getElementById('mijoz-tanlangan').value = row.dataset.fio;
-    document.getElementById('mijoz-info').innerHTML  =
-        '<i class="bi bi-check-circle text-success me-1"></i>' +
-        '<strong>' + row.dataset.fio + '</strong>' +
-        ' &nbsp;&middot;&nbsp; ' + row.dataset.telefon +
-        ' &nbsp;&middot;&nbsp; ' + row.dataset.passport;
+    document.getElementById('mijoz-info').innerHTML  = _mijozInfoHtml(row);
     var xEl = document.getElementById('mijoz-info-xato');
     if (xEl) xEl.style.display = 'none';
     if (_mijozModal) _mijozModal.hide();
+}
+
+/** Tanlangan mijoz/kafil uchun to'liq ma'lumot blokini quradi (telefon, manzil, PINFL, karta, izoh) */
+function _mijozInfoHtml(row) {
+    var d = row.dataset;
+    var html = '<div class="border rounded p-2 bg-light mt-1">' +
+        '<div><i class="bi bi-check-circle text-success me-1"></i><strong>' + d.fio + '</strong></div>' +
+        '<div class="text-muted mt-1">' +
+        '<i class="bi bi-telephone me-1"></i>' + (d.telefon || '—');
+    if (d.passport) html += ' &nbsp;&middot;&nbsp; <i class="bi bi-card-text me-1"></i>' + d.passport;
+    if (d.pinfl)     html += ' &nbsp;&middot;&nbsp; PINFL: ' + d.pinfl;
+    if (d.karta)     html += ' &nbsp;&middot;&nbsp; <i class="bi bi-credit-card me-1"></i>' + d.karta;
+    html += '</div>';
+    if (d.manzil) html += '<div class="text-muted"><i class="bi bi-geo-alt me-1"></i>' + d.manzil + '</div>';
+    if (d.izoh)   html += '<div class="text-muted"><i class="bi bi-chat-left-text me-1"></i>' + d.izoh + '</div>';
+    html += '</div>';
+    return html;
+}
+
+function kafilTanlovniTozala() {
+    document.getElementById('kafil_mijoz_id').value  = '';
+    document.getElementById('kafil-tanlangan').value = '';
+    document.getElementById('kafil-info').innerHTML  =
+        '<span class="text-muted">Kafil tanlanmagan (ixtiyoriy)</span>';
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -169,17 +213,30 @@ function mijozQidirAjax(q, page) {
             else   hdr.textContent = 'Jami ' + total + ' ta';
         }
 
+        var holatBadgeStil = {
+            faol:   { bg:'#d1fae5', fg:'#065f46', matn:'Faol' },
+            nofaol: { bg:'#f1f5f9', fg:'#475569', matn:'Nofaol' },
+            sudda:  { bg:'#fef3c7', fg:'#92400e', matn:'SUDDA' },
+            yomon:  { bg:'#fee2e2', fg:'#991b1b', matn:'YOMON' }
+        };
+        var _attrEsc = function(s) { return (s||'').toString().replace(/"/g,'&quot;'); };
         tbody.innerHTML = data.map(function(m) {
-            var faol = m.holat === 'faol';
-            var badge = faol
-                ? '<span style="background:#d1fae5;color:#065f46;font-weight:700;padding:2px 10px;border-radius:6px;font-size:.78rem">Faol</span>'
-                : '<span style="background:#f1f5f9;color:#475569;font-weight:600;padding:2px 10px;border-radius:6px;font-size:.78rem">Nofaol</span>';
-            return '<tr class="mijoz-modal-qator" style="cursor:pointer"' +
+            var st = holatBadgeStil[m.holat] || holatBadgeStil.nofaol;
+            var badge = '<span style="background:' + st.bg + ';color:' + st.fg +
+                ';font-weight:700;padding:2px 10px;border-radius:6px;font-size:.78rem">' + st.matn + '</span>';
+            var taqiqlangan = (m.holat === 'sudda' || m.holat === 'yomon');
+            return '<tr class="mijoz-modal-qator" style="cursor:pointer' + (taqiqlangan ? ';opacity:.55' : '') + '"' +
                 ' data-id="' + m.id + '"' +
                 ' data-fio="' + (m.fio||'').replace(/"/g,"'") + '"' +
                 ' data-telefon="' + (m.telefon||'') + '"' +
                 ' data-passport="' + (m.passport||'') + '"' +
-                ' ondblclick="mijozModalTanlash(this)" title="2 marta bosing">' +
+                ' data-pinfl="' + _attrEsc(m.pinfl) + '"' +
+                ' data-manzil="' + _attrEsc(m.manzil) + '"' +
+                ' data-izoh="' + _attrEsc(m.izoh) + '"' +
+                ' data-karta="' + _attrEsc(m.karta_raqami) + '"' +
+                ' data-taqiqlangan="' + (taqiqlangan ? '1' : '0') + '"' +
+                ' data-holat-nomi="' + st.matn + '"' +
+                ' ondblclick="mijozModalTanlash(this)" title="' + (taqiqlangan ? 'Taqiqlangan: shartnoma tuzib bo\'lmaydi' : '2 marta bosing') + '">' +
                 '<td><div class="fw-medium small">' + m.fio + '</div></td>' +
                 '<td class="small">' + m.telefon + '</td>' +
                 '<td class="small text-muted">' + m.passport + '</td>' +

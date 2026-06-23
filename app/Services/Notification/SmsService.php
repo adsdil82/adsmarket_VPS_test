@@ -48,18 +48,17 @@ class SmsService
 
 
     /**
-     * Bugun shu mijoz + shartnoma + template uchun SMS yuborilganmi tekshirish
+     * So'nggi 24 soat ichida shu shartnoma + shablon uchun SMS yuborilganmi tekshirish
      */
     public function isDuplicateToday(?int $customerId, ?int $contractId, ?int $templateId): bool
     {
-        if (!$customerId || !$templateId) return false;
+        if (!$contractId || !$templateId) return false;
 
         return NotificationLog::where('channel', 'sms')
-            ->where('customer_id', $customerId)
             ->where('contract_id', $contractId)
             ->where('template_id', $templateId)
             ->whereIn('status', ['sent', 'test'])
-            ->whereDate('created_at', today())
+            ->where('created_at', '>=', now()->subHours(24))
             ->exists();
     }
 
@@ -79,9 +78,9 @@ class SmsService
             return $this->logSkipped($phone, $message, $customerId, $contractId, $templateId, $batchId, 'Noto\'g\'ri telefon raqam');
         }
 
-        // Takroriy SMS oldini olish (bugun yuborilganmi)
+        // Takroriy SMS oldini olish (so'nggi 24 soat ichida shu shartnoma+shablon uchun yuborilganmi)
         if ($recipientType !== 'test' && $this->isDuplicateToday($customerId, $contractId, $templateId)) {
-            return $this->logSkipped($phone, $message, $customerId, $contractId, $templateId, $batchId, 'Bugun allaqachon yuborilgan');
+            return $this->logSkipped($phone, $message, $customerId, $contractId, $templateId, $batchId, "Bu shablon ushbu shartnoma uchun so'nggi 24 soat ichida allaqachon yuborilgan");
         }
 
         $result = $this->provider->send($phone, $message);

@@ -255,6 +255,25 @@
     @stack('styles')
 
     <style>
+    /* Forma maydonlari (input/textarea/select) bo'sh bo'lganda ko'rinadigan
+       placeholder matnining shaffofligi — barcha sahifa va modallarda */
+    input::placeholder,
+    textarea::placeholder {
+        opacity: 0.5 !important;
+    }
+    input::-webkit-input-placeholder,
+    textarea::-webkit-input-placeholder {
+        opacity: 0.5 !important;
+    }
+    input::-moz-placeholder,
+    textarea::-moz-placeholder {
+        opacity: 0.5 !important;
+    }
+    select.form-select:invalid,
+    select.form-select option[value=""] {
+        opacity: 0.5;
+    }
+
     /* Nested modals: mijoz/tovar modal kreditYangiModal ustida ko'rinsin */
     #mijozIzlashModal,
     #tovarIzlashModal {
@@ -322,6 +341,7 @@
             </li>
 
             {{-- ── MIJOZLAR ──────────────────────────────────── --}}
+            @if(Auth::user()->ruxsat('mijozlar'))
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="mijozlar">
                     <span class="g-label">&#128100; {{ __('ui.menu_mijozlar') }}</span>
@@ -351,8 +371,10 @@
                     </a>
                 </li>
             </ul>
+            @endif
 
             {{-- ── SHARTNOMALAR ───────────────────────────────── --}}
+            @if(Auth::user()->ruxsat('kreditlar'))
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="shartnomalar">
                     <span class="g-label">&#128196; {{ __('ui.menu_shartnomalar') }}</span>
@@ -389,8 +411,10 @@
                     </a>
                 </li>
             </ul>
+            @endif
 
             {{-- ── HISOBOTLAR ─────────────────────────────────── --}}
+            @if(Auth::user()->ruxsat('hisobotlar'))
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="hisobotlar">
                     <span class="g-label">&#128202; {{ __('ui.menu_hisobotlar') }}</span>
@@ -448,8 +472,10 @@
                     </a>
                 </li>
             </ul>
+            @endif
 
             {{-- ── TOVARLAR ────────────────────────────────────── --}}
+            @if(Auth::user()->ruxsat('tovarlar'))
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="tovarlar">
                     <span class="g-label">&#127979; {{ __('ui.menu_tovarlar') }}</span>
@@ -502,9 +528,10 @@
                 </li>
                 @endif
             </ul>
+            @endif
 
             {{-- ── TA'MINOTCHILAR ──────────────────────────────────── --}}
-            @if(Auth::user()->isTaminotKira())
+            @if(Auth::user()->ruxsat('taminotchilar'))
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="taminotchi">
                     <span class="g-label">🚛 TA'MINOTCHILAR</span>
@@ -547,7 +574,7 @@
 
 
             {{-- HARAJATLAR --}}
-            @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki() || Auth::user()->isKassir())
+            @if(Auth::user()->ruxsat('harajatlar'))
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="harajatlar">
                     <span class="g-label">&#128181; HARAJATLAR</span>
@@ -575,7 +602,7 @@
             @endif
 
             {{-- PUL OQIMLARI --}}
-            @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki() || Auth::user()->isKassir())
+            @if(Auth::user()->ruxsat('pul_oqimlari'))
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="pul-oqimlari">
                     <span class="g-label">&#9889; PUL OQIMLARI</span>
@@ -609,7 +636,7 @@
 
         
         {{-- MA'LUMOTNOMALAR --}}
-        @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki() || Auth::user()->isHisobchi())
+        @if(Auth::user()->ruxsat('malumotnomalar'))
         <li class="grup-header">
             <button class="grup-toggle" data-grup="malumotnamalar-menu">
                 <span class="g-label">&#128218; MA'LUMOTNOMALAR</span>
@@ -628,6 +655,9 @@
             <li class="nav-item"><a href="{{ route('admin.foydalanuvchilar') }}"
                 class="nav-link text-white py-1 {{ request()->routeIs('admin.foydalanuvchilar') ? 'active' : '' }}">
                 Foydalanuvchilar</a></li>
+            <li class="nav-item"><a href="{{ route('admin.rollar') }}"
+                class="nav-link text-white py-1 {{ request()->routeIs('admin.rollar') ? 'active' : '' }}">
+                Rollar</a></li>
             <li class="nav-item"><a href="{{ route('malumotnamalar.kassalar.index') }}"
                 class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.kassalar.*') ? 'active' : '' }}">
                 Kassalar</a></li>
@@ -698,7 +728,7 @@
         @endif
 
         {{-- QURILMALAR NAZORATI --}}
-        @if(Auth::user()->isAdmin() || Auth::user()->isMenejer())
+        @if(Auth::user()->ruxsat('qurilmalar'))
         <li class="grup-header">
             <button class="grup-toggle" data-grup="qurilmalar-nazorati">
                 <span class="g-label">&#128241; QURILMALAR</span>
@@ -712,7 +742,7 @@
                    Qurilmalar ro'yxati
                 </a>
             </li>
-            @if(Auth::user()->isAdmin() || Auth::user()->isMenejer() || Auth::user()->isOmborchi())
+            @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki() || Auth::user()->isOmborchi())
             <li class="nav-item">
                 <a href="{{ route('qurilmalar.create') }}"
                    class="{{ request()->routeIs('qurilmalar.create') ? 'active' : '' }}">
@@ -732,7 +762,7 @@
         @endif
 
             {{-- XABARNOMA guruh --}}
-            @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki())
+            @if(Auth::user()->ruxsat('xabarnoma'))
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="xabarnoma">
                     <span class="g-label">&#128241; XABARNOMA</span>
@@ -786,7 +816,7 @@
             @endif
 
                         {{-- ── TRANSFERLAR ─────────────────────────────────── --}}
-            @if(Auth::user()->isTaminotKira() || Auth::user()->isAdmin())
+            @if(Auth::user()->ruxsat('transferlar'))
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="transfer">
                     <span class="g-label">&#8644; TRANSFERLAR</span>
@@ -851,7 +881,7 @@
             @endif
 
             {{-- ── BOSHQARUV ───────────────────────────────────── --}}
-            @if(Auth::user()->isAdmin() || Auth::user()->rol === 'auditor')
+            @if(Auth::user()->ruxsat('boshqaruv'))
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="boshqaruv">
                     <span class="g-label">&#9881; {{ __('ui.menu_boshqaruv') }}</span>
@@ -872,6 +902,20 @@
                        class="nav-link text-white py-1 {{ request()->routeIs('admin.sozlamalar') ? 'active' : '' }}">
                         <i class="bi bi-gear me-2"></i>
                         <span class="nav-label">{{ __('ui.menu_sozlamalar') }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('admin.ruxsatlar') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('admin.ruxsatlar') ? 'active' : '' }}">
+                        <i class="bi bi-key me-2 text-warning"></i>
+                        <span class="nav-label">Ruxsatlar</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('admin.rollar') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('admin.rollar') ? 'active' : '' }}">
+                        <i class="bi bi-person-badge me-2 text-info"></i>
+                        <span class="nav-label">Rollar</span>
                     </a>
                 </li>
                 <li class="nav-item">

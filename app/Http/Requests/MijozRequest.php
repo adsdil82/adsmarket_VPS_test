@@ -22,13 +22,19 @@ class MijozRequest extends FormRequest
             'passport_seriya'       => ['nullable', 'string', 'max:10'],
             'passport_raqam'        => ['nullable', 'string', 'max:20'],
             'pinfl'                 => ['nullable', 'string', 'max:14', 'regex:/^\d{0,14}$/'],
+            'karta_raqami'          => ['nullable', 'string', 'max:20'],
             'passport_berilgan_joy' => ['nullable', 'string', 'max:300'],
             'manzil'                => ['nullable', 'string'],
+            'viloyat_id'            => ['nullable', 'exists:viloyatlar,id'],
+            'tuman_id'              => ['nullable', 'exists:tumanlar,id'],
             'tug_sana'              => ['nullable', 'date', 'before:today'],
             'ish_joyi'              => ['nullable', 'string', 'max:200'],
             'lavozimi'              => ['nullable', 'string', 'max:200'],
             'izoh'                  => ['nullable', 'string'],
-            'holat'                 => ['sometimes', 'in:faol,nofaol'],
+            'holat'                 => ['sometimes', 'in:faol,nofaol,sudda,yomon'],
+            'telefonlar'                  => ['nullable', 'array', 'max:3'],
+            'telefonlar.*.telefon'        => ['required', 'string', 'max:50'],
+            'telefonlar.*.sms_yuborilsin' => ['nullable', 'boolean'],
         ];
     }
 
@@ -41,6 +47,8 @@ class MijozRequest extends FormRequest
             'telefon.required'     => 'Telefon raqami kiritilishi shart.',
             'tug_sana.before'      => "Tug'ilgan sana bugundan oldin bo'lishi kerak.",
             'pinfl.regex'          => 'PINFL faqat raqamlardan iborat bo\'lishi kerak.',
+            'telefonlar.max'       => "Qo'shimcha telefon raqamlari 3 tadan oshmasligi kerak (asosiy raqam bilan jami 4 ta).",
+            'telefonlar.*.telefon.required' => 'Telefon raqami bo\'sh bo\'lmasligi kerak.',
         ];
     }
 }

@@ -30,9 +30,25 @@
                         <td class="fw-medium">{{ $mijoz->tolik_ism }}</td>
                     </tr>
                     <tr>
-                        <td class="text-muted">Telefon</td>
-                        <td><a href="tel:{{ $mijoz->telefon }}">{{ $mijoz->telefon }}</a></td>
+                        <td class="text-muted">Telefon (asosiy)</td>
+                        <td>
+                            <a href="tel:{{ $mijoz->telefon }}">{{ $mijoz->telefon }}</a>
+                            <span class="badge bg-success ms-1" style="font-size:.68rem">SMS</span>
+                        </td>
                     </tr>
+                    @foreach($mijoz->telefonlar as $t)
+                    <tr>
+                        <td class="text-muted">Qo'shimcha telefon</td>
+                        <td>
+                            <a href="tel:{{ $t->telefon }}">{{ $t->telefon }}</a>
+                            @if($t->sms_yuborilsin)
+                            <span class="badge bg-success ms-1" style="font-size:.68rem">SMS</span>
+                            @else
+                            <span class="badge bg-light text-muted border ms-1" style="font-size:.68rem">SMS yo'q</span>
+                            @endif
+                        </td>
+                    </tr>
+                    @endforeach
                     <tr>
                         <td class="text-muted">Passport</td>
                         <td>{{ $mijoz->passport_tolik }}</td>
@@ -53,6 +69,12 @@
                         <td class="text-muted">Tug'ilgan</td>
                         <td>{{ $mijoz->tug_sana?->format('d.m.Y') ?? '—' }}</td>
                     </tr>
+                    @if($mijoz->viloyat || $mijoz->tuman)
+                    <tr>
+                        <td class="text-muted">Viloyat / Tuman</td>
+                        <td>{{ $mijoz->viloyat?->nomi ?? '—' }} / {{ $mijoz->tuman?->nomi ?? '—' }}</td>
+                    </tr>
+                    @endif
                     <tr>
                         <td class="text-muted">Manzil</td>
                         <td>{{ $mijoz->manzil ?? '—' }}</td>
@@ -72,8 +94,8 @@
                     <tr>
                         <td class="text-muted">Holat</td>
                         <td>
-                            <span class="badge {{ $mijoz->holat === 'faol' ? 'bg-success' : 'bg-secondary' }}">
-                                {{ $mijoz->holat === 'faol' ? 'AKTIV' : 'PASSIV' }}
+                            <span class="badge bg-{{ $mijoz->holat_rangi }}">
+                                {{ $mijoz->holat_nomi }}
                             </span>
                         </td>
                     </tr>
@@ -97,12 +119,25 @@
                 Shartnomalar ({{ $mijoz->kreditlar->count() }} ta)
             </h6>
             @if(Auth::user()->isMenejerYoki())
-            <a href="{{ route('kreditlar.create', ['mijoz_id' => $mijoz->id]) }}"
-               class="btn btn-sm btn-primary">
-                <i class="bi bi-plus-lg me-1"></i> Yangi shartnoma
-            </a>
+                @if($mijoz->shartnomaTaqiqlanganmi())
+                <button type="button" class="btn btn-sm btn-secondary" disabled
+                        title="Mijoz holati «{{ $mijoz->holat_nomi }}» — yangi shartnoma tuzish taqiqlangan">
+                    <i class="bi bi-slash-circle me-1"></i> Yangi shartnoma (taqiqlangan)
+                </button>
+                @else
+                <a href="{{ route('kreditlar.create', ['mijoz_id' => $mijoz->id]) }}"
+                   class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i> Yangi shartnoma
+                </a>
+                @endif
             @endif
         </div>
+        @if($mijoz->shartnomaTaqiqlanganmi())
+        <div class="alert alert-danger py-2 small mb-2">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            Mijoz holati <strong>«{{ $mijoz->holat_nomi }}»</strong> — bu mijoz uchun yangi shartnoma tuzish taqiqlangan.
+        </div>
+        @endif
 
         @forelse($mijoz->kreditlar as $kredit)
         <div class="card border-0 shadow-sm mb-2">

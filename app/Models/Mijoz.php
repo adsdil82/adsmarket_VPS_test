@@ -23,8 +23,11 @@ class Mijoz extends Model implements Auditable
         'passport_seriya',
         'passport_raqam',
         'pinfl',
+        'karta_raqami',
         'passport_berilgan_joy',
         'manzil',
+        'viloyat_id',
+        'tuman_id',
         'tug_sana',
         'ish_joyi',
         'lavozimi',
@@ -53,6 +56,36 @@ class Mijoz extends Model implements Auditable
         return $this->passport_raqam ?? '—';
     }
 
+    /** Holat nomi (UI uchun) */
+    public function getHolatNomiAttribute(): string
+    {
+        return match ($this->holat) {
+            'faol'   => 'AKTIV',
+            'nofaol' => 'PASSIV',
+            'sudda'  => 'SUDDA',
+            'yomon'  => 'YOMON',
+            default  => $this->holat,
+        };
+    }
+
+    /** Holat rangi (badge uchun) */
+    public function getHolatRangiAttribute(): string
+    {
+        return match ($this->holat) {
+            'faol'   => 'success',
+            'nofaol' => 'secondary',
+            'sudda'  => 'warning',
+            'yomon'  => 'danger',
+            default  => 'secondary',
+        };
+    }
+
+    /** Shartnoma tuzish taqiqlangan holatlar (sudda yoki yomon mijoz) */
+    public function shartnomaTaqiqlanganmi(): bool
+    {
+        return in_array($this->holat, ['sudda', 'yomon']);
+    }
+
     // ─── Aloqalar ────────────────────────────────────────────────
 
     /** Mijoz qaysi filialga tegishli */
@@ -61,10 +94,38 @@ class Mijoz extends Model implements Auditable
         return $this->belongsTo(Filial::class, 'filial_id');
     }
 
+    public function viloyat(): BelongsTo
+    {
+        return $this->belongsTo(Viloyat::class, 'viloyat_id');
+    }
+
+    public function tuman(): BelongsTo
+    {
+        return $this->belongsTo(Tuman::class, 'tuman_id');
+    }
+
     /** Mijozning barcha nasiya shartnomalarni */
     public function kreditlar(): HasMany
     {
         return $this->hasMany(RegKredit::class, 'mijoz_id');
+    }
+
+    /** Qo'shimcha telefon raqamlari (asosiy $telefon dan tashqari, 3 tagacha) */
+    public function telefonlar(): HasMany
+    {
+        return $this->hasMany(MijozTelefon::class, 'mijoz_id')->orderBy('tartib');
+    }
+
+    /** SMS yuborish uchun barcha raqamlar (asosiy + "SMS yuborilsin" belgilangan qo'shimchalar) */
+    public function getSmsRaqamlariAttribute(): array
+    {
+        $raqamlar = $this->telefon ? [$this->telefon] : [];
+        foreach ($this->telefonlar as $t) {
+            if ($t->sms_yuborilsin && $t->telefon) {
+                $raqamlar[] = $t->telefon;
+            }
+        }
+        return array_values(array_unique(array_filter($raqamlar)));
     }
 
     /** Faol (to'lanmagan) shartnomalar */

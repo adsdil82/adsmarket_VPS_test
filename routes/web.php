@@ -112,6 +112,10 @@ Route::middleware('auth')->group(function () {
             Route::post('/send',    [PochXatController::class, 'send'])->name('send');
             Route::get('/preview',  [PochXatController::class, 'preview'])->name('preview');
         });
+        // SMS yuborish (shartnoma sahifasidan, AJAX)
+        Route::post('/{kredit}/sms-yubor', [RegKreditController::class, 'smsYubor'])
+            ->middleware('rol.check:admin,menejer,kassir')
+            ->name('sms.yubor');
         Route::get('/{kredit}/tahrirlash', [RegKreditController::class, 'edit'])
             ->middleware('rol.check:admin,menejer')
             ->name('edit');
@@ -277,10 +281,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/',                  [AdminController::class, 'index'])->name('index');
         Route::get('/sozlamalar',        [AdminController::class, 'sozlamalar'])->name('sozlamalar');
         Route::post('/sozlamalar',       [AdminController::class, 'sozlamalarSaqla'])->name('sozlamalar.saqlash');
+        Route::post('/hujjat-band', [AdminController::class, 'hujjatBandSaqla'])->name('hujjatband.saqlash');
+        Route::post('/hujjat-matn', [AdminController::class, 'hujjatMatnSaqla'])->name('hujjatmatn.saqlash');
         Route::get('/ruxsatlar',         [AdminController::class, 'ruxsatlar'])->name('ruxsatlar');
         Route::post('/ruxsatlar',        [AdminController::class, 'ruxsatlarSaqla'])->name('ruxsatlar.saqlash');
+        Route::get('/rollar',            [AdminController::class, 'rollar'])->name('rollar');
+        Route::post('/rollar',           [AdminController::class, 'rollarStore'])->name('rollar.store');
+        Route::put('/rollar/{rol}',      [AdminController::class, 'rollarUpdate'])->name('rollar.update');
+        Route::delete('/rollar/{rol}',   [AdminController::class, 'rollarDestroy'])->name('rollar.destroy');
         Route::get('/foydalanuvchilar',  [AdminController::class, 'foydalanuvchilar'])->name('foydalanuvchilar');
         Route::post('/foydalanuvchilar', [AdminController::class, 'foydalanuvchiStore'])->name('foydalanuvchilar.store');
+        Route::put('/foydalanuvchilar/{foydalanuvchi}', [AdminController::class, 'foydalanuvchiUpdate'])->name('foydalanuvchilar.update');
         Route::post('/foydalanuvchilar/{foydalanuvchi}/holat', [AdminController::class, 'foydalanuvchiHolat'])->name('foydalanuvchilar.holat');
         Route::post('/foydalanuvchilar/{foydalanuvchi}/parol', [AdminController::class, 'foydalanuvchiParolReset'])->name('foydalanuvchilar.parol');
         Route::get('/audit',             [AuditController::class, 'index'])->name('audit');

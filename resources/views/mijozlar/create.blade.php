@@ -9,27 +9,26 @@
 
 @section('content')
 <div class="row justify-content-center">
-<div class="col-lg-8">
+<div class="col-lg-10">
 
-<div class="card border-0 shadow-sm">
-    <div class="card-header">
-        <h6 class="mb-0"><i class="bi bi-person-plus me-1"></i> Yangi mijoz qo'shish</h6>
-    </div>
-    <div class="card-body">
-        <form method="POST" action="{{ route('mijozlar.store') }}">
-            @csrf
-            @include('mijozlar._form')
-
-            <hr>
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-check-lg me-1"></i> Saqlash
-                </button>
-                <a href="{{ route('mijozlar.index') }}" class="btn btn-outline-secondary">Bekor qilish</a>
-            </div>
-        </form>
-    </div>
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h5 class="fw-bold mb-0"><i class="bi bi-person-plus me-2 text-primary"></i>Yangi mijoz qo'shish</h5>
+    <a href="{{ route('mijozlar.index') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Mijozlar ro'yxati
+    </a>
 </div>
+
+<form method="POST" action="{{ route('mijozlar.store') }}">
+    @csrf
+    @include('mijozlar._form')
+
+    <div class="d-flex gap-2 mt-3">
+        <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-check-lg me-1"></i> Saqlash
+        </button>
+        <a href="{{ route('mijozlar.index') }}" class="btn btn-outline-secondary">Bekor qilish</a>
+    </div>
+</form>
 
 </div>
 </div>

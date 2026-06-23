@@ -97,6 +97,27 @@ class Foydalanuvchi extends Authenticatable implements Auditable
         return in_array($this->rol, ['admin','menejer','kassir','omborchi']);
     }
 
+    /**
+     * Rol uchun resurs/amal bo'yicha ruxsat tekshiruvi (admin/ruxsatlar sahifasidagi jadval asosida).
+     * Admin har doim to'liq ruxsatga ega. Natija so'rov davomida cache qilinadi.
+     */
+    public function ruxsat(string $resurs, string $amal = 'korish'): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        $hammasi = cache()->rememberForever('ruxsatlar_all', function () {
+            return \Illuminate\Support\Facades\DB::table('ruxsatlar')->get();
+        });
+
+        $qator = $hammasi->first(
+            fn($r) => $r->rol === $this->rol && $r->resurs === $resurs && $r->amal === $amal
+        );
+
+        return (bool) ($qator->ruxsat ?? false);
+    }
+
     // ─── Scope'lar ────────────────────────────────────────────────
 
     public function scopeFaol($query)

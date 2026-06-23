@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\MijozRequest;
 use App\Models\Filial;
 use App\Models\Mijoz;
+use App\Models\Tuman;
+use App\Models\Viloyat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -52,13 +54,22 @@ class MijozController extends Controller
             ? Filial::faol()->get()
             : Filial::where('id', $user->filial_id)->get();
 
-        return view('mijozlar.create', compact('filiallar'));
+        $viloyatlar = Viloyat::royhati();
+        $tumanlar   = Tuman::orderBy('sort_order')->get(['id', 'viloyat_id', 'nomi']);
+        [$ishJoyilar, $lavozimlar] = $this->ishJoyiVaLavozimRoyxati();
+
+        return view('mijozlar.create', compact('filiallar', 'viloyatlar', 'tumanlar', 'ishJoyilar', 'lavozimlar'));
     }
 
     /** Mijozni saqlash */
     public function store(MijozRequest $request)
     {
-        $mijoz = Mijoz::create($request->validated());
+        $data = $request->validated();
+        $telefonlar = $data['telefonlar'] ?? [];
+        unset($data['telefonlar']);
+
+        $mijoz = Mijoz::create($data);
+        $this->telefonlarSinxron($mijoz, $telefonlar);
 
         return redirect()
             ->route('mijozlar.show', $mijoz)
@@ -72,6 +83,9 @@ class MijozController extends Controller
 
         $mijoz->load([
             'filial',
+            'viloyat',
+            'tuman',
+            'telefonlar',
             'kreditlar' => fn($q) => $q->with('xodim')->orderByDesc('created_at'),
         ]);
 
@@ -88,7 +102,13 @@ class MijozController extends Controller
             ? Filial::faol()->get()
             : Filial::where('id', $user->filial_id)->get();
 
-        return view('mijozlar.edit', compact('mijoz', 'filiallar'));
+        $mijoz->load('telefonlar');
+
+        $viloyatlar = Viloyat::royhati();
+        $tumanlar   = Tuman::orderBy('sort_order')->get(['id', 'viloyat_id', 'nomi']);
+        [$ishJoyilar, $lavozimlar] = $this->ishJoyiVaLavozimRoyxati();
+
+        return view('mijozlar.edit', compact('mijoz', 'filiallar', 'viloyatlar', 'tumanlar', 'ishJoyilar', 'lavozimlar'));
     }
 
     /** Mijozni yangilash */
@@ -96,11 +116,69 @@ class MijozController extends Controller
     {
         $this->filialRuxsatTekshir($mijoz->filial_id);
 
-        $mijoz->update($request->validated());
+        $data = $request->validated();
+        $telefonlar = $data['telefonlar'] ?? [];
+        unset($data['telefonlar']);
+
+        $mijoz->update($data);
+        $this->telefonlarSinxron($mijoz, $telefonlar);
 
         return redirect()
             ->route('mijozlar.show', $mijoz)
             ->with('muvaffaqiyat', 'Mijoz ma\'lumotlari yangilandi.');
+    }
+
+    /**
+     * Boshqa mijozlarda oldin kiritilgan "Ish joyi" va "Lavozimi" qiymatlarini
+     * guruhlab (katta-kichik harf farqini hisobga olmay) dublikatlarsiz ro'yxat qilib qaytaradi —
+     * forma maydonida tanlov (datalist) sifatida ko'rsatish uchun. Eng ko'p uchraganlari birinchi bo'ladi.
+     */
+    private function ishJoyiVaLavozimRoyxati(): array
+    {
+        $ishJoyilar = Mijoz::whereNotNull('ish_joyi')->where('ish_joyi', '!=', '')
+            ->whereRaw("ish_joyi NOT REGEXP '^[0-9]+$'")
+            ->pluck('ish_joyi');
+
+        $lavozimlar = Mijoz::whereNotNull('lavozimi')->where('lavozimi', '!=', '')
+            ->whereRaw("lavozimi NOT REGEXP '^[0-9]+$'")
+            ->pluck('lavozimi');
+
+        return [
+            $this->guruhlabDedup($ishJoyilar),
+            $this->guruhlabDedup($lavozimlar),
+        ];
+    }
+
+    /** Katta-kichik harfga qaramay guruhlab, chastotasi bo'yicha saralab qiymatlar ro'yxatini qaytaradi */
+    private function guruhlabDedup($qiymatlar): array
+    {
+        $guruhlangan = [];
+        foreach ($qiymatlar as $qiymat) {
+            $qiymat = trim($qiymat);
+            if ($qiymat === '') continue;
+            $kalit = mb_strtolower($qiymat);
+            if (!isset($guruhlangan[$kalit])) {
+                $guruhlangan[$kalit] = ['matn' => $qiymat, 'soni' => 0];
+            }
+            $guruhlangan[$kalit]['soni']++;
+        }
+        usort($guruhlangan, fn($a, $b) => $b['soni'] <=> $a['soni']);
+
+        return array_column($guruhlangan, 'matn');
+    }
+
+    /** Mijozning qo'shimcha telefon raqamlarini (3 tagacha) qayta yozish */
+    private function telefonlarSinxron(Mijoz $mijoz, array $telefonlar): void
+    {
+        $mijoz->telefonlar()->delete();
+        foreach (array_slice($telefonlar, 0, 3) as $i => $t) {
+            if (empty($t['telefon'])) continue;
+            $mijoz->telefonlar()->create([
+                'telefon'        => $t['telefon'],
+                'sms_yuborilsin' => !empty($t['sms_yuborilsin']),
+                'tartib'         => $i + 1,
+            ]);
+        }
     }
 
 
@@ -125,7 +203,8 @@ class MijozController extends Controller
             $base = Mijoz::with('filial:id,nomi,kod')
                 ->when($filialId, fn($qu) => $qu->where('filial_id', $filialId))
                 ->select(['id','filial_id','familiya','ism','otasining_ismi',
-                          'telefon','passport_seriya','passport_raqam','holat'])
+                          'telefon','passport_seriya','passport_raqam','pinfl',
+                          'manzil','izoh','karta_raqami','holat'])
                 ->orderByDesc('created_at');
 
             $total   = $base->count();
@@ -135,13 +214,17 @@ class MijozController extends Controller
 
             return response()->json([
                 'data'  => $mijozlar->map(fn($m) => [
-                    'id'       => $m->id,
-                    'fio'      => trim($m->familiya . ' ' . $m->ism .
-                                  ($m->otasining_ismi ? ' ' . $m->otasining_ismi : '')),
-                    'telefon'  => $m->telefon ?? '',
-                    'passport' => trim(($m->passport_seriya ?? '') . ' ' . ($m->passport_raqam ?? '')),
-                    'filial'   => $m->filial?->nomi ?? '',
-                    'holat'    => $m->holat,
+                    'id'           => $m->id,
+                    'fio'          => trim($m->familiya . ' ' . $m->ism .
+                                      ($m->otasining_ismi ? ' ' . $m->otasining_ismi : '')),
+                    'telefon'      => $m->telefon ?? '',
+                    'passport'     => trim(($m->passport_seriya ?? '') . ' ' . ($m->passport_raqam ?? '')),
+                    'pinfl'        => $m->pinfl ?? '',
+                    'manzil'       => $m->manzil ?? '',
+                    'izoh'         => $m->izoh ?? '',
+                    'karta_raqami' => $m->karta_raqami ?? '',
+                    'filial'       => $m->filial?->nomi ?? '',
+                    'holat'        => $m->holat,
                 ]),
                 'total' => $total,
                 'page'  => $page,
@@ -183,19 +266,24 @@ class MijozController extends Controller
                 }
             })
             ->select(['id','filial_id','familiya','ism','otasining_ismi',
-                      'telefon','passport_seriya','passport_raqam','holat'])
+                      'telefon','passport_seriya','passport_raqam','pinfl',
+                      'manzil','izoh','karta_raqami','holat'])
             ->orderByDesc('created_at')
             ->limit(30)
             ->get();
 
         $mapped = $mijozlar->map(fn($m) => [
-            'id'       => $m->id,
-            'fio'      => trim($m->familiya . ' ' . $m->ism .
-                          ($m->otasining_ismi ? ' ' . $m->otasining_ismi : '')),
-            'telefon'  => $m->telefon ?? '',
-            'passport' => trim(($m->passport_seriya ?? '') . ' ' . ($m->passport_raqam ?? '')),
-            'filial'   => $m->filial?->nomi ?? '',
-            'holat'    => $m->holat,
+            'id'           => $m->id,
+            'fio'          => trim($m->familiya . ' ' . $m->ism .
+                              ($m->otasining_ismi ? ' ' . $m->otasining_ismi : '')),
+            'telefon'      => $m->telefon ?? '',
+            'passport'     => trim(($m->passport_seriya ?? '') . ' ' . ($m->passport_raqam ?? '')),
+            'pinfl'        => $m->pinfl ?? '',
+            'manzil'       => $m->manzil ?? '',
+            'izoh'         => $m->izoh ?? '',
+            'karta_raqami' => $m->karta_raqami ?? '',
+            'filial'       => $m->filial?->nomi ?? '',
+            'holat'        => $m->holat,
         ]);
         return response()->json(['data' => $mapped, 'total' => count($mapped), 'page' => 1, 'pages' => 1]);
     }

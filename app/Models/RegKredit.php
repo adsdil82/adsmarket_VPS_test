@@ -39,6 +39,8 @@ class RegKredit extends Model implements Auditable
         'izoh',
         'joriy_filial_id',
         'joriy_xodim_id',
+        'shartnoma_band_versiya_id',
+        'kafillik_band_versiya_id',
     ];
 
     protected $casts = [
@@ -108,6 +110,39 @@ class RegKredit extends Model implements Auditable
         };
     }
 
+    /** Summani kirill alifbosida so'zda ifodalash (shartnoma hujjati uchun) */
+    public static function summaSozda(float $summa): string
+    {
+        $n = (int) round($summa);
+        if ($n === 0) return 'нол сум';
+
+        $birliklar = ['', 'бир', 'икки', 'уч', 'тўрт', 'беш', 'олти', 'етти', 'саккиз', 'тўққиз'];
+        $onlar     = ['', 'ўн', 'йигирма', 'ўттиз', 'қирқ', 'эллик', 'олтмиш', 'етмиш', 'саксон', 'тўқсон'];
+        $yuzlar    = ['', 'бир юз', 'икки юз', 'уч юз', 'тўрт юз', 'беш юз',
+                      'олти юз', 'етти юз', 'саккиз юз', 'тўққиз юз'];
+
+        $uch = function (int $num) use ($birliklar, $onlar, $yuzlar): string {
+            $y = (int) ($num / 100); $num %= 100;
+            $o = (int) ($num / 10);  $b = $num % 10;
+            return trim(($y ? $yuzlar[$y] . ' ' : '') . ($o ? $onlar[$o] . ' ' : '') . ($b ? $birliklar[$b] : ''));
+        };
+
+        $natija = '';
+        $mlrd = (int) ($n / 1000000000); $n %= 1000000000;
+        $mln  = (int) ($n / 1000000);    $n %= 1000000;
+        $ming = (int) ($n / 1000);       $n %= 1000;
+
+        if ($mlrd) $natija .= $uch($mlrd) . ' миллиард ';
+        if ($mln)  $natija .= $uch($mln)  . ' миллион ';
+        if ($ming) $natija .= $uch($ming) . ' минг ';
+        if ($n)    $natija .= $uch($n) . ' ';
+
+        $natija = trim($natija);
+        $birinchiHarf = mb_strtoupper(mb_substr($natija, 0, 1)) . mb_substr($natija, 1);
+
+        return $birinchiHarf . " сум 00 тийн";
+    }
+
     // ─── Aloqalar ────────────────────────────────────────────────
 
     public function mijoz(): BelongsTo
@@ -169,6 +204,26 @@ class RegKredit extends Model implements Auditable
     {
         return $this->hasMany(ShartnomavVersioniya::class, 'reg_kredit_id')
                     ->orderByDesc('versiya_raqam');
+    }
+
+    /**
+     * Shartnoma hujjatiga biriktirilgan qo'shimcha bandlar matni (snapshot qilingan
+     * versiya). Admin sozlamalarda matnni keyinroq o'zgartirsa ham, bu yerda har doim
+     * shartnoma YARATILGAN paytdagi matn qaytadi.
+     */
+    public function getShartnomaQoshimchaBandAttribute(): ?string
+    {
+        return $this->shartnoma_band_versiya_id
+            ? \App\Models\HujjatBand::find($this->shartnoma_band_versiya_id)?->matn
+            : null;
+    }
+
+    /** Kafillik hujjatiga biriktirilgan qo'shimcha bandlar matni (snapshot qilingan versiya) */
+    public function getKafillikQoshimchaBandAttribute(): ?string
+    {
+        return $this->kafillik_band_versiya_id
+            ? \App\Models\HujjatBand::find($this->kafillik_band_versiya_id)?->matn
+            : null;
     }
 
     // ─── Scope'lar ────────────────────────────────────────────────

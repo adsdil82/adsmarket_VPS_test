@@ -140,6 +140,11 @@
         </a>
     </li>
     <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tab-hujjatlar">
+            <i class="bi bi-file-earmark-text me-1"></i> Hujjatlar
+        </a>
+    </li>
+    <li class="nav-item">
         <a class="nav-link" data-bs-toggle="tab" href="#tab-versiyalar">
             <i class="bi bi-clock-history me-1"></i> Versiyalar
             <span class="badge bg-secondary ms-1">{{ $kredit->versiyalar->count() }}</span>
@@ -150,6 +155,14 @@
             <i class="bi bi-envelope-paper me-1"></i> Pochta
             @if($pochta_loglar->count() > 0)
             <span class="badge bg-warning text-dark ms-1" style="font-size:10px">{{ $pochta_loglar->count() }}</span>
+            @endif
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tab-sms">
+            <i class="bi bi-chat-dots me-1"></i> SMS
+            @if($sms_loglar->count() > 0)
+            <span class="badge bg-warning text-dark ms-1" style="font-size:10px">{{ $sms_loglar->count() }}</span>
             @endif
         </a>
     </li>
@@ -167,6 +180,7 @@
                             <th>#</th>
                             <th>To'lov sanasi</th>
                             <th class="text-end">Rejadagi summa</th>
+                            <th class="text-end">shu jumladan ustama</th>
                             <th class="text-end">To'langan</th>
                             <th class="text-end">Qoldiq</th>
                             <th>Holat</th>
@@ -179,6 +193,9 @@
                             <td class="text-muted small">{{ $g->oylik_tartib }}</td>
                             <td>{{ $g->tolov_sana?->format('d.m.Y') ?? '—' }}</td>
                             <td class="text-end">{{ $g->tolov_summa !== null ? number_format($g->tolov_summa, 0, '.', ' ') : '—' }}</td>
+                            <td class="text-end text-warning-emphasis">
+                                {{ $g->ustama_summa > 0 ? number_format($g->ustama_summa, 0, '.', ' ') : '—' }}
+                            </td>
                             <td class="text-end text-success">
                                 {{ $g->tolangan_summa > 0 ? number_format($g->tolangan_summa, 0, '.', ' ') : '—' }}
                             </td>
@@ -474,6 +491,63 @@
         @endif
     </div>
 
+    {{-- ── Hujjatlar ────────────────────────────────────────────────── --}}
+    <div class="tab-pane fade" id="tab-hujjatlar">
+        <div class="row g-3">
+            @php
+            $hujjatlar = [
+              ['key'=>'shartnoma',   'icon'=>'file-earmark-text',  'rang'=>'primary',  'nom'=>'Nasiya shartnoma'],
+              ['key'=>'kafillik',    'icon'=>'people-fill',        'rang'=>'secondary','nom'=>'Kafillik shartnomasi'],
+              ['key'=>'grafik',      'icon'=>'table',              'rang'=>'info',     'nom'=>"To'lov grafigi"],
+              ['key'=>'yuk_xati',    'icon'=>'truck',              'rang'=>'warning',  'nom'=>'Yuk xati'],
+              ['key'=>'schyot',      'icon'=>'receipt',            'rang'=>'success',  'nom'=>'Schyot-faktura'],
+              ['key'=>'ariza',       'icon'=>'envelope-text',      'rang'=>'danger',   'nom'=>'Rahbarga ariza'],
+              ['key'=>'til_xat',     'icon'=>'pen-fill',           'rang'=>'dark',     'nom'=>"Til xat (majburiyat)"],
+            ];
+            $kafilBiriktirilgan = $kredit->kafil_mijoz_id || $kredit->kafil_ism;
+            @endphp
+            @foreach($hujjatlar as $h)
+              @continue($h['key'] === 'kafillik' && !$kafilBiriktirilgan)
+            <div class="col-sm-6 col-lg-4">
+              <div class="card border-{{ $h['rang'] }} border-opacity-25 h-100">
+                <div class="card-body d-flex flex-column">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="bg-{{ $h['rang'] }} bg-opacity-10 text-{{ $h['rang'] }} rounded p-2">
+                      <i class="bi bi-{{ $h['icon'] }} fs-5"></i>
+                    </span>
+                    <span class="fw-semibold small">{{ $h['nom'] }}</span>
+                  </div>
+                  <div class="mt-auto pt-2">
+                    <a href="{{ route('kreditlar.hujjat', [$kredit, $h['key']]) }}"
+                       target="_blank"
+                       class="btn btn-sm btn-outline-{{ $h['rang'] }} w-100">
+                      <i class="bi bi-printer me-1"></i>Chop etish
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+            @endforeach
+            @if(!$kafilBiriktirilgan)
+            <div class="col-sm-6 col-lg-4">
+              <div class="card border-secondary border-opacity-25 h-100 bg-light">
+                <div class="card-body d-flex flex-column">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="bg-secondary bg-opacity-10 text-secondary rounded p-2">
+                      <i class="bi bi-people-fill fs-5"></i>
+                    </span>
+                    <span class="fw-semibold small text-muted">Kafillik shartnomasi</span>
+                  </div>
+                  <div class="mt-auto pt-2">
+                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Kafil biriktirilmagan.</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            @endif
+        </div>
+    </div>
+
     {{-- ── Versiyalar ──────────────────────────────────────────────── --}}
     <div class="tab-pane fade" id="tab-versiyalar">
         <div class="card border-0 shadow-sm">
@@ -524,6 +598,11 @@
     {{-- ── Pochta Xatlar ──────────────────────────────────────── --}}
     <div class="tab-pane fade" id="tab-pochta">
         @include('kredit._pochta_tab')
+    </div>
+
+    {{-- ── SMS yuborish ──────────────────────────────────────── --}}
+    <div class="tab-pane fade" id="tab-sms">
+        @include('kredit._sms_tab')
     </div>
 </div>
 

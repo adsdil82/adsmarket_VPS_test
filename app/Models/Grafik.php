@@ -19,6 +19,7 @@ class Grafik extends Model implements Auditable
         'oylik_tartib',
         'tolov_sana',
         'tolov_summa',
+        'ustama_summa',
         'qoldiq_suma',
         'holat',
         'tolangan_summa',
