@@ -1,11 +1,29 @@
 <?php
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use ZipArchive;
 
 class BackupController extends Controller
 {
+    /**
+     * ZIP generatsiya progressini (0-100) keshga yozish. Frontend buni
+     * /admin/deploy/progress/{turi} orqali polling qilib o'qiydi — kesh
+     * fayl-asosli bo'lgani uchun bu request bilan polling request alohida
+     * PHP-FPM workerlarda ishlasa ham bir-birini ko'ra oladi.
+     */
+    private function progressYoz(string $turi, int $foiz): void
+    {
+        Cache::put("deploy_progress_{$turi}", max(0, min(100, $foiz)), 600);
+    }
+
+    /** Progress holatini JSON sifatida qaytarish (frontend polling uchun) */
+    public function progress(string $turi)
+    {
+        return response()->json(['foiz' => (int) Cache::get("deploy_progress_{$turi}", 0)]);
+    }
+
     /** Deploy sahifasi */
     public function deploy()
     {
@@ -33,19 +51,23 @@ class BackupController extends Controller
         set_time_limit(300);
         ini_set('memory_limit', '512M');
 
+        $this->progressYoz('db', 0);
+
         $sana    = now()->format('Y-m-d_H-i');
         $sqlFile = storage_path("app/nasiyapro_db_{$sana}.sql");
         $zipFile = storage_path("app/nasiyapro_db_{$sana}.zip");
         $dbName  = config('database.connections.mysql.database');
 
-        // SQL dump PHP orqali yaratish
+        // SQL dump PHP orqali yaratish (0-90% — jadval-jadval progress yoziladi)
         $sql = $this->phpDump($dbName);
 
         if (strlen($sql) < 100) {
+            $this->progressYoz('db', 0);
             return response()->json(['xato' => 'Dump yaratishda xato.'], 500);
         }
 
         file_put_contents($sqlFile, $sql);
+        $this->progressYoz('db', 92);
 
         // ZIP
         $zip = new ZipArchive();
@@ -60,6 +82,7 @@ class BackupController extends Controller
             "2. Yoki: mysql -u USER -p DBNAME < nasiyapro_db.sql\n"
         );
         $zip->close();
+        $this->progressYoz('db', 100);
 
         @unlink($sqlFile);
 
@@ -84,8 +107,11 @@ class BackupController extends Controller
 
         // Barcha jadvallar ro'yxati
         $jadvallar = $pdo->query("SHOW FULL TABLES FROM `{$dbName}` WHERE Table_type = 'BASE TABLE'")->fetchAll(\PDO::FETCH_COLUMN);
+        $jadvalSoni = max(1, count($jadvallar));
 
-        foreach ($jadvallar as $jadval) {
+        foreach ($jadvallar as $jadvalIdx => $jadval) {
+            // Jadvallarni dump qilish 0-90% oraligini egallaydi (qolgani fayl yozish/ZIP uchun)
+            $this->progressYoz('db', (int) round(($jadvalIdx / $jadvalSoni) * 90));
             // CREATE TABLE
             $create = $pdo->query("SHOW CREATE TABLE `{$jadval}`")->fetch(\PDO::FETCH_ASSOC);
             $output[] = "-- --------------------------------------------------------";
@@ -156,11 +182,14 @@ class BackupController extends Controller
         set_time_limit(300);
         ini_set('memory_limit', '512M');
 
+        $this->progressYoz('app', 0);
+
         $sana    = now()->format('Y-m-d_H-i');
         $zipFile = storage_path("app/nasiyapro_app_{$sana}.zip");
 
         $zip = new ZipArchive();
         if ($zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            $this->progressYoz('app', 0);
             return response()->json(['xato' => 'ZIP fayl yaratib bo\'lmadi.'], 500);
         }
 
@@ -175,6 +204,31 @@ class BackupController extends Controller
         $papkalar = ['app', 'config', 'database', 'resources', 'routes',
                      'public', 'storage/app', 'lang'];
 
+        $skipTekshir = function (string $rel) use ($chiqaril) {
+            foreach ($chiqaril as $c) {
+                if (str_starts_with($rel, $c)) return true;
+            }
+            return false;
+        };
+
+        // 1-o'tish: jami element sonini hisoblash (progress foizini hisoblash uchun)
+        $jamiSoni = 0;
+        foreach ($papkalar as $papka) {
+            $dir = $base . '/' . $papka;
+            if (!is_dir($dir)) continue;
+            $iter = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS),
+                \RecursiveIteratorIterator::SELF_FIRST
+            );
+            foreach ($iter as $item) {
+                $rel = ltrim(str_replace($base, '', $item->getRealPath()), '/\\');
+                if (!$skipTekshir($rel)) $jamiSoni++;
+            }
+        }
+        $jamiSoni = max(1, $jamiSoni);
+
+        // 2-o'tish: fayllarni ZIP'ga qo'shish va progress yozish (0-90%)
+        $bajarildi = 0;
         foreach ($papkalar as $papka) {
             $dir = $base . '/' . $papka;
             if (!is_dir($dir)) continue;
@@ -186,21 +240,21 @@ class BackupController extends Controller
 
             foreach ($iter as $item) {
                 $rel = ltrim(str_replace($base, '', $item->getRealPath()), '/\\');
-
-                // Chiqariluvchi papka tekshiruvi
-                $skip = false;
-                foreach ($chiqaril as $c) {
-                    if (str_starts_with($rel, $c)) { $skip = true; break; }
-                }
-                if ($skip) continue;
+                if ($skipTekshir($rel)) continue;
 
                 if ($item->isDir()) {
                     $zip->addEmptyDir($rel);
                 } else {
                     $zip->addFile($item->getRealPath(), $rel);
                 }
+
+                $bajarildi++;
+                if ($bajarildi % 25 === 0) {
+                    $this->progressYoz('app', (int) round(($bajarildi / $jamiSoni) * 90));
+                }
             }
         }
+        $this->progressYoz('app', 90);
 
         // Root fayllar
         foreach (['composer.json', 'composer.lock', 'artisan', '.env.example',
@@ -226,6 +280,7 @@ class BackupController extends Controller
         }
 
         $zip->close();
+        $this->progressYoz('app', 100);
 
         return response()->download($zipFile, "nasiyapro_app_{$sana}.zip")
             ->deleteFileAfterSend();

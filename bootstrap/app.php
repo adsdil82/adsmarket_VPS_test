@@ -15,8 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
 
         $middleware->alias([
-            'filial.check' => \App\Http\Middleware\FilialCheck::class,
-            'rol.check'    => \App\Http\Middleware\RolCheck::class,
+            'filial.check'      => \App\Http\Middleware\FilialCheck::class,
+            'rol.check'         => \App\Http\Middleware\RolCheck::class,
+            'litsenziya.tekshir' => \App\Http\Middleware\LitsenziyaTekshir::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

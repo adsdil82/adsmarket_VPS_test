@@ -104,7 +104,7 @@
         .grup-label { color: var(--sidebar-bg) !important; }
 
         /* ── Aktiv menyu elementi — temadan mustaqil gradient ─── */
-        .nav-link.active {
+        #sidebar .nav-link.active {
             background: linear-gradient(135deg, #0ee9e9 0%, #6366f1 100%) !important;
             color: #ffffff !important;
             font-weight: 700 !important;
@@ -113,7 +113,7 @@
             border-radius: 7px !important;
             position: relative;
         }
-        .nav-link.active::before {
+        #sidebar .nav-link.active::before {
             content: '';
             position: absolute;
             left: 0; top: 4px; bottom: 4px;
@@ -122,10 +122,22 @@
             border-radius: 0 3px 3px 0;
             opacity: .7;
         }
-        .nav-link:not(.active):hover {
+        #sidebar .nav-link:not(.active):hover {
             background: rgba(255,255,255,.09) !important;
             color: #fff !important;
             border-radius: 7px;
+        }
+
+        /* ── Bootstrap nav-tabs (sidebardan tashqarida) — yengil soya, chegara va faol tab qalin shrift ── */
+        .nav-tabs .nav-link {
+            box-shadow: 0 1px 3px rgba(0,0,0,.08);
+            margin-bottom: -1px;
+            border-color: rgba(222,226,230,.45) !important;
+        }
+        .nav-tabs .nav-link.active {
+            font-weight: 700 !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,.12);
+            border-color: #aab1bb #aab1bb #fff !important;
         }
         [data-bs-theme="dark"] .card { border-color: #444; }
 
@@ -905,6 +917,16 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="{{ route('admin.litsenziya') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('admin.litsenziya') ? 'active' : '' }}">
+                        <i class="bi bi-shield-check me-2 {{ \App\Services\Litsenziya::bloklanganmi() ? 'text-danger' : 'text-success' }}"></i>
+                        <span class="nav-label">Litsenziya</span>
+                        @if(\App\Services\Litsenziya::bloklanganmi())
+                            <span class="badge bg-danger ms-1">!</span>
+                        @endif
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="{{ route('admin.ruxsatlar') }}"
                        class="nav-link text-white py-1 {{ request()->routeIs('admin.ruxsatlar') ? 'active' : '' }}">
                         <i class="bi bi-key me-2 text-warning"></i>
@@ -1077,6 +1099,24 @@
                 </button>
             </div>
         </header>
+
+        {{-- Litsenziya holati ogohlantiruvi (faqat admin uchun) --}}
+        @if(Auth::user()->isAdmin() && \App\Services\Litsenziya::yoqilganmi() && in_array(\App\Services\Litsenziya::holati(), ['ogohlantirish','yengillik','yopiq']))
+            @php $litHolat = \App\Services\Litsenziya::holati(); @endphp
+            <div class="px-4 pt-3">
+                <div class="alert alert-{{ $litHolat === 'yopiq' ? 'danger' : 'warning' }} d-flex align-items-center justify-content-between py-2 mb-0">
+                    <span>
+                        <i class="bi bi-shield-exclamation me-1"></i>
+                        @if($litHolat === 'yopiq')
+                            <b>Litsenziya muddati tugagan.</b> Yangi mijoz/tovar/shartnoma qo'shish to'xtatilgan.
+                        @else
+                            <b>Litsenziya muddati tugashiga oz qoldi.</b> Vaqtida faollashtiring.
+                        @endif
+                    </span>
+                    <a href="{{ route('admin.litsenziya') }}" class="btn btn-sm btn-{{ $litHolat === 'yopiq' ? 'light' : 'dark' }} ms-2">Litsenziya bo'limi</a>
+                </div>
+            </div>
+        @endif
 
         {{-- Flash xabarlar --}}
         <div class="px-4 pt-3">

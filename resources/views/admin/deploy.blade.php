@@ -71,14 +71,18 @@
                             <span class="text-primary small">{{ count($jadvallar) }} jadval</span>
                         </div>
                     </div>
-                    <a href="{{ route('admin.deploy.db') }}" class="btn btn-success btn-sm fw-bold px-3"
-                       onclick="yuklanish(this,'Yuklanmoqda...',60000)">
+                    <button type="button" class="btn btn-success btn-sm fw-bold px-3" id="db-zip-btn"
+                            onclick="zipBoshla('db', this, '{{ route('admin.deploy.db') }}')">
                         <i class="bi bi-download me-1"></i>DB ZIP
-                    </a>
+                    </button>
                 </div>
                 <div class="text-muted mt-2" style="font-size:11px">
                     <i class="bi bi-info-circle me-1"></i>Fayl: <code>nasiyapro_db_[sana].zip</code> — phpMyAdmin orqali import qiling
                 </div>
+                <div class="progress mt-2 d-none" id="db-zip-progress-wrap" style="height:6px">
+                    <div class="progress-bar bg-success" id="db-zip-progress" style="width:0%"></div>
+                </div>
+                <div class="text-success small mt-1 d-none" id="db-zip-progress-text"></div>
             </div>
         </div>
     </div>
@@ -97,14 +101,18 @@
                             <span class="text-warning small">~30 soniya</span>
                         </div>
                     </div>
-                    <a href="{{ route('admin.deploy.app') }}" class="btn btn-primary btn-sm fw-bold px-3"
-                       onclick="yuklanish(this,'ZIP yaratilmoqda...',90000)">
+                    <button type="button" class="btn btn-primary btn-sm fw-bold px-3" id="app-zip-btn"
+                            onclick="zipBoshla('app', this, '{{ route('admin.deploy.app') }}')">
                         <i class="bi bi-download me-1"></i>APP ZIP
-                    </a>
+                    </button>
                 </div>
                 <div class="text-muted mt-2" style="font-size:11px">
                     <i class="bi bi-info-circle me-1"></i>Ichida: <code>.env.production_NAMUNA</code> va <code>DEPLOY_QOLLANMA.txt</code>
                 </div>
+                <div class="progress mt-2 d-none" id="app-zip-progress-wrap" style="height:6px">
+                    <div class="progress-bar bg-primary" id="app-zip-progress" style="width:0%"></div>
+                </div>
+                <div class="text-primary small mt-1 d-none" id="app-zip-progress-text"></div>
             </div>
         </div>
     </div>
@@ -506,11 +514,67 @@ sudo certbot --nginx -d sizningdomen.uz</pre>
 
 @push('scripts')
 <script>
-function yuklanish(btn, matn, ms) {
+/**
+ * ZIP yaratish (DB yoki APP) — haqiqiy server progressini polling orqali
+ * kuzatib, progress-bar (1-100%) ko'rsatadi. Yuklab olish yashirin iframe
+ * orqali boshlanadi (sahifadan chiqib ketmaslik uchun), shu vaqtda
+ * /admin/deploy/progress/{turi} dan progress so'raladi.
+ */
+function zipBoshla(turi, btn, url) {
+    if (btn.classList.contains('disabled')) return;
+
     const orig = btn.innerHTML;
-    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${matn}`;
+    const wrap = document.getElementById(turi + '-zip-progress-wrap');
+    const bar  = document.getElementById(turi + '-zip-progress');
+    const text = document.getElementById(turi + '-zip-progress-text');
+
     btn.classList.add('disabled');
-    setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('disabled'); }, ms || 60000);
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Boshlandi...';
+    wrap.classList.remove('d-none');
+    text.classList.remove('d-none');
+    bar.style.width = '1%';
+    text.textContent = '1%';
+
+    // Yuklab olishni yashirin iframe orqali boshlaymiz (sahifa qolaveradi)
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = url;
+    document.body.appendChild(iframe);
+
+    const progressUrl = "{{ route('admin.deploy.progress', '___turi___') }}".replace('___turi___', turi);
+    let oxirgiFoiz = 1;
+    let toxtaganSoni = 0;
+
+    const polling = setInterval(async () => {
+        let foiz = oxirgiFoiz;
+        try {
+            const res = await fetch(progressUrl, { cache: 'no-store' });
+            const data = await res.json();
+            foiz = data.foiz || 0;
+        } catch (e) {
+            toxtaganSoni++;
+        }
+
+        if (foiz > oxirgiFoiz) { oxirgiFoiz = foiz; toxtaganSoni = 0; }
+
+        bar.style.width = Math.max(1, oxirgiFoiz) + '%';
+        text.textContent = Math.max(1, oxirgiFoiz) + '%';
+
+        // Yakunlandi (100%) yoki javob 15 marta ketma-ket kelmasa — to'xtatamiz
+        if (oxirgiFoiz >= 100 || toxtaganSoni > 15) {
+            clearInterval(polling);
+            bar.style.width = '100%';
+            text.textContent = 'Yakunlandi ✓';
+            btn.innerHTML = orig;
+            btn.classList.remove('disabled');
+            setTimeout(() => {
+                wrap.classList.add('d-none');
+                text.classList.add('d-none');
+                bar.style.width = '0%';
+            }, 2500);
+            setTimeout(() => iframe.remove(), 3000);
+        }
+    }, 500);
 }
 
 function copyCmd(btn, id) {

@@ -514,6 +514,50 @@ class RegKreditController extends Controller
         }
     }
 
+    /**
+     * Shartnomani tanlangan versiyadagi ("oldingi holat") qiymatlarga qaytarish.
+     * Faqat admin uchun ochiq (xavfli/qaytarib bo'lmaydigan amal). Faqat reg_kredit
+     * jadvalining o'z maydonlarini tiklaydi — tovarlar va grafik (to'lov jadvali)
+     * jadvallariga TEGMAYDI, chunki ularning tarixi versiya jadvalida saqlanmaydi
+     * va ularni avtomatik qayta generatsiya qilish to'langan to'lovlarni
+     * yo'qotib qo'yishi mumkin (bu loyihada oldin real hodisa bo'lgan).
+     */
+    public function versiyaniQaytar(\App\Models\RegKredit $kredit, \App\Models\ShartnomavVersioniya $versiya)
+    {
+        $this->filialRuxsatTekshir($kredit->filial_id);
+
+        if (Auth::user()->rol !== 'admin') {
+            abort(403, 'Versiyani qaytarish faqat admin uchun ochiq.');
+        }
+
+        if ($versiya->reg_kredit_id !== $kredit->id) {
+            abort(404);
+        }
+
+        if (!$versiya->eski_holat) {
+            return back()->withErrors(['versiya' => "Bu versiya uchun \"oldingi holat\" ma'lumoti mavjud emas (birinchi yaratilish versiyasi)."]);
+        }
+
+        return DB::transaction(function () use ($kredit, $versiya) {
+            $tiklanadiganMaydonlar = array_intersect_key(
+                $versiya->eski_holat,
+                array_flip($kredit->getFillable())
+            );
+
+            $this->tulovService->versiyaSaqlash(
+                $kredit,
+                "v{$versiya->versiya_raqam} versiyasiga qaytarildi",
+                $tiklanadiganMaydonlar
+            );
+
+            $kredit->update($tiklanadiganMaydonlar);
+
+            return redirect()
+                ->route('kreditlar.versiyalar.index', $kredit)
+                ->with('muvaffaqiyat', "Shartnoma v{$versiya->versiya_raqam} versiyasidagi holatga qaytarildi. Diqqat: tovarlar va to'lov grafigi o'zgartirilmadi — agar summa farq qilsa, ularni qo'lda tekshiring.");
+        });
+    }
+
     /** Filial ruxsatini tekshirish */
     private function filialRuxsatTekshir(int $kreditFilialId): void
     {

@@ -8,6 +8,7 @@ use App\Http\Controllers\OmborController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\LitsenziyaController;
 use App\Http\Controllers\TransferController;
 use App\Http\Controllers\TransferHubController;
 use App\Http\Controllers\StockTransferController;
@@ -87,7 +88,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/yangi',      [MijozController::class, 'create'])
             ->middleware('rol.check:admin,menejer')
             ->name('create');
-        Route::post('/',          [MijozController::class, 'store'])->name('store');
+        Route::post('/',          [MijozController::class, 'store'])
+            ->middleware('litsenziya.tekshir')
+            ->name('store');
         Route::get('/ajax-qidiruv', [MijozController::class, 'ajaxQidiruv'])->name('ajax.qidiruv');
         Route::get('/{mijoz}',    [MijozController::class, 'show'])->name('show');
         Route::get('/{mijoz}/tahrirlash', [MijozController::class, 'edit'])
@@ -103,7 +106,7 @@ Route::middleware('auth')->group(function () {
             ->middleware('rol.check:admin,menejer')
             ->name('create');
         Route::post('/',         [RegKreditController::class, 'store'])
-            ->middleware('rol.check:admin,menejer')
+            ->middleware(['rol.check:admin,menejer', 'litsenziya.tekshir'])
             ->name('store');
         Route::get('/{kredit}',  [RegKreditController::class, 'show'])->name('show');
         // Hybrid Pochta xat yuborish (Phase 3)
@@ -152,6 +155,7 @@ Route::middleware('auth')->group(function () {
         // Versiyalar
         Route::get('/{kredit}/versiyalar',          [VersionController::class, 'index'])->name('versiyalar.index');
         Route::get('/{kredit}/versiyalar/{versiya}', [VersionController::class, 'show'])->name('versiyalar.show');
+        Route::post('/{kredit}/versiyalar/{versiya}/qaytarish', [RegKreditController::class, 'versiyaniQaytar'])->name('versiyalar.qaytarish');
     });
 
     // ─── Hisobotlar ───────────────────────────────────────────────
@@ -172,7 +176,9 @@ Route::middleware('auth')->group(function () {
     Route::prefix('katalog')->name('katalog.')->middleware('rol.check:admin,menejer')->group(function () {
         Route::get('/',               [TovarKatalogController::class, 'index'])->name('index');
         Route::get('/yangi',          [TovarKatalogController::class, 'create'])->name('create');
-        Route::post('/',              [TovarKatalogController::class, 'store'])->name('store');
+        Route::post('/',              [TovarKatalogController::class, 'store'])
+            ->middleware('litsenziya.tekshir')
+            ->name('store');
         Route::get('/{katalog}/edit', [TovarKatalogController::class, 'edit'])->name('edit');
         Route::put('/{katalog}',      [TovarKatalogController::class, 'update'])->name('update');
         Route::delete('/{katalog}',   [TovarKatalogController::class, 'destroy'])->name('destroy');
@@ -298,6 +304,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/deploy',            [BackupController::class, 'deploy'])->name('deploy');
         Route::get('/deploy/db-zip',     [BackupController::class, 'dbZip'])->name('deploy.db');
         Route::get('/deploy/app-zip',    [BackupController::class, 'appZip'])->name('deploy.app');
+        Route::get('/deploy/progress/{turi}', [BackupController::class, 'progress'])->name('deploy.progress');
+        Route::get('/litsenziya',        [LitsenziyaController::class, 'index'])->name('litsenziya');
+        Route::post('/litsenziya',       [LitsenziyaController::class, 'faollashtir'])->name('litsenziya.faollashtir');
         Route::get('/github',            [AdminController::class, 'github'])->name('github');
         // Hybrid Pochta (hybrid.pochta.uz) — jismoniy pochta xatlari
         Route::prefix('gibrid-pochta')->name('gibrid-pochta.')->group(function () {

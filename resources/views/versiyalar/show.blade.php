@@ -26,10 +26,31 @@
             @endif
         </div>
     </div>
-    <a href="{{ route('kreditlar.versiyalar.index', $kredit) }}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i> Versiyalarga qaytish
-    </a>
+    <div class="d-flex gap-2">
+        @if(Auth::user()->isAdmin() && $versiya->eski_holat)
+        <form method="POST" action="{{ route('kreditlar.versiyalar.qaytarish', [$kredit, $versiya]) }}"
+              onsubmit="return confirm('Shartnoma ushbu versiyadagi (\'Oldingi holat\') qiymatlarga qaytariladi.\n\nDiqqat: Tovarlar va to\'lov grafigi O\'ZGARTIRILMAYDI — faqat summa/sana maydonlari tiklanadi. Davom etilsinmi?');">
+            @csrf
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-arrow-counterclockwise me-1"></i> Shu versiyaga qaytarish
+            </button>
+        </form>
+        @endif
+        <a href="{{ route('kreditlar.versiyalar.index', $kredit) }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Versiyalarga qaytish
+        </a>
+    </div>
 </div>
+
+@if(Auth::user()->isAdmin() && $versiya->eski_holat)
+<div class="alert alert-secondary small mb-3">
+    <i class="bi bi-info-circle me-1"></i>
+    "Shu versiyaga qaytarish" — shartnomaning <strong>"Oldingi holat"</strong> ustunidagi
+    qiymatlarini (jami summa, kredit summa, sanalar va h.k.) tiklaydi va bu amal yangi versiya
+    sifatida qayd etiladi. <strong>Tovarlar va to'lov grafigi (Graf) o'zgartirilmaydi</strong> —
+    agar summalar farq qilsa, ularni "Tahrirlash" orqali qo'lda moslashtirish kerak bo'ladi.
+</div>
+@endif
 
 {{-- ── O'zgargan maydonlar ─────────────────────────────────────────── --}}
 @if($versiya->ozgargan_maydonlar && count($versiya->ozgargan_maydonlar) > 0)
