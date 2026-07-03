@@ -8,8 +8,8 @@
 
 @section('content')
 <div class="card border-0 shadow-sm">
-    <div class="card-header d-flex align-items-center gap-2 py-2">
-        <i class="bi bi-pencil-square text-warning fs-5"></i>
+    <div class="card-header d-flex align-items-center gap-2 py-2 text-white" style="background:linear-gradient(90deg,#1e3a8a,#1d4ed8);border-radius:.375rem .375rem 0 0">
+        <i class="bi bi-pencil-square fs-5" style="color:#fbbf24"></i>
         <h6 class="mb-0 fw-bold">{{ $kredit->shartnoma_raqam }} — Tahrirlash</h6>
         <span class="badge bg-{{ $kredit->holat_rangi }} ms-auto">{{ $kredit->holatNomi }}</span>
     </div>

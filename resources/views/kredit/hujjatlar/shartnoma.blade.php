@@ -28,9 +28,14 @@
   table.manzil-ichki { width:100%; border-collapse:collapse; font-size:10.5px; }
   table.manzil-ichki td { border:1px solid #333; padding:4px 6px; }
   table.manzil-ichki td:first-child { font-weight:bold; width:35%; background:#f7f7f7; }
-  .xaridor-box { border:1px solid #333; padding:6px 8px; font-size:10.5px; }
-  .imzo-row { display:flex; justify-content:space-between; margin-top:14px; }
-  .imzo-kvadrat { border:1px solid #333; padding:4px 10px; display:inline-block; }
+  /* MUHIM: DomPDF flexbox'ni to'liq qo'llab-quvvatlamaydi — shu sabab .imzo-row
+     avval display:flex bilan yozilgan bo'lib, ikkala imzo qutisi tekislanmay,
+     ikkisi ham chap tomonga (Sotuvchi ustuniga) yopishib qolardi. Shuning
+     uchun manzil/imzo qatorlari kabi haqiqiy <table> orqali tekislanadi —
+     DomPDF jadvallarni to'g'ri render qiladi. */
+  table.imzo-row { width:100%; border-collapse:collapse; margin-top:14px; }
+  table.imzo-row td { width:50%; padding:0 8px; }
+  .imzo-kvadrat { border:1px solid #333; padding:4px 10px; text-align:center; }
   .rozilik { margin-top:18px; font-size:10.5px; }
   .page-break { page-break-before: always; }
 </style>
@@ -159,21 +164,23 @@
       </td>
       <td>
         <p style="text-align:center;font-weight:bold;margin-bottom:4px">"Харидор":</p>
-        <div class="xaridor-box">
-          <strong>{{ $mijoz?->familiya }} {{ $mijoz?->ism }} {{ $mijoz?->otasining_ismi }}</strong><br>
-          Паспорт маълумотлари: {{ $mijoz?->passport_seriya }} {{ $mijoz?->passport_raqam }}<br>
-          {{ $mijoz?->passport_berilgan_joy }} томонидан берилган.<br>
-          Яшаш манзили: {{ $mijozManzil }}<br>
-          Тел: {{ $mijoz?->telefon }}
-        </div>
+        <table class="manzil-ichki">
+          <tr><td colspan="2"><strong>{{ $mijoz?->familiya }} {{ $mijoz?->ism }} {{ $mijoz?->otasining_ismi }}</strong></td></tr>
+          <tr><td>Паспорт:</td><td>{{ $mijoz?->passport_seriya }} {{ $mijoz?->passport_raqam }}</td></tr>
+          <tr><td>Берилган:</td><td>{{ $mijoz?->passport_berilgan_joy }}</td></tr>
+          <tr><td>Манзили:</td><td>{{ $mijozManzil }}</td></tr>
+          <tr><td>Тел:</td><td>{{ $mijoz?->telefon }}</td></tr>
+        </table>
       </td>
     </tr>
   </table>
 
-  <div class="imzo-row">
-    <div class="imzo-kvadrat">Сотувчи имзоси</div>
-    <div class="imzo-kvadrat">Харидор имзоси</div>
-  </div>
+  <table class="imzo-row">
+    <tr>
+      <td><div class="imzo-kvadrat">Сотувчи имзоси</div></td>
+      <td><div class="imzo-kvadrat">Харидор имзоси</div></td>
+    </tr>
+  </table>
 
   <p class="rozilik">Шартнома шартлари билан танишиб чиқдим. Ушбу шартнома шартларига розиман_________________</p>
 

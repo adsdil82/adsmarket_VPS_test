@@ -59,9 +59,15 @@ class HarajatMigrate extends Command
     public function handle(): int
     {
         $dryRun    = $this->option('dry-run');
-        $kassaId   = DB::table('kassalar')->value('id'); // birinchi kassani ol
         $filialId  = DB::table('filiallar')->value('id');
         $xodimId   = DB::table('foydalanuvchilar')->where('rol', 'admin')->value('id');
+
+        // Eski bazada harajatlar FAQAT naqd kassadan amalga oshirilgan
+        // (terminal/bank kassasi tushunchasi bo'lmagan) — shuning uchun har
+        // bir filial uchun aniq naqd kassani tanlaymiz, "jadvaldagi birinchi
+        // kassa" kabi tasodifiy tanlovga tayanmaymiz.
+        $naqdKassalar       = DB::table('kassalar')->where('tur', 'naqd')->pluck('id', 'filial_id');
+        $defaultNaqdKassaId = $naqdKassalar->first() ?? DB::table('kassalar')->value('id');
 
         $harajatlar = DB::table('harajatlar')
             ->whereNotExists(function ($q) {
@@ -79,7 +85,7 @@ class HarajatMigrate extends Command
             $sample = $harajatlar->take(5);
             foreach ($sample as $h) {
                 $katId = $this->kategoriyaTanlash($h->turi ?? '');
-                $yn    = ($h->summa < 0) ? 'kirim' : 'chiqim';
+                $yn    = $this->yunalishAniqla($h->turi ?? '', (float) $h->summa);
                 $this->line("  #{$h->id} | {$yn} | kat={$katId} | {$h->turi} | ".number_format(abs($h->summa)));
             }
             return 0;
@@ -92,12 +98,14 @@ class HarajatMigrate extends Command
         foreach ($harajatlar->chunk($chunk) as $batch) {
             $rows = [];
             foreach ($batch as $h) {
-                $katId   = $this->kategoriyaTanlash($h->turi ?? '');
-                $yunalish = ($h->summa < 0) ? 'kirim' : 'chiqim';
-                $summa   = abs($h->summa);
+                $katId    = $this->kategoriyaTanlash($h->turi ?? '');
+                $yunalish = $this->yunalishAniqla($h->turi ?? '', (float) $h->summa);
+                $summa    = abs($h->summa);
+                $hFilial  = $h->filial_id ?? $filialId;
+                $kassaId  = $naqdKassalar[$hFilial] ?? $defaultNaqdKassaId;
 
                 $rows[] = [
-                    'filial_id'      => $h->filial_id ?? $filialId,
+                    'filial_id'      => $hFilial,
                     'kassa_id'       => $kassaId,
                     'kategoriya_id'  => $katId,
                     'xodim_id'       => $h->xodim_id ?? $xodimId,
@@ -132,5 +140,26 @@ class HarajatMigrate extends Command
             }
         }
         return $this->defaultCategoriya;
+    }
+
+    /**
+     * Yo'nalishni (kirim/chiqim) aniqlash — eski bazada manfiy summa har doim
+     * "kirim" degani, lekin ba'zi qatorlar (masalan "Инкасса: Дуконга кирим
+     * килинган пуллар") MUSBAT summa bilan kiritilgan, holbuki TURI nomi
+     * o'zi aniq "kirim" ekanini bildiradi. Shuning uchun avval turi matniga,
+     * keyin summa belgisiga qaraymiz.
+     */
+    private function yunalishAniqla(string $tur, float $summa): string
+    {
+        $turKichik = mb_strtolower($tur);
+
+        // Turi matnida aniq "kirim/qaytarildi" so'zi bo'lsa — summa belgisidan
+        // qat'i nazar KIRIM (masalan "Дуконга кирим килинган пуллар").
+        $kirimMatnlari = ['дуконга кирим', 'кирим килинган', 'кирим qilingan'];
+        foreach ($kirimMatnlari as $m) {
+            if (str_contains($turKichik, $m)) return 'kirim';
+        }
+
+        return $summa < 0 ? 'kirim' : 'chiqim';
     }
 }

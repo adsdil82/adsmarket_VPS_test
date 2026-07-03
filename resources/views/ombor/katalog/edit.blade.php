@@ -56,9 +56,14 @@
                            value="{{ old('tan_narx', $katalog->tan_narx) }}" min="0" step="100">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label fw-medium">Sotish narxi <span class="text-danger">*</span></label>
+                    <label class="form-label fw-medium">Naqd/POS narxi <span class="text-danger">*</span></label>
                     <input type="number" name="sotish_narx" class="form-control"
                            value="{{ old('sotish_narx', $katalog->sotish_narx) }}" min="0" step="100" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-medium">Nasiya narxi <span class="text-danger">*</span></label>
+                    <input type="number" name="nasiya_narx" class="form-control"
+                           value="{{ old('nasiya_narx', $katalog->nasiya_narx) }}" min="0" step="100" required>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-medium">Minimal qoldiq</label>

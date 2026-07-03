@@ -9,7 +9,7 @@ class MijozTelefon extends Model
 {
     protected $table = 'mijoz_telefonlar';
 
-    protected $fillable = ['mijoz_id', 'telefon', 'sms_yuborilsin', 'tartib'];
+    protected $fillable = ['mijoz_id', 'telefon', 'egasi_ismi', 'sms_yuborilsin', 'tartib'];
 
     protected $casts = [
         'sms_yuborilsin' => 'boolean',

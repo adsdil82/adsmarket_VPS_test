@@ -14,6 +14,11 @@ use Illuminate\Support\Facades\DB;
 
 class PosController extends Controller
 {
+    public function __construct(
+        private \App\Services\TulovService $tulovService,
+        private \App\Services\StockService $stockService,
+    ) {}
+
     public function index()
     {
         $user     = Auth::user();
@@ -27,14 +32,17 @@ class PosController extends Controller
         return view('ombor.pos.index', compact('guruhlar', 'filialId', 'bugun_sotuv', 'bugun_checklar'));
     }
 
-    /** Ajax: tovarlarni qidirish/yuklash */
+    /** Ajax: tovarlarni qidirish/yuklash — FAQAT shu filialning o'z ombor qoldig'i bo'yicha. */
     public function tovarlar(Request $request)
     {
         $user     = Auth::user();
-        $filialId = $user->filial_id ?? $request->filial_id;
+        $filialId = $user->filial_id ?? $request->filial_id ?? Filial::first()?->id;
+        $ombor    = $filialId ? $this->stockService->asosiyOmbor($filialId) : null;
 
         $tovarlar = TovarKatalog::faol()
-            ->where('qoldiq', '>', 0)
+            ->when($ombor, fn($q) => $q->whereHas('omborQoldiqlar', fn($qq) =>
+                $qq->where('ombor_id', $ombor->id)->where('miqdor', '>', 0)
+            ), fn($q) => $q->whereRaw('1=0'))
             ->when($request->guruh_id, fn($q) => $q->where('guruh_id', $request->guruh_id))
             ->when($request->qidiruv,  fn($q) => $q->where(function($q2) use ($request) {
                 $q2->where('nomi', 'like', "%{$request->qidiruv}%")
@@ -44,6 +52,14 @@ class PosController extends Controller
             ->orderBy('nomi')
             ->limit(50)
             ->get(['id','nomi','barkod','sotish_narx','qoldiq','birlik','guruh_id']);
+
+        // Ko'rsatiladigan qoldiqni ham SHU OMBOR bo'yicha almashtiramiz
+        // (tovar_katalog.qoldiq — kompaniya bo'yicha jami, chalg'itmasligi uchun).
+        if ($ombor) {
+            $tovarlar->each(function ($t) use ($ombor) {
+                $t->qoldiq = $this->stockService->qoldiq($ombor->id, $t->id);
+            });
+        }
 
         return response()->json($tovarlar);
     }
@@ -64,15 +80,21 @@ class PosController extends Controller
             'tovarlar.*.narx'     => 'required|numeric|min:0',
         ]);
 
-        // Qoldiq tekshiruvi
+        // Qoldiq tekshiruvi — endi SHU FILIALNING o'z ombori bo'yicha (global
+        // emas), boshqa filialning qoldig'i bu yerda sotilishiga yo'l qo'yilmaydi.
+        $ombor = $this->stockService->asosiyOmbor($request->filial_id);
+        if (!$ombor) {
+            return response()->json(['xato' => "Bu filial uchun ombor topilmadi."], 422);
+        }
         foreach ($request->tovarlar as $q) {
             $tovar = TovarKatalog::find($q['tovar_id']);
-            if ($tovar->qoldiq < $q['miqdor']) {
-                return response()->json(['xato' => "«{$tovar->nomi}»: omborda {$tovar->qoldiq} {$tovar->birlik} bor"], 422);
+            $mavjud = $this->stockService->qoldiq($ombor->id, $q['tovar_id']);
+            if ($mavjud < $q['miqdor']) {
+                return response()->json(['xato' => "«{$tovar->nomi}»: «{$ombor->nomi}» omborida {$mavjud} {$tovar->birlik} bor"], 422);
             }
         }
 
-        $sotuv = DB::transaction(function () use ($request) {
+        $sotuv = DB::transaction(function () use ($request, $ombor) {
             $umumiy = collect($request->tovarlar)->sum(fn($q) => $q['miqdor'] * $q['narx']);
             $chegirma = (float)($request->chegirma ?? 0);
             $jami = $umumiy - $chegirma;
@@ -121,11 +143,45 @@ class PosController extends Controller
                     'narx'       => $q['narx'],
                     'jami_summa' => $summa,
                 ]);
-                TovarKatalog::find($q['tovar_id'])->decrement('qoldiq', $q['miqdor']);
+                $this->stockService->chiqim(
+                    $ombor->id, $q['tovar_id'], (float) $q['miqdor'],
+                    manbaTur: 'pos_sotuv', manbaId: $sotuv->id,
+                    izoh: "POS savdo #{$sotuv->check_raqam}", harakat: 'chiqim',
+                );
             }
 
             return $sotuv;
         });
+
+        // Naqd/plastik qabul qilingan pulni "Pul oqimlari"ga avtomatik kirim
+        // sifatida yozish (CF-1300 — Naqd savdo POS). Naqd uchun mijozga
+        // qaytarilgan pul (qayta_pul) ayiriladi — kassada qoladigan SOF
+        // summa yoziladi.
+        $naqdSofSumma = max(0, (float) $sotuv->naqd_summa - (float) $sotuv->qayta_pul);
+        if ($naqdSofSumma > 0) {
+            $this->tulovService->pulOqimigaYozKassaTuri(
+                filialId: $sotuv->filial_id,
+                kassaTuri: 'naqd',
+                summa: $naqdSofSumma,
+                sana: $sotuv->sana->toDateString(),
+                kategoriyaKodi: 'CF-1300',
+                izoh: "POS savdo #{$sotuv->check_raqam}" . ($sotuv->mijoz_ism ? " ({$sotuv->mijoz_ism})" : ''),
+                manbaTur: 'pos_sotuv_naqd',
+                manbaId: $sotuv->id,
+            );
+        }
+        if ((float) $sotuv->plastik_summa > 0) {
+            $this->tulovService->pulOqimigaYozKassaTuri(
+                filialId: $sotuv->filial_id,
+                kassaTuri: 'terminal',
+                summa: (float) $sotuv->plastik_summa,
+                sana: $sotuv->sana->toDateString(),
+                kategoriyaKodi: 'CF-1300',
+                izoh: "POS savdo #{$sotuv->check_raqam}" . ($sotuv->mijoz_ism ? " ({$sotuv->mijoz_ism})" : ''),
+                manbaTur: 'pos_sotuv_plastik',
+                manbaId: $sotuv->id,
+            );
+        }
 
         return response()->json([
             'muvaffaqiyat' => true,

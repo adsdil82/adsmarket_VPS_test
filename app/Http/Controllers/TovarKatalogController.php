@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 
 class TovarKatalogController extends Controller
 {
+    public function __construct(private \App\Services\BarcodeService $barcodeService) {}
+
     public function index(Request $request)
     {
         $query = TovarKatalog::with('guruh')
@@ -50,10 +52,16 @@ class TovarKatalogController extends Controller
             'birlik'       => 'required|string|max:20',
             'tan_narx'     => 'required|numeric|min:0',
             'sotish_narx'  => 'required|numeric|min:0',
+            'nasiya_narx'  => 'required|numeric|min:0',
             'min_qoldiq'   => 'nullable|numeric|min:0',
             'holat'        => 'in:faol,nofaol',
             'izoh'         => 'nullable|string',
         ]);
+
+        // Shtrix-kod kiritilmagan bo'lsa — avtomatik EAN-13 generatsiya qilinadi
+        // (yangi tovarni darhol chop etish/sotish mumkin bo'lishi uchun).
+        $data['barkod'] = $data['barkod'] ?: $this->barcodeService->generate();
+
         TovarKatalog::create($data);
         return redirect()->route('katalog.index')->with('muvaffaqiyat', "Tovar «{$data['nomi']}» qo'shildi.");
     }
@@ -73,6 +81,7 @@ class TovarKatalogController extends Controller
             'birlik'       => 'required|string|max:20',
             'tan_narx'     => 'required|numeric|min:0',
             'sotish_narx'  => 'required|numeric|min:0',
+            'nasiya_narx'  => 'required|numeric|min:0',
             'min_qoldiq'   => 'nullable|numeric|min:0',
             'holat'        => 'in:faol,nofaol',
             'izoh'         => 'nullable|string',

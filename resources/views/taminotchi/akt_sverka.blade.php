@@ -111,7 +111,7 @@ table.main tr.end-row td{background:#e8f5e9;font-weight:bold}
         <tr style="background:#f0f0f0;font-weight:bold">
             <td colspan="2">JAMI:</td>
             <td class="num">{{ number_format($kirimlar->sum('jami_summa'),0,'.',' ') }}</td>
-            <td class="num">{{ number_format($tulovlar->sum('summa'),0,'.',' ') }}</td>
+            <td class="num">{{ number_format($tulovlar->sum('summa_uzs'),0,'.',' ') }}</td>
             <td></td>
         </tr>
 

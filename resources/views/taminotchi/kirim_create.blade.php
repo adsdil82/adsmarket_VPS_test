@@ -10,6 +10,11 @@
 <style>
 .qator-row td { vertical-align: middle; }
 .del-qator { cursor: pointer; color: #dc3545; }
+.yangi-tovar-belgi { font-size:.65rem; color:#b45309; background:#fff7ed; border:1px solid #fdba74; border-radius:4px; padding:1px 5px; display:inline-flex; align-items:center; gap:3px; margin-top:3px; cursor:default; white-space:nowrap; }
+.yangi-tovar-belgi .bekor-link { cursor:pointer; color:#dc3545; font-weight:bold; }
+.ustama-bosh { background:#fffbeb; min-width:90px; }
+.ustama-bosh input { min-width:80px; }
+#qatorlar-table th { font-size:.78rem; white-space:nowrap; }
 </style>
 @endpush
 
@@ -41,43 +46,31 @@
 
             {{-- Tovarlar jadvali --}}
             <h6 class="fw-bold mb-2">Tovarlar ro'yxati</h6>
+            <div class="small text-muted mb-2">
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">POS %/Nasiya %</span>
+                ustunlari faqat <strong>yangi tovar</strong> (katalogda topilmagan) qatorlarda ko'rinadi — kirim narxidan keyin ketma-ket joylashgan.
+            </div>
             <div class="table-responsive mb-3">
-                <table class="table table-sm border" id="qatorlar-table">
+                <table class="table table-sm border align-middle" id="qatorlar-table">
                     <thead class="table-light">
                         <tr>
-                            <th style="width:35%">Tovar nomi <span class="text-danger">*</span></th>
-                            <th style="width:20%">Katalogdan</th>
-                            <th style="width:10%">Miqdor</th>
-                            <th style="width:10%">Birlik</th>
-                            <th style="width:15%">Narx (so'm)</th>
-                            <th style="width:10%">Jami</th>
+                            <th style="width:13%">Tovar guruhi</th>
+                            <th style="width:17%">Tovar nomi <span class="text-danger">*</span></th>
+                            <th style="width:7%">Miqdor</th>
+                            <th style="width:7%">Birlik</th>
+                            <th style="width:9%">Kirim narxi</th>
+                            <th style="width:7%">POS %</th>
+                            <th style="width:9%">POS narxi</th>
+                            <th style="width:7%">Nasiya %</th>
+                            <th style="width:9%">Nasiya narxi</th>
+                            <th style="width:8%">Jami</th>
                             <th></th>
                         </tr>
                     </thead>
-                    <tbody id="qatorlar-body">
-                        <tr class="qator-row">
-                            <td><input type="text" name="qatorlar[0][nomi]" class="form-control form-control-sm" required placeholder="Tovar nomi"></td>
-                            <td>
-                                <select class="form-select form-select-sm katalog-select" data-idx="0">
-                                    <option value="">— Tanlang —</option>
-                                    @foreach($tovarlar as $tv)
-                                    <option value="{{ $tv->id }}" data-nomi="{{ $tv->nomi }}" data-narx="{{ $tv->sotish_narx }}" data-birlik="{{ $tv->birlik }}">
-                                        {{ $tv->nomi }}
-                                    </option>
-                                    @endforeach
-                                </select>
-                                <input type="hidden" name="qatorlar[0][tovar_id]" class="tovar-id-input">
-                            </td>
-                            <td><input type="number" name="qatorlar[0][miqdor]" class="form-control form-control-sm miqdor-input" value="1" min="0.001" step="0.001" required></td>
-                            <td><input type="text" name="qatorlar[0][birlik]" class="form-control form-control-sm" value="dona"></td>
-                            <td><input type="number" name="qatorlar[0][narx]" class="form-control form-control-sm narx-input" min="0" step="100" required></td>
-                            <td class="fw-bold text-end jami-td">0</td>
-                            <td></td>
-                        </tr>
-                    </tbody>
+                    <tbody id="qatorlar-body"></tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="5" class="fw-bold text-end">Jami:</td>
+                            <td colspan="9" class="fw-bold text-end">Jami:</td>
                             <td class="fw-bold text-end" id="umumiy-jami">0</td>
                             <td></td>
                         </tr>
@@ -102,33 +95,63 @@
 </div>
 @endsection
 
+@php
+$tovarlarJs = $tovarlar->map(fn($t) => [
+    'id' => $t->id, 'nomi' => $t->nomi, 'narx' => $t->sotish_narx,
+    'birlik' => $t->birlik, 'guruh_id' => $t->guruh_id,
+]);
+@endphp
 @push('scripts')
 <script>
-var qatorCount = 1;
+var qatorCount = 0;
+var BARCHA_TOVARLAR = @json($tovarlarJs);
+var GURUH_OPTIONS_HTML = @json($guruhlar)
+    .map(function(g) { return '<option value="' + g.id + '">' + g.nomi + '</option>'; })
+    .join('');
 
 function qatorQosh() {
     var idx = qatorCount++;
     var tbody = document.getElementById('qatorlar-body');
-    var tovarOptions = document.querySelector('.katalog-select').innerHTML;
     var tr = document.createElement('tr');
     tr.className = 'qator-row';
     tr.innerHTML = `
-        <td><input type="text" name="qatorlar[${idx}][nomi]" class="form-control form-control-sm" required placeholder="Tovar nomi"></td>
         <td>
-            <select class="form-select form-select-sm katalog-select" data-idx="${idx}">
-                ${tovarOptions}
+            <select class="form-select form-select-sm guruh-select" data-idx="${idx}">
+                <option value="">— Guruh tanlang —</option>
+                ${GURUH_OPTIONS_HTML}
             </select>
+            <input type="hidden" name="qatorlar[${idx}][guruh_id]" class="guruh-id-input">
+        </td>
+        <td>
+            <input type="text" name="qatorlar[${idx}][nomi]" class="form-control form-control-sm nomi-input"
+                   list="tovar-list-${idx}" required placeholder="Guruh tanlang yoki to'g'ridan-to'g'ri yozing" autocomplete="off">
+            <datalist id="tovar-list-${idx}"></datalist>
             <input type="hidden" name="qatorlar[${idx}][tovar_id]" class="tovar-id-input">
+            <div class="yangi-tovar-belgi" style="display:none">
+                🆕 Yangi tovar
+                <span class="bekor-link" title="Bekor qilish">✕</span>
+            </div>
         </td>
         <td><input type="number" name="qatorlar[${idx}][miqdor]" class="form-control form-control-sm miqdor-input" value="1" min="0.001" step="0.001" required></td>
-        <td><input type="text" name="qatorlar[${idx}][birlik]" class="form-control form-control-sm" value="dona"></td>
+        <td><input type="text" name="qatorlar[${idx}][birlik]" class="form-control form-control-sm birlik-input" value="dona"></td>
         <td><input type="number" name="qatorlar[${idx}][narx]" class="form-control form-control-sm narx-input" min="0" step="100" required></td>
+        <td class="ustama-bosh" style="display:none"><input type="number" class="form-control form-control-sm ustama-pos-foiz" min="0" step="1" value="0"></td>
+        <td class="ustama-bosh" style="display:none">
+            <input type="number" class="form-control form-control-sm pos-narx-input" min="0" step="100">
+            <input type="hidden" name="qatorlar[${idx}][pos_narx]" class="pos-narx-hidden">
+        </td>
+        <td class="ustama-bosh" style="display:none"><input type="number" class="form-control form-control-sm ustama-nasiya-foiz" min="0" step="1" value="20"></td>
+        <td class="ustama-bosh" style="display:none">
+            <input type="number" class="form-control form-control-sm nasiya-narx-input" min="0" step="100">
+            <input type="hidden" name="qatorlar[${idx}][nasiya_narx]" class="nasiya-narx-hidden">
+        </td>
         <td class="fw-bold text-end jami-td">0</td>
         <td><i class="bi bi-x-circle del-qator" onclick="qatorOchir(this)"></i></td>
     `;
     tbody.appendChild(tr);
     jamiYangilash();
     bindEvents(tr);
+    return tr;
 }
 
 function qatorOchir(el) {
@@ -148,30 +171,116 @@ function jamiYangilash() {
     document.getElementById('umumiy-jami').textContent = jami.toLocaleString('uz-UZ');
 }
 
+// Guruh tanlanganda — shu guruhga oid tovarlarni datalist'ga to'ldiradi
+function guruhOzgardi(row) {
+    var guruhSel  = row.querySelector('.guruh-select');
+    var guruhId   = guruhSel.value;
+    row.querySelector('.guruh-id-input').value = guruhId;
+
+    var datalist = row.querySelector('datalist');
+    datalist.innerHTML = '';
+    var royxat = guruhId ? BARCHA_TOVARLAR.filter(t => String(t.guruh_id) === guruhId) : BARCHA_TOVARLAR;
+    royxat.forEach(function(t) {
+        var opt = document.createElement('option');
+        opt.value = t.nomi;
+        datalist.appendChild(opt);
+    });
+
+    // Guruh almashtirilsa — eski tanlovni tozalaymiz
+    row.querySelector('.tovar-id-input').value = '';
+    tovarMosligiTekshir(row);
+}
+
+// Yozilgan/tanlangan nom katalogda bor-yo'qligini tekshiradi
+function tovarMosligiTekshir(row) {
+    var nomiInput = row.querySelector('.nomi-input');
+    var nomi = nomiInput.value.trim();
+    var guruhId = row.querySelector('.guruh-id-input').value;
+    var belgi = row.querySelector('.yangi-tovar-belgi');
+
+    if (!nomi) { belgi.style.display = 'none'; ustamaUstunlarKorsat(row, false); return; }
+
+    var royxat = guruhId ? BARCHA_TOVARLAR.filter(t => String(t.guruh_id) === guruhId) : BARCHA_TOVARLAR;
+    var mos = royxat.find(t => t.nomi.toLowerCase() === nomi.toLowerCase());
+
+    if (mos) {
+        row.querySelector('.tovar-id-input').value = mos.id;
+        row.querySelector('.narx-input').value = mos.narx;
+        row.querySelector('.birlik-input').value = mos.birlik || 'dona';
+        belgi.style.display = 'none';
+        ustamaUstunlarKorsat(row, false);
+        jamiYangilash();
+    } else {
+        row.querySelector('.tovar-id-input').value = '';
+        // Faqat guruh tanlangan bo'lsagina "yangi tovar" deb belgilaymiz —
+        // guruhsiz holatda oddiy matn qator sifatida qoladi (katalogga
+        // qo'shilmaydi).
+        var yangiTovar = !!guruhId;
+        belgi.style.display = yangiTovar ? 'inline-flex' : 'none';
+        ustamaUstunlarKorsat(row, yangiTovar);
+        if (yangiTovar) ustamaHisobla(row, 'foiz');
+    }
+}
+
+function ustamaUstunlarKorsat(row, korsat) {
+    row.querySelectorAll('.ustama-bosh').forEach(function(td) {
+        td.style.display = korsat ? 'table-cell' : 'none';
+    });
+}
+
+// Kirim narxi + ustama % asosida POS va Nasiya narxlarini hisoblaydi.
+// manba='foiz' — foizdan narx hisoblanadi; manba='narx' — narxdan foiz orqaga hisoblanadi.
+function ustamaHisobla(row, manba) {
+    var tanNarx = parseFloat(row.querySelector('.narx-input').value) || 0;
+
+    ['pos', 'nasiya'].forEach(function(tur) {
+        var foizInp = row.querySelector('.ustama-' + tur + '-foiz');
+        var narxInp = row.querySelector('.' + tur + '-narx-input');
+        var hiddenInp = row.querySelector('.' + tur + '-narx-hidden');
+        if (!foizInp) return;
+
+        if (manba === 'narx') {
+            var narx = parseFloat(narxInp.value) || 0;
+            var foiz = tanNarx > 0 ? Math.round(((narx - tanNarx) / tanNarx) * 100) : 0;
+            foizInp.value = foiz;
+        } else {
+            var foiz = parseFloat(foizInp.value) || 0;
+            var narx = Math.round(tanNarx * (1 + foiz / 100));
+            narxInp.value = narx;
+        }
+        hiddenInp.value = narxInp.value;
+    });
+}
+
 function bindEvents(row) {
     row.querySelectorAll('.miqdor-input,.narx-input').forEach(function(inp) {
         inp.addEventListener('input', jamiYangilash);
     });
-    var sel = row.querySelector('.katalog-select');
-    if (sel) {
-        sel.addEventListener('change', function() {
-            var opt = this.options[this.selectedIndex];
-            if (opt.value) {
-                var nomiInput = this.closest('tr').querySelector('input[type=text]');
-                var narxInput = this.closest('tr').querySelector('.narx-input');
-                var birlikInput = this.closest('tr').querySelectorAll('input[type=text]')[1];
-                var idInput = this.closest('td').querySelector('.tovar-id-input');
-                nomiInput.value = opt.dataset.nomi;
-                narxInput.value = opt.dataset.narx;
-                if (birlikInput) birlikInput.value = opt.dataset.birlik || 'dona';
-                if (idInput) idInput.value = opt.value;
-                jamiYangilash();
-            }
-        });
-    }
+    row.querySelector('.narx-input').addEventListener('input', function() { ustamaHisobla(row, 'foiz'); });
+
+    var guruhSel = row.querySelector('.guruh-select');
+    if (guruhSel) guruhSel.addEventListener('change', function() { guruhOzgardi(row); });
+
+    var nomiInput = row.querySelector('.nomi-input');
+    if (nomiInput) nomiInput.addEventListener('input', function() { tovarMosligiTekshir(row); });
+
+    var bekorLink = row.querySelector('.bekor-link');
+    if (bekorLink) bekorLink.addEventListener('click', function() {
+        nomiInput.value = '';
+        row.querySelector('.tovar-id-input').value = '';
+        row.querySelector('.yangi-tovar-belgi').style.display = 'none';
+        ustamaUstunlarKorsat(row, false);
+        nomiInput.focus();
+    });
+
+    row.querySelectorAll('.ustama-pos-foiz,.ustama-nasiya-foiz').forEach(function(inp) {
+        inp.addEventListener('input', function() { ustamaHisobla(row, 'foiz'); });
+    });
+    row.querySelectorAll('.pos-narx-input,.nasiya-narx-input').forEach(function(inp) {
+        inp.addEventListener('input', function() { ustamaHisobla(row, 'narx'); });
+    });
 }
 
-// Boshlang'ich qatorga event ulash
-document.querySelectorAll('.qator-row').forEach(function(tr) { bindEvents(tr); });
+qatorQosh();
 </script>
 @endpush

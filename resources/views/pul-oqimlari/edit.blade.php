@@ -70,20 +70,12 @@
                 <select name="kategoriya_id" class="form-select @error('kategoriya_id') is-invalid @enderror" required>
                     <option value="">— tanlang —</option>
                     @if($yunalish === 'kirim')
-                        @foreach($kirimKategoriyalar as $grup => $bolalar)
-                            <optgroup label="{{ $grup }}">
-                                @foreach($bolalar as $id => $nomi)
-                                <option value="{{ $id }}" {{ old('kategoriya_id', $pulOqim->kategoriya_id) == $id ? 'selected' : '' }}>{{ $nomi }}</option>
-                                @endforeach
-                            </optgroup>
+                        @foreach($kirimKategoriyalar as $id => $nomi)
+                        <option value="{{ $id }}" {{ old('kategoriya_id', $pulOqim->kategoriya_id) == $id ? 'selected' : '' }}>{{ $nomi }}</option>
                         @endforeach
                     @else
-                        @foreach($chiqimKategoriyalar as $grup => $bolalar)
-                            <optgroup label="{{ $grup }}">
-                                @foreach($bolalar as $id => $nomi)
-                                <option value="{{ $id }}" {{ old('kategoriya_id', $pulOqim->kategoriya_id) == $id ? 'selected' : '' }}>{{ $nomi }}</option>
-                                @endforeach
-                            </optgroup>
+                        @foreach($chiqimKategoriyalar as $id => $nomi)
+                        <option value="{{ $id }}" {{ old('kategoriya_id', $pulOqim->kategoriya_id) == $id ? 'selected' : '' }}>{{ $nomi }}</option>
                         @endforeach
                     @endif
                 </select>

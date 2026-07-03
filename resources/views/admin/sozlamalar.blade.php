@@ -186,14 +186,15 @@
                 <input type="hidden" name="tema" id="tema-input" value="{{ old('tema', $soz['tema'] ?? 1) }}">
                 <div class="row g-2">
                     @foreach($temalar as $id => $tema)
+                    @php $tema2 = $tema['sidebar2'] ?? $tema['sidebar']; @endphp
                     <div class="col-6 col-md-4 col-lg-2">
                         <div class="tema-karta {{ ($soz['tema'] ?? '1') == $id ? 'selected' : '' }}"
                              data-tema="{{ $id }}"
                              onclick="tanlaTemani({{ $id }})"
-                             style="cursor:pointer; border-radius:10px; overflow:hidden; border:3px solid {{ ($soz['tema'] ?? '1') == $id ? $tema['accent'] : 'transparent' }}; transition:border 0.2s">
+                             style="cursor:pointer; border-radius:10px; overflow:hidden; border:3px solid {{ ($soz['tema'] ?? '1') == $id ? $tema['accent'] : 'transparent' }}; transition:border 0.2s; box-shadow:0 1px 4px rgba(0,0,0,.08)">
                             {{-- Preview --}}
                             <div style="display:flex;height:70px;">
-                                <div style="width:40%;background:{{ $tema['sidebar'] }};display:flex;flex-direction:column;gap:4px;padding:6px 4px;">
+                                <div style="width:40%;background:linear-gradient(180deg,{{ $tema['sidebar'] }} 0%,{{ $tema2 }} 100%);display:flex;flex-direction:column;gap:4px;padding:6px 4px;">
                                     <div style="height:4px;background:{{ $tema['accent'] }};border-radius:2px;width:70%"></div>
                                     <div style="height:3px;background:rgba(255,255,255,0.3);border-radius:2px;width:90%"></div>
                                     <div style="height:3px;background:rgba(255,255,255,0.3);border-radius:2px;width:80%"></div>
@@ -206,10 +207,97 @@
                             </div>
                             <div class="text-center py-1 small fw-medium" style="font-size:11px;background:#f8f9fa;">
                                 {{ $tema['nomi'] }}
+                                @if($id >= 11)<i class="bi bi-bank2 ms-1" style="color:{{ $tema['sidebar2'] }}" title="Bank uslub"></i>@endif
                             </div>
                         </div>
                     </div>
                     @endforeach
+                </div>
+
+                {{-- ── Maxsus ranglar ── --}}
+                <hr class="my-3">
+                <div class="form-check mb-2">
+                    <input type="checkbox" class="form-check-input" id="tema-maxsus-check" name="tema_maxsus"
+                           value="1" {{ ($soz['tema_maxsus'] ?? '0') === '1' ? 'checked' : '' }} onchange="temaMaxsusToggle()">
+                    <label class="form-check-label fw-medium" for="tema-maxsus-check">
+                        <i class="bi bi-eyedropper me-1"></i>Maxsus ranglar ishlatish
+                        <small class="text-muted fw-normal">(yuqoridagi tayyor temalar o'rniga o'zingiz rang tanlang)</small>
+                    </label>
+                </div>
+                <div id="tema-maxsus-blok" class="row g-2 {{ ($soz['tema_maxsus'] ?? '0') === '1' ? '' : 'd-none' }}">
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small mb-1">Sidebar — 1-rang</label>
+                        <input type="color" class="form-control form-control-color w-100" name="tema_sidebar1"
+                               id="tema-sidebar1" value="{{ $soz['tema_sidebar1'] ?? '#1e3a8a' }}" onchange="temaMaxsusPreview()">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small mb-1">Sidebar — 2-rang</label>
+                        <input type="color" class="form-control form-control-color w-100" name="tema_sidebar2"
+                               id="tema-sidebar2" value="{{ $soz['tema_sidebar2'] ?? '#2563eb' }}" onchange="temaMaxsusPreview()">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small mb-1">Aksent — 1-rang</label>
+                        <input type="color" class="form-control form-control-color w-100" name="tema_accent1"
+                               id="tema-accent1" value="{{ $soz['tema_accent1'] ?? '#fbbf24' }}" onchange="temaMaxsusPreview()">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small mb-1">Aksent — 2-rang</label>
+                        <input type="color" class="form-control form-control-color w-100" name="tema_accent2"
+                               id="tema-accent2" value="{{ $soz['tema_accent2'] ?? '#f59e0b' }}" onchange="temaMaxsusPreview()">
+                    </div>
+                    <div class="col-12">
+                        <div id="tema-maxsus-preview" style="display:flex;height:70px;border-radius:10px;overflow:hidden;border:1px solid #dee2e6">
+                            <div id="tema-maxsus-preview-sb" style="width:40%;display:flex;flex-direction:column;gap:4px;padding:6px 4px;">
+                                <div id="tema-maxsus-preview-ac" style="height:4px;border-radius:2px;width:70%"></div>
+                                <div style="height:3px;background:rgba(255,255,255,0.3);border-radius:2px;width:90%"></div>
+                                <div style="height:3px;background:rgba(255,255,255,0.3);border-radius:2px;width:80%"></div>
+                                <div style="height:3px;background:rgba(255,255,255,0.3);border-radius:2px;width:85%"></div>
+                            </div>
+                            <div style="flex:1;background:#f8f9fa;padding:6px 4px;">
+                                <div style="height:4px;background:#e9ecef;border-radius:2px;margin-bottom:4px"></div>
+                                <div id="tema-maxsus-preview-ac2" style="height:8px;border-radius:2px;opacity:0.5"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ── Guruh nomi shrift rangi ── --}}
+                <hr class="my-3">
+                <label class="form-label fw-medium mb-2">
+                    <i class="bi bi-fonts me-1"></i>Guruh nomi shrift rangi
+                    <small class="text-muted fw-normal">(sidebar'dagi MIJOZLAR, SHARTNOMALAR kabi guruh nomlari matni)</small>
+                </label>
+                @php
+                    $grupFontVariantlari = [
+                        'qora'  => ['nomi' => 'Qora',  'rang' => '#161616'],
+                        'sariq' => ['nomi' => 'Sariq', 'rang' => '#ffe066'],
+                        'qizil' => ['nomi' => 'Qizil', 'rang' => '#ff5252'],
+                        'oq'    => ['nomi' => "Oq",    'rang' => '#ffffff'],
+                    ];
+                    $grupFontTanlangan = $soz['grup_font_rang'] ?? 'oq';
+                    $onizTemaId = (int)($soz['tema'] ?? 1);
+                    $onizTema   = $temalar[$onizTemaId] ?? $temalar[1];
+                    $onizAcc1   = ($soz['tema_maxsus'] ?? '0') === '1' ? ($soz['tema_accent1'] ?: $onizTema['accent']) : $onizTema['accent'];
+                    $onizAcc2   = ($soz['tema_maxsus'] ?? '0') === '1' ? ($soz['tema_accent2'] ?: ($onizTema['accent2'] ?? $onizTema['accent'])) : ($onizTema['accent2'] ?? $onizTema['accent']);
+                @endphp
+                <div class="d-flex gap-2 flex-wrap mb-3">
+                    @foreach($grupFontVariantlari as $key => $gf)
+                    <div class="form-check">
+                        <input type="radio" class="form-check-input" name="grup_font_rang" id="gfr-{{ $key }}"
+                               value="{{ $key }}" {{ $grupFontTanlangan === $key ? 'checked' : '' }}
+                               onchange="grupFontPreview('{{ $key }}')">
+                        <label class="form-check-label" for="gfr-{{ $key }}">
+                            <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:{{ $gf['rang'] }};border:1px solid #ccc;vertical-align:middle;margin-right:3px"></span>
+                            {{ $gf['nomi'] }}
+                        </label>
+                    </div>
+                    @endforeach
+                </div>
+                <div id="grup-font-preview"
+                     data-accent1="{{ $onizAcc1 }}" data-accent2="{{ $onizAcc2 }}"
+                     style="max-width:260px;padding:6px 10px;border-radius:10px;font-size:12px;font-weight:900;letter-spacing:2.5px;text-transform:uppercase;box-shadow:0 2px 6px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,{{ $onizAcc1 }} 0%,{{ $onizAcc2 }} 45%,{{ $onizAcc1 }} 100%)">
+                    <span id="grup-font-preview-label">Guruh nomi</span>
+                    <i class="bi bi-dash-lg"></i>
                 </div>
             </div>
         </div>
@@ -475,12 +563,12 @@
                                    value="{{ $smsSoz['sender_id']->value ?? 'NasiyaPro' }}">
                         </div>
                         <div class="col-sm-4">
-                            <label class="form-label small fw-medium">Test telefon</label>
-                            <input type="text" name="test_phone" class="form-control form-control-sm"
-                                   value="{{ $smsSoz['test_phone']->value ?? '' }}" placeholder="+998901234567">
+                            <label class="form-label small fw-medium">API URL</label>
+                            <input type="url" name="api_url" class="form-control form-control-sm"
+                                   value="{{ $smsSoz['api_url']->value ?? '' }}" placeholder="https://notify.eskiz.uz/api">
                         </div>
                         <div class="col-sm-6">
-                            <label class="form-label small fw-medium">Login</label>
+                            <label class="form-label small fw-medium">Login / Email</label>
                             <input type="text" name="login" class="form-control form-control-sm"
                                    value="{{ $smsSoz['login']->value ?? '' }}">
                         </div>
@@ -488,10 +576,21 @@
                             <label class="form-label small fw-medium">Parol/Token</label>
                             <input type="password" name="password" class="form-control form-control-sm"
                                    placeholder="{{ ($smsSoz['password']->value??'')?'••••••••':'Kiriting' }}">
+                            <div class="form-text small">Bo'sh qoldirsangiz eski parol saqlanadi.</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-medium">Test telefon</label>
+                            <input type="text" name="test_phone" class="form-control form-control-sm"
+                                   value="{{ $smsSoz['test_phone']->value ?? '' }}" placeholder="+998901234567">
                         </div>
                     </div>
-                    <div class="d-flex gap-2 mt-3 align-items-center">
-                        <div class="form-check form-switch me-3">
+                    <div class="d-flex gap-3 mt-3 align-items-center flex-wrap">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="enabled" id="adm-sms-enabled"
+                                   {{ ($smsSoz['enabled']->value??'1')==='1'?'checked':'' }}>
+                            <label class="form-check-label small fw-medium" for="adm-sms-enabled">SMS moduli yoqilgan</label>
+                        </div>
+                        <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" name="test_mode" id="adm-sms-test"
                                    {{ ($smsSoz['test_mode']->value??'1')==='1'?'checked':'' }}>
                             <label class="form-check-label small" for="adm-sms-test">Test rejimi</label>
@@ -646,7 +745,45 @@ function tanlaTemani(id) {
     if (karta) {
         karta.style.border = `3px solid ${temalar[id].accent}`;
     }
+    // Tayyor tema tanlanganda "Maxsus ranglar" avtomatik o'chadi
+    const maxsusCheck = document.getElementById('tema-maxsus-check');
+    if (maxsusCheck.checked) {
+        maxsusCheck.checked = false;
+        temaMaxsusToggle();
+    }
 }
+function temaMaxsusToggle() {
+    const yoqilgan = document.getElementById('tema-maxsus-check').checked;
+    document.getElementById('tema-maxsus-blok').classList.toggle('d-none', !yoqilgan);
+    if (yoqilgan) temaMaxsusPreview();
+}
+function temaMaxsusPreview() {
+    const s1 = document.getElementById('tema-sidebar1').value;
+    const s2 = document.getElementById('tema-sidebar2').value;
+    const a1 = document.getElementById('tema-accent1').value;
+    const a2 = document.getElementById('tema-accent2').value;
+    document.getElementById('tema-maxsus-preview-sb').style.background = `linear-gradient(180deg, ${s1} 0%, ${s2} 100%)`;
+    document.getElementById('tema-maxsus-preview-ac').style.background = `linear-gradient(90deg, ${a1} 0%, ${a2} 100%)`;
+    document.getElementById('tema-maxsus-preview-ac2').style.background = `linear-gradient(90deg, ${a1} 0%, ${a2} 100%)`;
+    grupFontPreview(null, a1, a2);
+}
+const grupFontRanglar = { qora: ['#161616', 'rgba(255,255,255,.9)'], sariq: ['#ffe066', 'rgba(0,0,0,.85)'], qizil: ['#ff5252', 'rgba(0,0,0,.85)'], oq: ['#ffffff', 'rgba(0,0,0,.85)'] };
+function grupFontPreview(key, a1, a2) {
+    const prev = document.getElementById('grup-font-preview');
+    if (!key) {
+        key = document.querySelector('input[name="grup_font_rang"]:checked')?.value || 'oq';
+    }
+    a1 = a1 || prev.dataset.accent1;
+    a2 = a2 || prev.dataset.accent2;
+    prev.dataset.accent1 = a1; prev.dataset.accent2 = a2;
+    prev.style.background = `linear-gradient(135deg, ${a1} 0%, ${a2} 45%, ${a1} 100%)`;
+    const [rang, outline] = grupFontRanglar[key] || grupFontRanglar.oq;
+    const label = document.getElementById('grup-font-preview-label');
+    prev.style.color = rang;
+    label.style.textShadow = `-1px -1px 0 ${outline}, 1px -1px 0 ${outline}, -1px 1px 0 ${outline}, 1px 1px 0 ${outline}, 0 0 3px ${outline}`;
+}
+grupFontPreview();
+temaMaxsusPreview();
 </script>
 @endpush
 

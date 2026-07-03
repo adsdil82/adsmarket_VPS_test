@@ -35,7 +35,7 @@ class PulOqimController extends Controller
         ];
         $stat['sof'] = $stat['kirim'] - $stat['chiqim'];
 
-        // Kategoriya bo'yicha breakdown
+        // Kategoriya bo'yicha breakdown (kirim va chiqim alohida)
         $chiqimByKat = (clone $base)->chiqim()
             ->select('kategoriya_id', DB::raw('SUM(summa) as jami'), DB::raw('COUNT(*) as soni'))
             ->with('kategoriya')
@@ -43,7 +43,55 @@ class PulOqimController extends Controller
             ->orderByDesc('jami')
             ->get();
 
-        $oqimlar = $base->orderByDesc('sana')->orderByDesc('id')->paginate(30)->withQueryString();
+        $kirimByKat = (clone $base)->kirim()
+            ->select('kategoriya_id', DB::raw('SUM(summa) as jami'), DB::raw('COUNT(*) as soni'))
+            ->with('kategoriya')
+            ->groupBy('kategoriya_id')
+            ->orderByDesc('jami')
+            ->get();
+
+        // Pastdagi operatsiyalar ro'yxati — agar foydalanuvchi aniq kassa
+        // tanlamagan bo'lsa, standart holatda FAQAT naqd kassa operatsiyalari
+        // ko'rsatiladi (oxirgi ustundagi "qoldiq" bitta kassa doirasidagina
+        // mantiqiy bo'lgani uchun). Yuqoridagi KPI/kategoriya bloklari esa
+        // hamma kassa turlarini (naqd/terminal/bank) ko'rsatishda davom etadi.
+        $royxatBase = clone $base;
+        if (!$request->kassa_id) {
+            $naqdKassaIds = Kassa::where('tur', 'naqd')
+                ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
+                ->pluck('id');
+            $royxatBase->whereIn('kassa_id', $naqdKassaIds);
+        }
+
+        $oqimlar = $royxatBase->orderByDesc('sana')->orderByDesc('id')->paginate(30)->withQueryString();
+
+        // Har bir qatordan keyingi kassa qoldig'i (salda) — shu kassaning davr
+        // boshigacha bo'lgan qoldig'i + o'sha paytgacha (shu qatorni qo'shib)
+        // bo'lgan barcha amaliyotlar yig'indisi.
+        $ochilishCache = [];
+        foreach ($oqimlar as $o) {
+            if (!array_key_exists($o->kassa_id, $ochilishCache)) {
+                $ochilishCache[$o->kassa_id] = (float) PulOqim::tasdiqlangan()
+                    ->where('kassa_id', $o->kassa_id)
+                    ->where('sana', '<', $danSana)
+                    ->selectRaw("COALESCE(SUM(CASE WHEN yunalish='kirim' THEN summa ELSE -summa END),0) as qoldiq")
+                    ->value('qoldiq');
+            }
+
+            $shuPaytgacha = (float) PulOqim::tasdiqlangan()
+                ->where('kassa_id', $o->kassa_id)
+                ->where('sana', '>=', $danSana)
+                ->where(function ($q) use ($o) {
+                    $q->where('sana', '<', $o->sana)
+                      ->orWhere(function ($q2) use ($o) {
+                          $q2->where('sana', $o->sana)->where('id', '<=', $o->id);
+                      });
+                })
+                ->selectRaw("COALESCE(SUM(CASE WHEN yunalish='kirim' THEN summa ELSE -summa END),0) as net")
+                ->value('net');
+
+            $o->qoldiq_keyin = $ochilishCache[$o->kassa_id] + $shuPaytgacha;
+        }
 
         $filiallar   = $user->isAdmin() ? Filial::faol()->get() : collect();
         $kassalar    = Kassa::where('holat', 'faol')
@@ -51,9 +99,38 @@ class PulOqimController extends Controller
             ->get();
         $kategoriyalar = PulKategoriya::faol()->with('bolalar')->asosiy()->orderBy('sort_order')->get();
 
+        // Kassalar (to'lov turlari: naqd/terminal/bank) bo'yicha davr boshiga
+        // qoldiq, kirim, chiqim va davr oxiriga qoldiq — alohida blok.
+        $kassaHarakati = $kassalar->map(function ($k) use ($danSana, $gachaSana) {
+            $ochilishQoldiq = (float) PulOqim::tasdiqlangan()
+                ->where('kassa_id', $k->id)
+                ->where('sana', '<', $danSana)
+                ->selectRaw("COALESCE(SUM(CASE WHEN yunalish='kirim' THEN summa ELSE -summa END),0) as qoldiq")
+                ->value('qoldiq');
+
+            $davr = PulOqim::tasdiqlangan()
+                ->where('kassa_id', $k->id)
+                ->sanada($danSana, $gachaSana)
+                ->selectRaw("
+                    COALESCE(SUM(CASE WHEN yunalish='kirim' THEN summa ELSE 0 END),0) as kirim,
+                    COALESCE(SUM(CASE WHEN yunalish='chiqim' THEN summa ELSE 0 END),0) as chiqim")
+                ->first();
+
+            $kirim  = (float) $davr->kirim;
+            $chiqim = (float) $davr->chiqim;
+
+            return (object) [
+                'kassa'           => $k,
+                'ochilish_qoldiq' => $ochilishQoldiq,
+                'kirim'           => $kirim,
+                'chiqim'          => $chiqim,
+                'yopilish_qoldiq' => $ochilishQoldiq + $kirim - $chiqim,
+            ];
+        });
+
         return view('pul-oqimlari.index', compact(
-            'oqimlar', 'filiallar', 'kassalar', 'kategoriyalar',
-            'filialId', 'danSana', 'gachaSana', 'stat', 'chiqimByKat'
+            'oqimlar', 'filiallar', 'kassalar', 'kategoriyalar', 'kassaHarakati',
+            'filialId', 'danSana', 'gachaSana', 'stat', 'chiqimByKat', 'kirimByKat'
         ));
     }
 
@@ -104,6 +181,11 @@ class PulOqimController extends Controller
     {
         $user = Auth::user();
         if (!$user->isAdmin() && $pulOqim->filial_id !== $user->filial_id) abort(403);
+        // Avtomatik (manba modulidan yaratilgan) yozuvlar bu yerdan
+        // tahrirlanmaydi — mos modulning o'zidan o'zgartiriladi, aks holda
+        // manba (shartnoma to'lovi, ta'minotchi to'lovi va h.k.) bilan
+        // mos kelmay qoladi.
+        if ($pulOqim->manba_tur !== 'manual') abort(403, "Avtomatik yozuvni faqat manba modulidan o'zgartirish mumkin.");
 
         $filiallar  = $user->isAdmin() ? Filial::faol()->get() : Filial::where('id', $user->filial_id)->get();
         $kassalar   = Kassa::where('holat', 'faol')->get();
@@ -118,6 +200,7 @@ class PulOqimController extends Controller
     {
         $user = Auth::user();
         if (!$user->isAdmin() && $pulOqim->filial_id !== $user->filial_id) abort(403);
+        if ($pulOqim->manba_tur !== 'manual') abort(403, "Avtomatik yozuvni faqat manba modulidan o'zgartirish mumkin.");
 
         $request->validate([
             'yunalish'     => 'required|in:kirim,chiqim',
@@ -140,6 +223,13 @@ class PulOqimController extends Controller
     public function destroy(PulOqim $pulOqim)
     {
         if (!Auth::user()->isAdmin()) abort(403);
+        // Avtomatik yozuvlar bu yerdan o'chirilmaydi — manba (shartnoma
+        // to'lovi, ta'minotchi to'lovi va h.k.) bilan qarzdorlik/qoldiq
+        // mos kelmay qolishining oldini olish uchun, faqat manba modulining
+        // o'zidan o'chirish kerak (u yerda tegishli qoldiqlar ham tiklanadi).
+        if ($pulOqim->manba_tur !== 'manual') {
+            abort(403, "Avtomatik yozuvni faqat manba modulidan (masalan Ta'minotchilar yoki Shartnoma to'lovlari) o'chirish mumkin.");
+        }
         $pulOqim->update(['holat' => 'bekor']);
         return back()->with('muvaffaqiyat', 'Operatsiya bekor qilindi.');
     }
@@ -168,5 +258,89 @@ class PulOqimController extends Controller
         }
 
         return response()->json(compact('labels','kirimlar','chiqimlar'));
+    }
+
+    /**
+     * Pul oqimi hisoboti — bank darajasidagi "Statement of Cash Flows":
+     * qatorlarda kategoriyalar (Operatsion / Moliyaviy bo'limlarga bo'lingan),
+     * ustunlarda tanlangan yilning 12 oyi + yillik jami, pastda har oy
+     * uchun boshlang'ich/yakuniy kassa qoldig'i.
+     */
+    public function hisobot(Request $request)
+    {
+        $user      = Auth::user();
+        $filialId  = $user->isAdmin() ? ($request->filial_id ?: null) : $user->filial_id;
+        $yil       = (int) ($request->yil ?? now()->year);
+        $kassaTuri = in_array($request->kassa_turi, ['naqd','terminal','bank']) ? $request->kassa_turi : null;
+        $birlik    = in_array($request->birlik, ['ming','mln']) ? $request->birlik : 'som';
+        $bolgich   = $birlik === 'mln' ? 1_000_000 : ($birlik === 'ming' ? 1_000 : 1);
+
+        // "Bargli" kategoriyalar — bolasi yo'q, ya'ni to'g'ridan-to'g'ri
+        // yozuv qabul qiladigan kategoriyalar (faqat guruh sarlavhasi bo'lib,
+        // o'zi yozuvga ega bo'lmagan ota kategoriyalar chiqarib tashlanadi).
+        $kategoriyalar = PulKategoriya::whereDoesntHave('bolalar')->orderBy('kod')->get();
+
+        $oylikXom = PulOqim::tasdiqlangan()
+            ->filialda($filialId)
+            ->when($kassaTuri, fn($q) => $q->whereHas('kassa', fn($k) => $k->where('tur', $kassaTuri)))
+            ->whereYear('sana', $yil)
+            ->select('kategoriya_id', DB::raw('MONTH(sana) as oy'), DB::raw('SUM(summa) as jami'))
+            ->groupBy('kategoriya_id', 'oy')
+            ->get()
+            ->groupBy('kategoriya_id');
+
+        $qatorlar = $kategoriyalar->map(function ($kat) use ($oylikXom) {
+            $oylar = array_fill(1, 12, 0.0);
+            foreach (($oylikXom[$kat->id] ?? collect()) as $r) {
+                $oylar[(int) $r->oy] = (float) $r->jami;
+            }
+            return [
+                'kategoriya' => $kat,
+                'oylar'      => $oylar,
+                'jami'       => array_sum($oylar),
+            ];
+        })->filter(fn($q) => $q['jami'] != 0 || true); // bo'sh qatorlarni ham ko'rsatamiz (statement to'liqligi uchun)
+
+        $tushumlar = $qatorlar->filter(fn($q) => $q['kategoriya']->yunalish === 'kirim')->values();
+        $tolovlar  = $qatorlar->filter(fn($q) => $q['kategoriya']->yunalish === 'chiqim')->values();
+
+        // Har oy uchun umumiy (hamma kategoriya) sof kirim/chiqim — kassa
+        // qoldig'ini hisoblash uchun.
+        $oylikSofKirim  = array_fill(1, 12, 0.0);
+        $oylikSofChiqim = array_fill(1, 12, 0.0);
+        foreach ($qatorlar as $q) {
+            for ($m = 1; $m <= 12; $m++) {
+                if ($q['kategoriya']->yunalish === 'kirim') {
+                    $oylikSofKirim[$m] += $q['oylar'][$m];
+                } else {
+                    $oylikSofChiqim[$m] += $q['oylar'][$m];
+                }
+            }
+        }
+
+        // Yil boshigacha to'plangan qoldiq (Cash at Beginning of Period — Yanvar)
+        $boshlangichQoldiq = (float) (PulOqim::tasdiqlangan()->filialda($filialId)
+            ->when($kassaTuri, fn($q) => $q->whereHas('kassa', fn($k) => $k->where('tur', $kassaTuri)))
+            ->where('sana', '<', "{$yil}-01-01")
+            ->selectRaw("SUM(CASE WHEN yunalish='kirim' THEN summa ELSE -summa END) as q")
+            ->value('q') ?? 0);
+
+        $oylikBoshlangich = [];
+        $oylikYakuniy     = [];
+        $joriy = $boshlangichQoldiq;
+        for ($m = 1; $m <= 12; $m++) {
+            $oylikBoshlangich[$m] = $joriy;
+            $joriy += $oylikSofKirim[$m] - $oylikSofChiqim[$m];
+            $oylikYakuniy[$m] = $joriy;
+        }
+
+        $filiallar = $user->isAdmin() ? Filial::faol()->get() : collect();
+        $yillarRoyxati = range(now()->year, 2019);
+
+        return view('pul-oqimlari.hisobot', compact(
+            'yil', 'filialId', 'filiallar', 'yillarRoyxati', 'kassaTuri', 'birlik', 'bolgich',
+            'tushumlar', 'tolovlar',
+            'oylikSofKirim', 'oylikSofChiqim', 'oylikBoshlangich', 'oylikYakuniy'
+        ));
     }
 }

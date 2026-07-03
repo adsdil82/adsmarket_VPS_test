@@ -20,7 +20,7 @@ Muddat: {{ $kredit->muddati_oy }} oy</p>
 <table>
 <thead><tr><th>#</th><th>To'lov sanasi</th><th>To'lov summasi</th><th>shu jumladan ustama</th><th>Qoldiq qarz</th><th>Holat</th></tr></thead>
 <tbody>
-@foreach($kredit->grafik as $g)
+@foreach($kredit->grafik->filter(fn($x) => $x->tolov_sana !== null) as $g)
 <tr class='{{ $g->holat === "tolangan" ? "tolangan" : "" }}'>
   <td>{{ $g->oylik_tartib }}</td>
   <td>{{ $g->tolov_sana?->format('d.m.Y') }}</td>

@@ -2,8 +2,6 @@
 namespace App\Services;
 
 use App\Models\FilialTransfer;
-use App\Models\Ombor;
-use App\Models\StockLedger;
 use App\Models\TovarKatalog;
 use App\Models\TransferTafsilot;
 use Illuminate\Support\Facades\Auth;
@@ -11,14 +9,20 @@ use Illuminate\Support\Facades\DB;
 
 class StockTransferService
 {
+    public function __construct(private StockService $stock) {}
+
     /**
-     * Yangi tovar transferi yaratish (qoralama)
-     * Jo'natuvchi ombordan darhol CHIQARMAYMIZ — "yuborildi" statusida
+     * Yangi tovar transferi yaratish (qoralama). Jo'natuvchi ombordan
+     * DARHOL chiqim qilinadi ("yuborildi" holatida yo'lda hisoblanadi) —
+     * qabul qiluvchi tasdiqlagach, o'zining omboriga kirim bo'ladi.
      */
     public function yaratish(array $data, array $tovarlar): FilialTransfer
     {
+        if (empty($data['from_ombor_id']) || empty($data['to_ombor_id'])) {
+            throw new \Exception("Jo'natuvchi va qabul qiluvchi ombor tanlanishi shart.");
+        }
+
         return DB::transaction(function () use ($data, $tovarlar) {
-            // Transfer raqam
             $raqam = 'TT-' . now()->format('Ymd') . '-' . str_pad(
                 FilialTransfer::whereDate('created_at', today())->count() + 1,
                 4, '0', STR_PAD_LEFT
@@ -34,11 +38,6 @@ class StockTransferService
             foreach ($tovarlar as $q) {
                 $tovar = TovarKatalog::findOrFail($q['tovar_id']);
 
-                // Qoldiq tekshiruvi
-                if ($tovar->qoldiq < $q['miqdor']) {
-                    throw new \Exception("Tovar «{$tovar->nomi}»: omborda {$tovar->qoldiq} {$tovar->birlik} bor, {$q['miqdor']} so'ralyapti.");
-                }
-
                 TransferTafsilot::create([
                     'transfer_id' => $transfer->id,
                     'tovar_id'    => $q['tovar_id'],
@@ -46,22 +45,20 @@ class StockTransferService
                     'narx'        => $tovar->tan_narx,
                 ]);
 
-                // Jo'natuvchi ombordan chiqarish + stock ledger
-                $oldinQoldiq = $tovar->qoldiq;
-                $tovar->decrement('qoldiq', $q['miqdor']);
-
-                $this->ledgerYoz($data['from_ombor_id'] ?? null, $tovar, 'transfer_out',
-                    $q['miqdor'], $oldinQoldiq, $oldinQoldiq - $q['miqdor'],
-                    'filiallar_transfer', $transfer->id, "Transfer #{$raqam} — yuborildi");
+                // Jo'natuvchi OMBORIDAN (filial emas!) chiqim — qoldiq yetarli
+                // bo'lmasa StockService o'zi aniq xabar bilan Exception otadi.
+                $this->stock->chiqim(
+                    $data['from_ombor_id'], $q['tovar_id'], (float) $q['miqdor'],
+                    manbaTur: 'filiallar_transfer', manbaId: $transfer->id,
+                    izoh: "Transfer #{$raqam} — yuborildi", harakat: 'transfer_out',
+                );
             }
 
             return $transfer;
         });
     }
 
-    /**
-     * Qabul qilish — qabul qiluvchi ombor tasdiqlaydi
-     */
+    /** Qabul qilish — qabul qiluvchi ombor tasdiqlaydi, o'z ombori qoldig'i oshadi. */
     public function qabulQilish(FilialTransfer $transfer): void
     {
         if ($transfer->holat !== 'yuborildi') {
@@ -70,16 +67,12 @@ class StockTransferService
 
         DB::transaction(function () use ($transfer) {
             foreach ($transfer->tafsilot as $t) {
-                $tovar = TovarKatalog::find($t->tovar_id);
-                if (!$tovar) continue;
-
-                $oldinQoldiq = $tovar->qoldiq;
-                $tovar->increment('qoldiq', $t->miqdor);
-
-                $this->ledgerYoz($transfer->to_ombor_id, $tovar, 'transfer_in',
-                    $t->miqdor, $oldinQoldiq, $oldinQoldiq + $t->miqdor,
-                    'filiallar_transfer', $transfer->id,
-                    "Transfer #{$transfer->transfer_raqam} — qabul qilindi");
+                if (!$t->tovar_id) continue;
+                $this->stock->kirim(
+                    $transfer->to_ombor_id, $t->tovar_id, (float) $t->miqdor,
+                    manbaTur: 'filiallar_transfer', manbaId: $transfer->id,
+                    izoh: "Transfer #{$transfer->transfer_raqam} — qabul qilindi", harakat: 'transfer_in',
+                );
             }
 
             $transfer->update([
@@ -90,9 +83,7 @@ class StockTransferService
         });
     }
 
-    /**
-     * Bekor qilish — tovarlarni qaytarish
-     */
+    /** Bekor qilish — yo'ldagi tovarlar jo'natuvchi omboriga qaytariladi. */
     public function bekorQilish(FilialTransfer $transfer, string $sabab): void
     {
         if (!in_array($transfer->holat, ['yuborildi', 'qoralama'])) {
@@ -101,41 +92,17 @@ class StockTransferService
 
         DB::transaction(function () use ($transfer, $sabab) {
             if ($transfer->holat === 'yuborildi') {
-                // Tovarlarni jo'natuvchi omborga qaytarish
                 foreach ($transfer->tafsilot as $t) {
-                    $tovar = TovarKatalog::find($t->tovar_id);
-                    if (!$tovar) continue;
-                    $oldinQoldiq = $tovar->qoldiq;
-                    $tovar->increment('qoldiq', $t->miqdor);
-                    $this->ledgerYoz($transfer->from_ombor_id, $tovar, 'tuzatish',
-                        $t->miqdor, $oldinQoldiq, $oldinQoldiq + $t->miqdor,
-                        'filiallar_transfer', $transfer->id,
-                        "Transfer #{$transfer->transfer_raqam} bekor — tovar qaytarildi. Sabab: {$sabab}");
+                    if (!$t->tovar_id) continue;
+                    $this->stock->kirim(
+                        $transfer->from_ombor_id, $t->tovar_id, (float) $t->miqdor,
+                        manbaTur: 'filiallar_transfer', manbaId: $transfer->id,
+                        izoh: "Transfer #{$transfer->transfer_raqam} bekor — tovar qaytarildi. Sabab: {$sabab}",
+                        harakat: 'tuzatish',
+                    );
                 }
             }
             $transfer->update(['holat' => 'bekor', 'sabab' => $sabab]);
         });
-    }
-
-    /** StockLedger ga yozuv */
-    private function ledgerYoz(?int $omborId, TovarKatalog $tovar, string $harakat,
-        float $miqdor, float $oldin, float $keyin,
-        string $manba_tur, int $manba_id, string $izoh): void
-    {
-        if (!$omborId) return;
-        StockLedger::create([
-            'ombor_id'     => $omborId,
-            'tovar_id'     => $tovar->id,
-            'tovar_nomi'   => $tovar->nomi,
-            'harakat'      => $harakat,
-            'miqdor'       => $miqdor,
-            'qoldiq_oldin' => $oldin,
-            'qoldiq_keyin' => $keyin,
-            'tan_narx'     => $tovar->tan_narx,
-            'manba_tur'    => $manba_tur,
-            'manba_id'     => $manba_id,
-            'xodim_id'     => Auth::id(),
-            'izoh'         => $izoh,
-        ]);
     }
 }

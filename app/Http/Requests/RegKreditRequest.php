@@ -16,6 +16,7 @@ class RegKreditRequest extends FormRequest
         return [
             'mijoz_id'            => ['required', 'exists:mijozlar,id'],
             'filial_id'           => ['required', 'exists:filiallar,id'],
+            'joriy_xodim_id'      => ['nullable', 'integer', 'exists:foydalanuvchilar,id'],
 
             // Moliyaviy ma'lumotlar
             'jami_summa'          => ['required', 'numeric', 'min:0'],

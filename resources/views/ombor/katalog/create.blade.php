@@ -57,10 +57,17 @@
                     @error('tan_narx')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label fw-medium">Sotish narxi (so'm) <span class="text-danger">*</span></label>
+                    <label class="form-label fw-medium">Naqd/POS narxi (so'm) <span class="text-danger">*</span></label>
                     <input type="number" name="sotish_narx" class="form-control @error('sotish_narx') is-invalid @enderror"
                            value="{{ old('sotish_narx', 0) }}" min="0" step="100" required>
                     @error('sotish_narx')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-medium">Nasiya narxi (so'm) <span class="text-danger">*</span></label>
+                    <input type="number" name="nasiya_narx" class="form-control @error('nasiya_narx') is-invalid @enderror"
+                           value="{{ old('nasiya_narx', 0) }}" min="0" step="100" required>
+                    @error('nasiya_narx')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <div class="form-text">Bo'lib-bo'lib to'lashda ishlatiladigan narx (odatda naqd narxdan yuqori)</div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-medium">Minimal qoldiq (ogohlantirish uchun)</label>

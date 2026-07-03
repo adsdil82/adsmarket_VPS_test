@@ -73,25 +73,17 @@
                 <select name="kategoriya_id" id="kategoriya-select" class="form-select @error('kategoriya_id') is-invalid @enderror" required>
                     <option value="">— tanlang —</option>
                     <optgroup label="── Kirim ──" class="grup-kirim">
-                        @foreach($kirimKategoriyalar as $grup => $bolalar)
-                            <optgroup label="  {{ $grup }}" class="grup-kirim">
-                                @foreach($bolalar as $id => $nomi)
-                                <option value="{{ $id }}" data-yunalish="kirim" {{ old('kategoriya_id') == $id ? 'selected' : '' }}>
-                                    {{ $nomi }}
-                                </option>
-                                @endforeach
-                            </optgroup>
+                        @foreach($kirimKategoriyalar as $id => $nomi)
+                        <option value="{{ $id }}" data-yunalish="kirim" {{ old('kategoriya_id') == $id ? 'selected' : '' }}>
+                            {{ $nomi }}
+                        </option>
                         @endforeach
                     </optgroup>
                     <optgroup label="── Chiqim ──" class="grup-chiqim">
-                        @foreach($chiqimKategoriyalar as $grup => $bolalar)
-                            <optgroup label="  {{ $grup }}" class="grup-chiqim">
-                                @foreach($bolalar as $id => $nomi)
-                                <option value="{{ $id }}" data-yunalish="chiqim" {{ old('kategoriya_id') == $id ? 'selected' : '' }}>
-                                    {{ $nomi }}
-                                </option>
-                                @endforeach
-                            </optgroup>
+                        @foreach($chiqimKategoriyalar as $id => $nomi)
+                        <option value="{{ $id }}" data-yunalish="chiqim" {{ old('kategoriya_id') == $id ? 'selected' : '' }}>
+                            {{ $nomi }}
+                        </option>
                         @endforeach
                     </optgroup>
                 </select>

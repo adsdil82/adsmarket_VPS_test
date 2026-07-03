@@ -70,6 +70,14 @@
                                 <option value="nofaol">Nofaol</option>
                             </select>
                         </div>
+                        <div class="col-sm-3">
+                            <label class="form-label fw-medium">Asosiy valyuta</label>
+                            <select name="asosiy_valyuta" class="form-select">
+                                <option value="UZS" {{ old('asosiy_valyuta','UZS')==='UZS' ? 'selected' : '' }}>UZS — So'm</option>
+                                <option value="USD" {{ old('asosiy_valyuta')==='USD' ? 'selected' : '' }}>USD — Dollar</option>
+                            </select>
+                            <div class="form-text">To'lov kiritishda shu valyuta avtomatik tanlanadi</div>
+                        </div>
                         @if(Auth::user()->isAdmin())
                         <div class="col-sm-6">
                             <label class="form-label fw-medium">Filial</label>

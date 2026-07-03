@@ -11,7 +11,7 @@ class Taminotchi extends Model
 
     protected $fillable = [
         'nomi','kontakt_shaxs','telefon','telefon2',
-        'manzil','inn','bank_hisob','bank_nomi','mfo',
+        'manzil','inn','bank_hisob','bank_nomi','mfo','asosiy_valyuta',
         'izoh','holat','filial_id',
     ];
 
@@ -40,10 +40,10 @@ class Taminotchi extends Model
         return (float)$this->kirimlar()->sum('jami_summa');
     }
 
-    /** Jami to'langan summa */
+    /** Jami to'langan summa (har doim so'mda — valyutadan qat'i nazar) */
     public function getJamiTolovAttribute(): float
     {
-        return (float)$this->tulovlar()->sum('summa');
+        return (float)$this->tulovlar()->sum('summa_uzs');
     }
 
     /** Qoldiq qarz (biz ta'minotchiga qarazdormiz) */

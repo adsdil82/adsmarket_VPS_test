@@ -18,10 +18,83 @@ class TulovController extends Controller
     {
         $this->filialRuxsatTekshir($kredit->filial_id);
 
-        $kredit->load(['mijoz', 'grafik' => fn($q) => $q->tolanmagan()->orderBy('oylik_tartib')]);
-        $tulovTurlari = TulovTuri::faol()->get();
+        $kredit->load([
+            'mijoz',
+            'grafik' => fn($q) => $q->orderBy('oylik_tartib'),
+            'tulovlar' => fn($q) => $q->with(['tulovTuri', 'xodim'])->orderByDesc('tolov_sana')->orderByDesc('id'),
+        ]);
 
-        return view('tulov.create', compact('kredit', 'tulovTurlari'));
+        // Admin har bir rol uchun qaysi to'lov turlari ko'rinishini cheklab
+        // qo'yishi mumkin (Rollar sozlamasidan). Cheklov sozlanmagan bo'lsa —
+        // o'zgarishsiz, barcha faol turlar ko'rinadi.
+        $ruxsatEtilganIdlar = \App\Models\Rol::korinadiganTulovTurlari(Auth::user()->rol);
+        $tulovTurlari = TulovTuri::faol()
+            ->when($ruxsatEtilganIdlar, fn($q) => $q->whereIn('id', $ruxsatEtilganIdlar))
+            ->get();
+
+        // "Ustama" ustuni — moliyaviy maxfiy ma'lumot, faqat shu rolga ruxsat
+        // berilgan bo'lsa ko'rinadi (standart: faqat admin).
+        $ustamaKorishMumkin = \App\Models\Rol::ustamaKorishMumkinmi(Auth::user()->rol);
+
+        $bugun = today();
+        $tolanmaganQatorlar = $kredit->grafik->filter(
+            fn($g) => in_array($g->holat, ['tolanmagan', 'qisman', 'muddati_otgan']) && $g->tolov_sana
+        )->sortBy('oylik_tartib')->values();
+
+        $kechikkanQatorlar = $tolanmaganQatorlar->filter(
+            fn($g) => $g->tolov_sana && $g->tolov_sana->lt($bugun)
+        );
+        $kechikkanSumma = $kechikkanQatorlar->sum(fn($g) => $g->tolov_summa - ($g->tolangan_summa ?? 0));
+        $kechikkanSoni  = $kechikkanQatorlar->count();
+
+        $birinchiOy = $tolanmaganQatorlar->first();
+        $maxKechikishKuni = (int) $kechikkanQatorlar->max('kechikish_kunlari');
+
+        // ── Grafik bo'yicha "vaqtida to'landi / kechikib to'landi / qoldi" nisbati (donut diagramma uchun) ──
+        // MUHIM: bu yerda oyning FIFO tartibida "to'liq yopilgan sana"si emas, balki KUMULYATIV
+        // balans solishtiriladi: har bir grafik kuniga (tolov_sana) kelib, mijozning O'SHA
+        // KUNGACHA jami to'lagan puli (barcha to'lovlar yig'indisi) o'sha kungacha REJA bo'yicha
+        // to'lanishi kerak bo'lgan jami summadan (kumulyativ) kam bo'lmasa — o'sha oy "vaqtida"
+        // hisoblanadi, hatto boshqa oy qisman-qisman to'lovlar bilan yopilgan bo'lsa ham.
+        $grafikTartib  = $kredit->grafik->filter(fn($g) => $g->tolov_sana !== null)->sortBy('oylik_tartib')->values();
+        $jamiRejaSumma = (float) $grafikTartib->sum('tolov_summa');
+
+        $vaqtidaTolandi  = 0.0;
+        $kechikibTolandi = 0.0;
+        $kumulyativReja  = 0.0;
+        foreach ($grafikTartib as $g) {
+            $kumulyativReja += (float) $g->tolov_summa;
+            if ($g->holat !== 'tolangan') {
+                continue;
+            }
+            $kumulyativTolandi = (float) $kredit->tulovlar->filter(
+                fn($t) => $t->tolov_sana && $t->tolov_sana->lte($g->tolov_sana)
+            )->sum('summa');
+
+            if ($kumulyativTolandi >= $kumulyativReja) {
+                $vaqtidaTolandi += (float) $g->tolov_summa;
+            } else {
+                $kechikibTolandi += (float) $g->tolov_summa;
+            }
+        }
+        $qoldiSumma = max(0, $jamiRejaSumma - $vaqtidaTolandi - $kechikibTolandi);
+
+        $diagrammaFoiz = [
+            'vaqtida'  => $jamiRejaSumma > 0 ? round($vaqtidaTolandi  / $jamiRejaSumma * 100, 1) : 0,
+            'kechikib' => $jamiRejaSumma > 0 ? round($kechikibTolandi / $jamiRejaSumma * 100, 1) : 0,
+            'qoldi'    => $jamiRejaSumma > 0 ? round($qoldiSumma      / $jamiRejaSumma * 100, 1) : 0,
+        ];
+
+        // Har bir to'lov turi uchun "keyingi kvitansiya raqami" oldindan ko'rsatish
+        // (foydalanuvchi to'lov turini tanlaganda mos raqam darhol ko'rinadi).
+        $kvitansiyaPreview = $tulovTurlari->mapWithKeys(
+            fn($t) => [$t->id => $this->tulovService->keyingiKvitansiyaOldindanKorish($t->id)]
+        );
+
+        return view('tulov.create', compact(
+            'kredit', 'tulovTurlari', 'kechikkanSumma', 'kechikkanSoni', 'birinchiOy', 'kvitansiyaPreview', 'ustamaKorishMumkin', 'maxKechikishKuni',
+            'diagrammaFoiz', 'vaqtidaTolandi', 'kechikibTolandi', 'qoldiSumma'
+        ));
     }
 
     /** To'lovni saqlash */
@@ -34,6 +107,14 @@ class TulovController extends Controller
             return back()->withErrors(['summa' => 'Bu shartnoma to\'liq yopilgan. Yangi to\'lov qabul qilish mumkin emas.']);
         }
 
+        // Rolga ruxsat etilmagan to'lov turi — forma orqali (DevTools bilan)
+        // o'zgartirib yuborilgan bo'lishi mumkin, shuning uchun bu yerda ham
+        // serverda qayta tekshiriladi.
+        $ruxsatEtilganIdlar = \App\Models\Rol::korinadiganTulovTurlari(Auth::user()->rol);
+        if ($ruxsatEtilganIdlar && !in_array((int) $request->tulov_turi_id, $ruxsatEtilganIdlar)) {
+            return back()->withErrors(['tulov_turi_id' => 'Sizning rolingiz uchun bu to\'lov turi ruxsat etilmagan.'])->withInput();
+        }
+
         // To'lov summasi qoldiq qarzdan katta bo'lmasin
         if ($request->summa > $kredit->qoldiq_qarz) {
             return back()->withErrors([
@@ -41,7 +122,17 @@ class TulovController extends Controller
             ])->withInput();
         }
 
-        $tulov = $this->tulovService->tulovQabul($kredit, $request->validated());
+        // XAVFSIZLIK: to'lov sanasi va kvitansiya raqami HECH QACHON formadan
+        // (foydalanuvchi kiritgan qiymatdan) olinmaydi — faqat server tomonda
+        // belgilanadi. Aks holda kassir orqaga sana qo'yib hisobotlarni
+        // buzishi yoki qo'lda raqam yozib kvitansiya tartibini chalkashtirishi
+        // mumkin edi. tolov_sana doim BUGUNGI kun, kvitansiya_raqam esa
+        // TulovService::tulovQabul() ichida avtomatik generatsiya qilinadi.
+        $malumot = $request->validated();
+        $malumot['tolov_sana']       = today()->toDateString();
+        $malumot['kvitansiya_raqam'] = null;
+
+        $tulov = $this->tulovService->tulovQabul($kredit, $malumot);
 
         $kvUrl = route('kreditlar.tulov.kvitansiya', [$kredit, $tulov]);
 
@@ -108,10 +199,15 @@ class TulovController extends Controller
     {
         $this->filialRuxsatTekshir($kredit->filial_id);
 
-        $summa = (float)$tulov->summa;
+        $summa  = (float)$tulov->summa;
+        $tulovId = $tulov->id;
 
         // Tulovni audit log bilan o'chiramiz
         $tulov->delete();
+
+        // Shu to'lovdan avtomatik yaratilgan "Pul oqimlari" yozuvini ham
+        // o'chiramiz — aks holda kassa qoldig'ida osilib qoladi.
+        $this->tulovService->pulOqiminiOchir('tulov', $tulovId);
 
         // Kredit statistikasini yangilash
         $kredit->decrement('tolov_qilingan', $summa);
@@ -155,6 +251,11 @@ class TulovController extends Controller
             $kredit->increment('tolov_qilingan', $farq);
             $kredit->decrement('qoldiq_qarz', $farq);
         }
+
+        // Bog'langan "Pul oqimlari" yozuvini ham yangilab qo'yamiz (summa va
+        // sana mos kelmay qolmasligi uchun) — agar avtomatik yozuv bo'lsa.
+        \App\Models\PulOqim::where('manba_tur', 'tulov')->where('manba_id', $tulov->id)
+            ->update(['summa' => $validated['summa'], 'sana' => $validated['tolov_sana']]);
 
         if ($request->expectsJson()) {
             return response()->json(['muvaffaqiyat' => true, 'xabar' => "To'lov tahrirlandi"]);

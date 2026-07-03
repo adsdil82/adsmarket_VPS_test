@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 class SupplierReturnController extends Controller
 {
+    public function __construct(private \App\Services\StockService $stockService) {}
+
     public function index(Request $request)
     {
         $user     = Auth::user();
@@ -105,14 +107,19 @@ class SupplierReturnController extends Controller
             return back()->with('xato', "Bu qaytarish {$supplierReturn->holat} holatida.");
         }
         DB::transaction(function () use ($supplierReturn) {
-            // Ombor qoldig'ini kamaytirish
+            // Aynan shu QAYTARISH uchun tanlangan OMBORdan chiqim qilinadi
+            // (boshqa ombor/filial qoldig'iga tegilmaydi).
             foreach ($supplierReturn->qatorlar as $q) {
-                if ($q->tovar_id) {
-                    $tovar = TovarKatalog::find($q->tovar_id);
-                    if ($tovar && $tovar->qoldiq >= $q->miqdor) {
-                        $tovar->decrement('qoldiq', $q->miqdor);
-                    }
+                if (!$q->tovar_id) continue;
+                if (!$this->stockService->yetarlimi($supplierReturn->ombor_id, $q->tovar_id, (float) $q->miqdor)) {
+                    continue; // yetarli bo'lmasa — shu qatorni o'tkazib yuboramiz, qoldiqni manfiyga olib bormaymiz
                 }
+                $this->stockService->chiqim(
+                    $supplierReturn->ombor_id, $q->tovar_id, (float) $q->miqdor,
+                    manbaTur: 'taminotchi_qaytarish', manbaId: $supplierReturn->id,
+                    izoh: "Ta'minotchiga qaytarish — {$q->nomi} (sabab: {$supplierReturn->sabab})",
+                    harakat: 'qaytarish',
+                );
             }
             $supplierReturn->update([
                 'holat'          => 'tasdiqlangan',

@@ -76,6 +76,13 @@
 
             {{-- Tovarlar jadvali --}}
             <h6 class="fw-bold mb-2">Tovarlar ro'yxati</h6>
+            <div class="mb-2" style="max-width:320px">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+                    <input type="text" id="barkod-skan" class="form-control" placeholder="Shtrix-kod skaner..." autocomplete="off"
+                           onkeydown="if(event.key==='Enter'){event.preventDefault();barkodSkan();}">
+                </div>
+            </div>
             <div class="table-responsive mb-3">
                 <table class="table table-sm border" id="tovarlar-table">
                     <thead class="table-light">
@@ -93,7 +100,7 @@
                                 <select name="tovarlar[0][tovar_id]" class="form-select form-select-sm tovar-select" onchange="qoldiqKorsatish(this,0)" required>
                                     <option value="">— Tovar tanlang —</option>
                                     @foreach($tovarlar as $tv)
-                                    <option value="{{ $tv->id }}" data-qoldiq="{{ $tv->qoldiq }}" data-birlik="{{ $tv->birlik }}">
+                                    <option value="{{ $tv->id }}" data-qoldiq="{{ $tv->qoldiq }}" data-birlik="{{ $tv->birlik }}" data-barkod="{{ $tv->barkod }}">
                                         {{ $tv->nomi }} ({{ $tv->qoldiq }} {{ $tv->birlik }})
                                     </option>
                                     @endforeach
@@ -164,6 +171,54 @@ function tovarQosh() {
         <td><button type="button" class="del-btn" onclick="this.closest('tr').remove()"><i class="bi bi-x-circle"></i></button></td>
     `;
     tbody.appendChild(tr);
+    return idx;
+}
+
+/**
+ * Shtrix-kod skaneri: kiritilgan qiymatga mos tovar topilsa — bo'sh (hali
+ * tovar tanlanmagan) qatorga yoki yangi qatorga avtomat qo'yiladi, miqdor
+ * maydoniga fokus o'tadi (tezkor ketma-ket skaner uchun qulay).
+ */
+function barkodSkan() {
+    var inp = document.getElementById('barkod-skan');
+    var q = inp.value.trim();
+    if (!q) return;
+
+    var mosOption = null;
+    document.querySelectorAll('.tovar-select option, #tovarlar-body select option').forEach(function(o) {
+        if (o.dataset.barkod === q) mosOption = o;
+    });
+
+    if (!mosOption) {
+        alert("Bu shtrix-kodga mos tovar topilmadi!");
+        inp.value = '';
+        return;
+    }
+
+    // Bo'sh (tovar tanlanmagan) qatorni qidiramiz, bo'lmasa yangisini qo'shamiz
+    var boshQator = null, boshIdx = null;
+    document.querySelectorAll('#tovarlar-body tr.tovar-row').forEach(function(tr) {
+        var sel = tr.querySelector('select');
+        if (!boshQator && sel && !sel.value) {
+            boshQator = tr;
+            boshIdx = sel.name.match(/\[(\d+)\]/)[1];
+        }
+    });
+
+    var idx;
+    if (boshQator) {
+        idx = boshIdx;
+    } else {
+        idx = tovarQosh();
+    }
+
+    var sel = document.querySelector(`[name="tovarlar[${idx}][tovar_id]"]`);
+    sel.value = mosOption.value;
+    qoldiqKorsatish(sel, idx);
+
+    inp.value = '';
+    var miqdorInp = document.querySelector(`[name="tovarlar[${idx}][miqdor]"]`);
+    if (miqdorInp) { miqdorInp.focus(); miqdorInp.select(); }
 }
 </script>
 @endpush

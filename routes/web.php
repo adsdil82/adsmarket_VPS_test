@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HisobotController;
 use App\Http\Controllers\MijozController;
 use App\Http\Controllers\OmborController;
+use App\Http\Controllers\BarcodeLabelController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\BackupController;
@@ -36,6 +37,8 @@ use App\Http\Controllers\YangiTulovTuriController;
 use App\Http\Controllers\NotificationTemplateController;
 use App\Http\Controllers\HarajatController;
 use App\Http\Controllers\PulOqimController;
+use App\Http\Controllers\PLController;
+use App\Http\Controllers\BLController;
 use App\Http\Controllers\QurilmaController;
 use App\Http\Controllers\QurilmaProvayderController;
 use App\Http\Controllers\MalumotnomalarController;
@@ -78,7 +81,9 @@ Route::middleware('auth')->group(function () {
 Route::middleware('auth')->group(function () {
 
     // Dashboard
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/', [DashboardController::class, 'index'])
+        ->middleware('litsenziya.tekshir:dashboard')
+        ->name('dashboard');
     Route::get('/dashboard/statistika', [DashboardController::class, 'ajaxStatistika'])
         ->name('dashboard.statistika');
 
@@ -86,10 +91,10 @@ Route::middleware('auth')->group(function () {
     Route::prefix('mijozlar')->name('mijozlar.')->group(function () {
         Route::get('/',           [MijozController::class, 'index'])->name('index');
         Route::get('/yangi',      [MijozController::class, 'create'])
-            ->middleware('rol.check:admin,menejer')
+            ->middleware(['rol.check:admin,menejer', 'litsenziya.tekshir:mijoz', 'litsenziya.limit:mijoz_max'])
             ->name('create');
         Route::post('/',          [MijozController::class, 'store'])
-            ->middleware('litsenziya.tekshir')
+            ->middleware(['litsenziya.tekshir:mijoz', 'litsenziya.limit:mijoz_max'])
             ->name('store');
         Route::get('/ajax-qidiruv', [MijozController::class, 'ajaxQidiruv'])->name('ajax.qidiruv');
         Route::get('/{mijoz}',    [MijozController::class, 'show'])->name('show');
@@ -102,11 +107,13 @@ Route::middleware('auth')->group(function () {
     // ─── Nasiya shartnomalar ──────────────────────────────────────
     Route::prefix('kreditlar')->name('kreditlar.')->group(function () {
         Route::get('/',          [RegKreditController::class, 'index'])->name('index');
+        Route::get('/excel',     [RegKreditController::class, 'excel'])->name('excel');
+        Route::get('/ajax/tovar-barkod', [RegKreditController::class, 'tovarBarkod'])->name('ajax.tovar_barkod');
         Route::get('/yangi',     [RegKreditController::class, 'create'])
-            ->middleware('rol.check:admin,menejer')
+            ->middleware(['rol.check:admin,menejer', 'litsenziya.tekshir:shartnoma', 'litsenziya.limit:shartnoma_max'])
             ->name('create');
         Route::post('/',         [RegKreditController::class, 'store'])
-            ->middleware(['rol.check:admin,menejer', 'litsenziya.tekshir'])
+            ->middleware(['rol.check:admin,menejer', 'litsenziya.tekshir:shartnoma', 'litsenziya.limit:shartnoma_max'])
             ->name('store');
         Route::get('/{kredit}',  [RegKreditController::class, 'show'])->name('show');
         // Hybrid Pochta xat yuborish (Phase 3)
@@ -125,8 +132,12 @@ Route::middleware('auth')->group(function () {
         Route::put('/{kredit}',  [RegKreditController::class, 'update'])
             ->middleware('rol.check:admin,menejer')
             ->name('update');
+        Route::post('/{kredit}/activate', [RegKreditController::class, 'activate'])
+            ->middleware('rol.check:admin,menejer')
+            ->name('activate');
         Route::get('/{kredit}/pdf', [RegKreditController::class, 'pdf'])->name('pdf');
         Route::get('/{kredit}/hujjat/{tur}', [RegKreditController::class, 'hujjat'])->name('hujjat');
+        Route::get('/{kredit}/hujjat-html/{tur}', [RegKreditController::class, 'hujjatHtml'])->name('hujjat.html');
 
         // To'lovlar
         Route::get('/{kredit}/tulov',          [TulovController::class, 'create'])
@@ -159,25 +170,26 @@ Route::middleware('auth')->group(function () {
     });
 
     // ─── Hisobotlar ───────────────────────────────────────────────
-    Route::prefix('hisobotlar')->name('hisobotlar.')->group(function () {
+    Route::prefix('hisobotlar')->name('hisobotlar.')->middleware('litsenziya.tekshir:hisobot')->group(function () {
         Route::get('/',                    [HisobotController::class, 'index'])->name('index');
         Route::get('/kelayotgan',          [HisobotController::class, 'kelayotganTulovlar'])->name('kelayotgan');
         Route::get('/kredit-portfolio',    [HisobotController::class, 'kreditPortfeli'])->name('kredit_portfolio');
         Route::get('/chiqarilgan',         [HisobotController::class, 'chiqarilganKreditlar'])->name('chiqarilgan');
-        Route::get('/kechikish-analiz',    [HisobotController::class, 'kechikishAnaliz'])->name('kechikish_analiz');
-        Route::get('/konstruktor',         [HisobotController::class, 'konstruktor'])->name('konstruktor');
-        Route::post('/konstruktor',        [HisobotController::class, 'konstruktorHisobot'])->name('konstruktor.hisobot');
-        Route::get('/excel/{tur}',         [HisobotController::class, 'excelExport'])->name('excel');
-        Route::post('/konstruktor/excel',  [HisobotController::class, 'konstruktorExcel'])->name('konstruktor.excel');
+        Route::get('/sotilgan-tovarlar',   [HisobotController::class, 'sotilganTovarlar'])->name('sotilgan_tovarlar');
+        Route::get('/kechikish-analiz',    [HisobotController::class, 'kechikishAnaliz'])->middleware('litsenziya.limit:hisobot_advanced')->name('kechikish_analiz');
+        Route::get('/konstruktor',         [HisobotController::class, 'konstruktor'])->middleware('litsenziya.limit:hisobot_advanced')->name('konstruktor');
+        Route::post('/konstruktor',        [HisobotController::class, 'konstruktorHisobot'])->middleware('litsenziya.limit:hisobot_advanced')->name('konstruktor.hisobot');
+        Route::get('/excel/{tur}',         [HisobotController::class, 'excelExport'])->middleware('litsenziya.limit:hisobot_advanced')->name('excel');
+        Route::post('/konstruktor/excel',  [HisobotController::class, 'konstruktorExcel'])->middleware('litsenziya.limit:hisobot_advanced')->name('konstruktor.excel');
         Route::get('/transferlar',            [HisobotController::class, 'transferHisobot'])->name('transfer');
     });
 
     // ─── Tovar katalog ────────────────────────────────────────────
     Route::prefix('katalog')->name('katalog.')->middleware('rol.check:admin,menejer')->group(function () {
         Route::get('/',               [TovarKatalogController::class, 'index'])->name('index');
-        Route::get('/yangi',          [TovarKatalogController::class, 'create'])->name('create');
+        Route::get('/yangi',          [TovarKatalogController::class, 'create'])->middleware(['litsenziya.tekshir:tovar', 'litsenziya.limit:tovar_max'])->name('create');
         Route::post('/',              [TovarKatalogController::class, 'store'])
-            ->middleware('litsenziya.tekshir')
+            ->middleware(['litsenziya.tekshir:tovar', 'litsenziya.limit:tovar_max'])
             ->name('store');
         Route::get('/{katalog}/edit', [TovarKatalogController::class, 'edit'])->name('edit');
         Route::put('/{katalog}',      [TovarKatalogController::class, 'update'])->name('update');
@@ -210,7 +222,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // ─── POS (Naqd savdo) ─────────────────────────────────────────
-    Route::prefix('pos')->name('pos.')->group(function () {
+    Route::prefix('pos')->name('pos.')->middleware(['litsenziya.tekshir:pos', 'litsenziya.limit:pos'])->group(function () {
         Route::get('/',              [PosController::class, 'index'])->name('index');
         Route::get('/tovarlar',      [PosController::class, 'tovarlar'])->name('tovarlar');
         Route::post('/saqlash',      [PosController::class, 'store'])->name('store');
@@ -221,6 +233,9 @@ Route::middleware('auth')->group(function () {
     // ─── Ombor (eski, endi katalog ishlatiladi) ───────────────────
     Route::prefix('ombor')->name('ombor.')->group(function () {
         Route::get('/',       [OmborController::class, 'index'])->name('index');
+        Route::get('/tovar/{tovar}', [OmborController::class, 'tovar'])->name('tovar');
+        Route::get('/etiketka',          [BarcodeLabelController::class, 'index'])->name('etiketka');
+        Route::get('/etiketka/tovarlar', [BarcodeLabelController::class, 'tovarlar'])->name('etiketka.tovarlar');
         Route::get('/kirim',  fn() => redirect()->route('kirim.index'))->name('kirim');
         Route::get('/chiqim', fn() => redirect()->route('chiqim.index'))->name('chiqim');
     });
@@ -295,6 +310,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/rollar',           [AdminController::class, 'rollarStore'])->name('rollar.store');
         Route::put('/rollar/{rol}',      [AdminController::class, 'rollarUpdate'])->name('rollar.update');
         Route::delete('/rollar/{rol}',   [AdminController::class, 'rollarDestroy'])->name('rollar.destroy');
+        Route::put('/rollar/{rol}/tulov-sozlama', [AdminController::class, 'rollarTulovSozlama'])->name('rollar.tulov_sozlama');
         Route::get('/foydalanuvchilar',  [AdminController::class, 'foydalanuvchilar'])->name('foydalanuvchilar');
         Route::post('/foydalanuvchilar', [AdminController::class, 'foydalanuvchiStore'])->name('foydalanuvchilar.store');
         Route::put('/foydalanuvchilar/{foydalanuvchi}', [AdminController::class, 'foydalanuvchiUpdate'])->name('foydalanuvchilar.update');
@@ -343,14 +359,23 @@ Route::middleware('auth')->group(function () {
             ->middleware('rol.check:admin,menejer,omborchi');
         Route::post('/{taminotchi}/kirim',      [TaminotchiController::class, 'kirimStore'])->name('kirim.store')
             ->middleware('rol.check:admin,menejer,omborchi');
+        Route::get('/{taminotchi}/kirim/{kirim}/tahrirlash', [TaminotchiController::class, 'kirimEdit'])->name('kirim.edit')
+            ->middleware('rol.check:admin,menejer,omborchi');
+        Route::put('/{taminotchi}/kirim/{kirim}', [TaminotchiController::class, 'kirimUpdate'])->name('kirim.update')
+            ->middleware('rol.check:admin,menejer,omborchi');
 
         // To'lov (kassir + admin + menejer)
         Route::post('/{taminotchi}/tulov', [TaminotchiController::class, 'tulovStore'])->name('tulov.store')
             ->middleware('rol.check:admin,menejer,kassir');
+        Route::delete('/{taminotchi}/tulov/{tulov}', [TaminotchiController::class, 'tulovDestroy'])->name('tulov.destroy')
+            ->middleware('rol.check:admin');
+        Route::put('/{taminotchi}/tulov/{tulov}',    [TaminotchiController::class, 'tulovUpdate'])->name('tulov.update')
+            ->middleware('rol.check:admin');
 
         // Akt sverka va hisobotlar (barcha login bo'lganlar)
         Route::get('/{taminotchi}/akt-sverka', [TaminotchiController::class, 'aktSverka'])->name('akt_sverka');
         Route::get('/hisobot/reestr',           [TaminotchiController::class, 'tulovReestr'])->name('tulov_reestr');
+        Route::get('/hisobot/kirim-reestr',     [TaminotchiController::class, 'kirimReestr'])->name('kirim_reestr');
         Route::get('/hisobot/balans',           [TaminotchiController::class, 'hisobot'])->name('hisobot');
     });
 
@@ -413,6 +438,7 @@ Route::middleware('auth')->group(function () {
     // Pul Oqimlari (CashFlow)
     Route::prefix('pul-oqimlari')->name('pul-oqimlari.')->group(function () {
         Route::get('/',                          [PulOqimController::class, 'index'])->name('index');
+        Route::get('/hisobot',                    [PulOqimController::class, 'hisobot'])->name('hisobot');
         Route::get('/yangi',                     [PulOqimController::class, 'create'])->name('create')
             ->middleware('rol.check:admin,menejer,kassir');
         Route::post('/',                         [PulOqimController::class, 'store'])->name('store')
@@ -424,6 +450,19 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{pulOqim}',              [PulOqimController::class, 'destroy'])->name('destroy')
             ->middleware('rol.check:admin');
         Route::get('/ajax/kunlik-chart',         [PulOqimController::class, 'ajaxKunlikChart'])->name('ajax.chart');
+
+        Route::prefix('moliyaviy-natija')->name('moliyaviy-natija.')->middleware('rol.check:admin,menejer,hisobchi')->group(function () {
+            Route::get('/',              [PLController::class, 'index'])->name('index');
+            Route::post('/qiymat',       [PLController::class, 'qiymatSaqlash'])->name('qiymat');
+        });
+
+        Route::prefix('balans')->name('balans.')->middleware('rol.check:admin,menejer,hisobchi')->group(function () {
+            Route::get('/',              [BLController::class, 'index'])->name('index');
+            Route::post('/qiymat',       [BLController::class, 'qiymatSaqlash'])->name('qiymat');
+            Route::post('/modda',        [BLController::class, 'qatorStore'])->name('modda.store');
+            Route::delete('/modda/{qator}', [BLController::class, 'qatorDestroy'])->name('modda.destroy');
+            Route::put('/modda/{qator}', [BLController::class, 'qatorUpdate'])->name('modda.update');
+        });
     });
 
     Route::prefix('harajatlar')->name('harajatlar.')->group(function () {
@@ -439,6 +478,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{harajat}',   [HarajatController::class, 'destroy'])->name('destroy')
             ->middleware('rol.check:admin');
     });
+
 
     // Buxgalteriya
     Route::prefix('buxgalteriya')->name('buxgalteriya.')->middleware('rol.check:admin')->group(function () {
@@ -534,6 +574,14 @@ Route::middleware('auth')->group(function () {
                 ->middleware('rol.check:admin,menejer');
             Route::delete('/{harajatTuri}',     [HarajatTuriController::class, 'destroy'])->name('destroy')
                 ->middleware('rol.check:admin');
+            Route::post('/bog-lash',            [HarajatTuriController::class, 'bogLash'])->name('boglash')
+                ->middleware('rol.check:admin,menejer');
+            Route::get('/taminotchi-migratsiya', [HarajatTuriController::class, 'taminotchiMigratsiya'])->name('taminotchi-migratsiya')
+                ->middleware('rol.check:admin,menejer');
+            Route::post('/taminotchi-migratsiya', [HarajatTuriController::class, 'taminotchiMigratsiyaTasdiq'])->name('taminotchi-migratsiya.tasdiq')
+                ->middleware('rol.check:admin,menejer');
+            Route::post('/manfiy-daromad', [HarajatTuriController::class, 'manfiyDaromadQilish'])->name('manfiy-daromad')
+                ->middleware('rol.check:admin,menejer');
         });
 
         // Pul oqimi kategoriyalari

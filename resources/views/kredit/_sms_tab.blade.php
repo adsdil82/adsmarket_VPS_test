@@ -1,54 +1,64 @@
-<div class="row g-3 mb-3">
-    <div class="col-md-5">
-        <label class="form-label small fw-medium">Shablon</label>
-        <select id="sms-shablon" class="form-select form-select-sm">
-            <option value="">— Bo'sh xabar (qo'lda yozish) —</option>
-            @foreach($sms_shablonlar as $sh)
-            <option value="{{ $sh->id }}">{{ $sh->name }}</option>
-            @endforeach
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label small fw-medium">Telefon raqam</label>
-        @php $smsRaqamlari = $kredit->mijoz->sms_raqamlari ?? []; @endphp
-        @if(count($smsRaqamlari) > 1)
-        <select id="sms-tel-select" class="form-select form-select-sm" onchange="document.getElementById('sms-tel').value=this.value">
-            @foreach($smsRaqamlari as $r)
-            <option value="{{ $r }}">{{ $r }}</option>
-            @endforeach
-        </select>
-        <input type="hidden" id="sms-tel" value="{{ $smsRaqamlari[0] ?? '' }}">
-        @else
-        <input type="text" id="sms-tel" class="form-control form-control-sm"
-               value="{{ $smsRaqamlari[0] ?? ($kredit->mijoz->telefon ?? '') }}" placeholder="+998901234567">
-        @endif
-    </div>
-    <div class="col-md-3 d-flex align-items-end">
-        <button type="button" class="btn btn-sm btn-primary w-100" id="sms-yubor-btn" onclick="smsTabYuborish()">
-            <i class="bi bi-send me-1"></i>SMS yuborish
-        </button>
-    </div>
-    <div class="col-12">
-        <label class="form-label small fw-medium">Xabar matni</label>
-        <textarea id="sms-matn" class="form-control form-control-sm" rows="3" maxlength="800"
-                  placeholder="Shablon tanlang yoki qo'lda yozing"></textarea>
-        <div class="form-text small"><span id="sms-belgi-son">0</span> belgi</div>
-        <div id="sms-cooldown-info" class="form-text small text-warning d-none">
-            <i class="bi bi-clock-history me-1"></i><span id="sms-cooldown-matn"></span>
-        </div>
-    </div>
-    <div class="col-12">
-        <div id="sms-natija" class="alert d-none py-2 small mb-0"></div>
-    </div>
+<div class="bft-section-title"><i class="bi bi-chat-dots me-1"></i>Xabar tuzish</div>
+<div class="bft-wrap bft-wrap-lg mb-2">
+    <table class="bft-table">
+        <tbody>
+            <tr>
+                <td class="bft-label">Shablon</td>
+                <td class="bft-wide">
+                    <select id="sms-shablon" class="form-select form-select-sm" style="max-width:340px">
+                        <option value="">— Bo'sh xabar (qo'lda yozish) —</option>
+                        @foreach($sms_shablonlar as $sh)
+                        <option value="{{ $sh->id }}">{{ $sh->name }}</option>
+                        @endforeach
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td class="bft-label">Telefon raqam</td>
+                <td class="bft-wide">
+                    @php $smsRaqamlari = $kredit->mijoz->sms_raqamlari ?? []; @endphp
+                    <div class="d-flex gap-2 align-items-center flex-wrap">
+                        @if(count($smsRaqamlari) > 1)
+                        <select id="sms-tel-select" class="form-select form-select-sm" style="max-width:220px" onchange="document.getElementById('sms-tel').value=this.value">
+                            @foreach($smsRaqamlari as $r)
+                            <option value="{{ $r }}">{{ $r }}</option>
+                            @endforeach
+                        </select>
+                        <input type="hidden" id="sms-tel" value="{{ $smsRaqamlari[0] ?? '' }}">
+                        @else
+                        <input type="text" id="sms-tel" class="form-control form-control-sm" style="max-width:220px"
+                               value="{{ $smsRaqamlari[0] ?? ($kredit->mijoz->telefon ?? '') }}" placeholder="+998901234567">
+                        @endif
+                        <button type="button" class="btn btn-sm btn-primary" id="sms-yubor-btn" onclick="smsTabYuborish()">
+                            <i class="bi bi-send me-1"></i>SMS yuborish
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="bft-label">Xabar matni</td>
+                <td class="bft-wide">
+                    <textarea id="sms-matn" class="form-control form-control-sm" rows="3" maxlength="800"
+                              placeholder="Shablon tanlang yoki qo'lda yozing"></textarea>
+                    <div class="form-text small"><span id="sms-belgi-son">0</span> belgi</div>
+                    <div id="sms-cooldown-info" class="form-text small text-warning d-none">
+                        <i class="bi bi-clock-history me-1"></i><span id="sms-cooldown-matn"></span>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
 </div>
+<div id="sms-natija" class="alert d-none py-2 small mb-3"></div>
 
-<div class="table-responsive">
-    <table class="table table-sm table-hover align-middle mb-0" id="sms-log-table">
-        <thead class="table-light">
+<div class="bft-section-title bft-secondary"><i class="bi bi-clock-history me-1"></i>Yuborilgan SMS'lar tarixi</div>
+<div class="bft-wrap bft-wrap-lg">
+    <table class="bft-table bft-doc-table" id="sms-log-table">
+        <thead>
             <tr>
                 <th style="width:120px">Sana</th>
                 <th>Shablon</th>
-                <th>Telefon</th>
+                <th style="width:140px">Telefon</th>
                 <th style="width:110px">Holat</th>
                 <th style="width:100px">Provider</th>
                 <th>Izoh / Xato</th>

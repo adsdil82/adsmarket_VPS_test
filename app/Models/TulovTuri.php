@@ -38,6 +38,12 @@ class TulovTuri extends Model implements \OwenIt\Auditing\Contracts\Auditable
         return $this->hasMany(OldinTulov::class, 'tulov_turi_id');
     }
 
+    /** Bu to'lov turini ko'rish huquqi berilgan rollar */
+    public function rollar()
+    {
+        return $this->belongsToMany(Rol::class, 'rol_tulov_turlari');
+    }
+
     // ─── Scope'lar ────────────────────────────────────────────────
 
     /** Faqat faol to'lov turlarini qaytaradi */

@@ -22,6 +22,7 @@ $rang = $rangXarita[$holati] ?? 'secondary';
 $matn = $matnXarita[$holati] ?? $holati;
 @endphp
 
+@section('content')
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body p-4">
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
@@ -88,7 +89,7 @@ $matn = $matnXarita[$holati] ?? $holati;
             @csrf
             <div class="col-md-6">
                 <label class="form-label small text-muted">Faollashtirish kodi</label>
-                <input type="text" name="kod" class="form-control" placeholder="20271231-A1B2C3D4E5" required>
+                <input type="text" name="kod" class="form-control" placeholder="20271231170-A1B2C3D4E5" required>
             </div>
             <div class="col-md-3">
                 <button type="submit" class="btn btn-primary w-100">
@@ -98,6 +99,7 @@ $matn = $matnXarita[$holati] ?? $holati;
         </form>
     </div>
 </div>
+@endsection
 
 @push('scripts')
 <script>

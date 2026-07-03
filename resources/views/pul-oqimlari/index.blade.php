@@ -18,16 +18,19 @@
         <i class="bi bi-arrow-left-right me-2" style="color:#6366f1"></i>Pul Oqimlari
         <span class="badge bg-secondary bg-opacity-15 text-secondary ms-1" style="font-size:.7rem;font-weight:600">CashFlow</span>
     </h5>
-    @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki() || Auth::user()->isKassir())
     <div class="d-flex gap-2">
+        <a href="{{ route('pul-oqimlari.hisobot') }}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-file-earmark-bar-graph me-1"></i>Hisobot
+        </a>
+        @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki() || Auth::user()->isKassir())
         <a href="{{ route('pul-oqimlari.create', ['yunalish'=>'kirim']) }}" class="btn btn-sm btn-success">
             <i class="bi bi-plus-lg me-1"></i>Kirim
         </a>
         <a href="{{ route('pul-oqimlari.create', ['yunalish'=>'chiqim']) }}" class="btn btn-sm btn-danger">
             <i class="bi bi-dash-lg me-1"></i>Chiqim
         </a>
+        @endif
     </div>
-    @endif
 </div>
 
 {{-- KPI kartalar --}}
@@ -75,25 +78,6 @@
         </div>
     </div>
 </div>
-
-{{-- Kategoriya breakdown (chiqim) --}}
-@if($chiqimByKat->count())
-<div class="card border-0 shadow-sm mb-3">
-    <div class="card-body py-2 px-3">
-        <div class="text-muted mb-2" style="font-size:.72rem;font-weight:600;text-transform:uppercase">Chiqim — Kategoriyalar bo'yicha</div>
-        <div class="d-flex flex-wrap gap-2">
-            @foreach($chiqimByKat->take(8) as $ck)
-            @php $kat = $ck->kategoriya; @endphp
-            <div class="d-flex align-items-center gap-1" style="font-size:.75rem">
-                <span class="fw-600 text-muted">{{ $kat?->kod ?? '—' }}</span>
-                <span>{{ Str::limit($kat?->nomi ?? '—', 22) }}</span>
-                <span class="badge bg-danger bg-opacity-10 text-danger fw-bold">{{ number_format($ck->jami,0,'.',' ') }}</span>
-            </div>
-            @endforeach
-        </div>
-    </div>
-</div>
-@endif
 
 {{-- Filtr --}}
 <div class="card border-0 shadow-sm mb-3">
@@ -150,10 +134,140 @@
     </div>
 </div>
 
+{{-- Kategoriya breakdown (kirim va chiqim alohida) --}}
+@if($kirimByKat->count() || $chiqimByKat->count())
+<div class="row g-3 mb-3">
+    @if($kirimByKat->count())
+    <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+        <div class="card-header py-2 px-3 bg-white d-flex justify-content-between align-items-center" style="cursor:pointer" onclick="blokToggle('blok-kirim-kat', this)">
+            <div class="text-muted" style="font-size:.72rem;font-weight:600;text-transform:uppercase">Kirim — Kategoriyalar bo'yicha</div>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2"><i class="bi bi-plus-lg"></i></button>
+        </div>
+        <div id="blok-kirim-kat" class="table-responsive" style="display:none">
+            <table class="table table-sm mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Kod</th>
+                        <th>Kategoriya</th>
+                        <th class="text-end">Soni</th>
+                        <th class="text-end">Summa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($kirimByKat as $ck)
+                    @php $kat = $ck->kategoriya; @endphp
+                    <tr>
+                        <td class="small text-muted">{{ $kat?->kod ?? '—' }}</td>
+                        <td class="small">{{ $kat?->nomi ?? '—' }}</td>
+                        <td class="text-end small text-muted">{{ number_format($ck->soni) }}</td>
+                        <td class="text-end small text-success fw-bold">{{ number_format($ck->jami,0,'.',' ') }}</td>
+                    </tr>
+                    @endforeach
+                    <tr class="table-light fw-bold">
+                        <td colspan="2" class="small">Jami:</td>
+                        <td class="text-end small">{{ number_format($kirimByKat->sum('soni')) }}</td>
+                        <td class="text-end small text-success">{{ number_format($kirimByKat->sum('jami'),0,'.',' ') }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </div>
+    @endif
+    @if($chiqimByKat->count())
+    <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+        <div class="card-header py-2 px-3 bg-white d-flex justify-content-between align-items-center" style="cursor:pointer" onclick="blokToggle('blok-chiqim-kat', this)">
+            <div class="text-muted" style="font-size:.72rem;font-weight:600;text-transform:uppercase">Chiqim — Kategoriyalar bo'yicha</div>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2"><i class="bi bi-plus-lg"></i></button>
+        </div>
+        <div id="blok-chiqim-kat" class="table-responsive" style="display:none">
+            <table class="table table-sm mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Kod</th>
+                        <th>Kategoriya</th>
+                        <th class="text-end">Soni</th>
+                        <th class="text-end">Summa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($chiqimByKat as $ck)
+                    @php $kat = $ck->kategoriya; @endphp
+                    <tr>
+                        <td class="small text-muted">{{ $kat?->kod ?? '—' }}</td>
+                        <td class="small">{{ $kat?->nomi ?? '—' }}</td>
+                        <td class="text-end small text-muted">{{ number_format($ck->soni) }}</td>
+                        <td class="text-end small text-danger fw-bold">{{ number_format($ck->jami,0,'.',' ') }}</td>
+                    </tr>
+                    @endforeach
+                    <tr class="table-light fw-bold">
+                        <td colspan="2" class="small">Jami:</td>
+                        <td class="text-end small">{{ number_format($chiqimByKat->sum('soni')) }}</td>
+                        <td class="text-end small text-danger">{{ number_format($chiqimByKat->sum('jami'),0,'.',' ') }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </div>
+    @endif
+</div>
+@endif
+
+{{-- Kassalar bo'yicha harakat (davr boshiga / oxiriga qoldiq) --}}
+@if($kassaHarakati->count())
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header py-2 px-3 bg-white d-flex justify-content-between align-items-center" style="cursor:pointer" onclick="blokToggle('blok-kassa-harakat', this)">
+        <div class="text-muted" style="font-size:.72rem;font-weight:600;text-transform:uppercase">
+            Kassalar bo'yicha harakat — {{ \Carbon\Carbon::parse($danSana)->format('d.m.Y') }} — {{ \Carbon\Carbon::parse($gachaSana)->format('d.m.Y') }}
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2"><i class="bi bi-plus-lg"></i></button>
+    </div>
+    <div id="blok-kassa-harakat" class="table-responsive" style="display:none">
+        <table class="table table-sm mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Kassa</th>
+                    <th class="text-end">Davr boshiga qoldiq</th>
+                    <th class="text-end text-success">Kirim</th>
+                    <th class="text-end text-danger">Chiqim</th>
+                    <th class="text-end">Davr oxiriga qoldiq</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($kassaHarakati as $h)
+                <tr>
+                    <td class="small fw-medium">
+                        <i class="bi bi-{{ $h->kassa->tur === 'naqd' ? 'cash-coin' : ($h->kassa->tur === 'terminal' ? 'credit-card' : 'bank') }} me-1 text-muted"></i>
+                        {{ $h->kassa->nomi }}
+                    </td>
+                    <td class="text-end small text-muted">{{ number_format($h->ochilish_qoldiq,0,'.',' ') }}</td>
+                    <td class="text-end small text-success">+{{ number_format($h->kirim,0,'.',' ') }}</td>
+                    <td class="text-end small text-danger">-{{ number_format($h->chiqim,0,'.',' ') }}</td>
+                    <td class="text-end small fw-bold {{ $h->yopilish_qoldiq >= 0 ? '' : 'text-danger' }}">
+                        {{ number_format($h->yopilish_qoldiq,0,'.',' ') }}
+                    </td>
+                </tr>
+                @endforeach
+                <tr class="table-light fw-bold">
+                    <td class="small">Jami:</td>
+                    <td class="text-end small">{{ number_format($kassaHarakati->sum('ochilish_qoldiq'),0,'.',' ') }}</td>
+                    <td class="text-end small text-success">+{{ number_format($kassaHarakati->sum('kirim'),0,'.',' ') }}</td>
+                    <td class="text-end small text-danger">-{{ number_format($kassaHarakati->sum('chiqim'),0,'.',' ') }}</td>
+                    <td class="text-end small">{{ number_format($kassaHarakati->sum('yopilish_qoldiq'),0,'.',' ') }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+@endif
+
 {{-- Jadval --}}
 <div class="card border-0 shadow-sm">
     <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle" style="font-size:.85rem">
+        <table class="table table-bordered table-sm mb-0 align-middle" style="font-size:.83rem">
             <thead class="table-light">
                 <tr>
                     <th style="width:80px">Sana</th>
@@ -162,8 +276,10 @@
                     <th>Izoh</th>
                     <th>Kassa</th>
                     @if(Auth::user()->isAdmin())<th>Xodim</th>@endif
-                    <th class="text-end" style="width:140px">Summa</th>
-                    @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki())<th style="width:60px"></th>@endif
+                    <th class="text-end" style="width:115px">Kirim</th>
+                    <th class="text-end" style="width:115px">Chiqim</th>
+                    <th class="text-end" style="width:130px">Qoldiq</th>
+                    @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki())<th class="text-center" style="width:80px">Amal</th>@endif
                 </tr>
             </thead>
             <tbody>
@@ -171,61 +287,58 @@
                 @php
                     $isKirim = $o->yunalish === 'kirim';
                     $kat = $o->kategoriya;
-                    $rangMap = ['green'=>'success','red'=>'danger','orange'=>'warning','blue'=>'primary','purple'=>'purple','yellow'=>'warning','gray'=>'secondary'];
-                    $bsRang = $rangMap[$kat?->rang ?? 'gray'] ?? 'secondary';
                 @endphp
-                <tr style="border-left:3px solid {{ $isKirim ? '#22c55e' : '#ef4444' }}">
-                    <td class="text-nowrap text-muted small">{{ $o->sana->format('d.m.Y') }}</td>
-                    <td>
-                        @if($isKirim)
-                            <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.7rem">↑ Kirim</span>
-                        @else
-                            <span class="badge" style="background:#fee2e2;color:#dc2626;font-size:.7rem">↓ Chiqim</span>
-                        @endif
+                <tr>
+                    <td class="text-nowrap">{{ $o->sana->format('d.m.Y') }}</td>
+                    <td class="text-nowrap fw-medium" style="color:{{ $isKirim ? '#16a34a' : '#dc2626' }}">
+                        {{ $isKirim ? '↑ Kirim' : '↓ Chiqim' }}
                     </td>
-                    <td>
+                    <td class="text-nowrap">
                         @if($kat)
-                            @if($kat->ota)
-                            <span class="text-muted small">{{ $kat->ota->nomi }} /</span><br>
-                            @endif
-                            <span class="badge bg-{{ $bsRang }} bg-opacity-15 text-dark" style="font-size:.7rem">
-                                {{ $kat->kod }} — {{ $kat->nomi }}
-                            </span>
+                            {{ $kat->kod }} — {{ $kat?->ota?->nomi ? $kat->ota->nomi.' / ' : '' }}{{ $kat->nomi }}
                         @else
-                            <span class="text-muted small">—</span>
+                            <span class="text-muted">—</span>
                         @endif
                     </td>
-                    <td class="text-muted small">{{ Str::limit($o->izoh, 45) }}</td>
-                    <td class="text-muted small">{{ $o->kassa?->nomi ?? '—' }}</td>
+                    <td>{{ Str::limit($o->izoh, 45) }}</td>
+                    <td>{{ $o->kassa?->nomi ?? '—' }}</td>
                     @if(Auth::user()->isAdmin())
-                    <td class="text-muted small">{{ $o->xodim?->ism_familiya }}</td>
+                    <td>{{ $o->xodim?->ism_familiya }}</td>
                     @endif
-                    <td class="text-end fw-bold text-nowrap" style="color:{{ $isKirim ? '#16a34a' : '#dc2626' }}">
-                        {{ $isKirim ? '+' : '−' }}{{ number_format($o->summa,0,'.',' ') }}
+                    <td class="text-end fw-bold text-nowrap" style="color:#16a34a">
+                        {{ $isKirim ? number_format($o->summa,0,'.',' ') : '' }}
+                    </td>
+                    <td class="text-end fw-bold text-nowrap" style="color:#dc2626">
+                        {{ !$isKirim ? number_format($o->summa,0,'.',' ') : '' }}
+                    </td>
+                    <td class="text-end text-nowrap fw-medium {{ $o->qoldiq_keyin < 0 ? 'text-danger' : '' }}">
+                        {{ number_format($o->qoldiq_keyin,0,'.',' ') }}
                     </td>
                     @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki())
-                    <td>
-                        @if($o->manba_tur === 'manual' || Auth::user()->isAdmin())
-                        <a href="{{ route('pul-oqimlari.edit',$o) }}" class="btn btn-outline-secondary py-0 px-1" style="font-size:.7rem">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                        @if(Auth::user()->isAdmin())
-                        <form method="POST" action="{{ route('pul-oqimlari.destroy',$o) }}" class="d-inline"
-                              onsubmit="return confirm('Bekor qilish?')">
-                            @csrf @method('DELETE')
-                            <button class="btn btn-outline-danger py-0 px-1" style="font-size:.7rem">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                        </form>
-                        @endif
+                    <td class="text-center text-nowrap">
+                        @if($o->manba_tur === 'manual')
+                        <div class="d-inline-flex gap-1">
+                            <a href="{{ route('pul-oqimlari.edit',$o) }}" class="btn btn-outline-secondary py-0 px-1" style="font-size:.7rem">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            @if(Auth::user()->isAdmin())
+                            <form method="POST" action="{{ route('pul-oqimlari.destroy',$o) }}" class="d-inline"
+                                  onsubmit="return confirm('Bekor qilish?')">
+                                @csrf @method('DELETE')
+                                <button class="btn btn-outline-danger py-0 px-1" style="font-size:.7rem">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </form>
+                            @endif
+                        </div>
                         @else
-                            <span class="text-muted" style="font-size:.7rem" title="Auto yozuv">🔗</span>
+                            <span class="text-muted" style="font-size:.7rem" title="Avtomatik yozuv — manba modulidan o'chiriladi/tahrirlanadi">🔗</span>
                         @endif
                     </td>
                     @endif
                 </tr>
                 @empty
-                <tr><td colspan="9" class="text-center text-muted py-5">
+                <tr><td colspan="11" class="text-center text-muted py-5">
                     <i class="bi bi-arrow-left-right fs-3 d-block mb-2 opacity-25"></i>
                     Tanlangan davr uchun operatsiyalar topilmadi
                 </td></tr>
@@ -238,3 +351,15 @@
     @endif
 </div>
 @endsection
+
+@push('scripts')
+<script>
+function blokToggle(blokId, headerEl) {
+    var blok = document.getElementById(blokId);
+    var icon = headerEl.querySelector('i');
+    var yashirin = blok.style.display === 'none';
+    blok.style.display = yashirin ? '' : 'none';
+    if (icon) icon.className = 'bi ' + (yashirin ? 'bi-dash-lg' : 'bi-plus-lg');
+}
+</script>
+@endpush

@@ -23,7 +23,7 @@
 <div class="login-card">
     <div class="login-header">
         <i class="bi bi-bank2 fs-2 mb-2 d-block" style="color:#ffc107"></i>
-        <h4 class="fw-bold mb-0">ImkonPlus</h4>
+        <h4 class="fw-bold mb-0">ADSMARKET</h4>
         <small class="opacity-75">Nasiya boshqaruv tizimi</small>
     </div>
     <div class="login-body">

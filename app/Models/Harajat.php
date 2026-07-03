@@ -17,6 +17,12 @@ class Harajat extends Model implements Auditable
         'xodim_id',
         'sana',
         'turi',
+        'harajat_turi_id',
+        'tegishli_xodim_id',
+        'taminotchi_tulov_id',
+        'schetchik_raqami',
+        'kassa_turi',
+        'pul_kategoriya_id',
         'summa',
         'mazmuni',
         'eski_id',
@@ -37,5 +43,25 @@ class Harajat extends Model implements Auditable
     public function xodim(): BelongsTo
     {
         return $this->belongsTo(Foydalanuvchi::class, 'xodim_id');
+    }
+
+    public function kategoriya(): BelongsTo
+    {
+        return $this->belongsTo(PulKategoriya::class, 'pul_kategoriya_id');
+    }
+
+    public function harajatTuri(): BelongsTo
+    {
+        return $this->belongsTo(HarajatTuri::class, 'harajat_turi_id');
+    }
+
+    public function tegishliXodim(): BelongsTo
+    {
+        return $this->belongsTo(Foydalanuvchi::class, 'tegishli_xodim_id');
+    }
+
+    public function taminotchiTulov(): BelongsTo
+    {
+        return $this->belongsTo(TaminotchiTulov::class, 'taminotchi_tulov_id');
     }
 }

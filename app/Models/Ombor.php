@@ -11,5 +11,6 @@ class Ombor extends Model {
     public function kirimlar(): HasMany  { return $this->hasMany(OmboraKirim::class,'ombor_id'); }
     public function chiqimlar(): HasMany { return $this->hasMany(OmbordanChiqim::class,'ombor_id'); }
     public function ledger(): HasMany    { return $this->hasMany(StockLedger::class,'ombor_id'); }
+    public function qoldiqlar(): HasMany { return $this->hasMany(OmborQoldiq::class,'ombor_id'); }
     public function scopeFaol($q)        { return $q->where('holat','faol'); }
 }

@@ -9,6 +9,7 @@ use App\Models\Tuman;
 use App\Models\Viloyat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class MijozController extends Controller
 {
@@ -21,6 +22,8 @@ class MijozController extends Controller
             : $user->filial_id;
 
         $query = Mijoz::with('filial')
+            ->withCount('kreditlar')
+            ->withSum(['kreditlar as jami_qoldiq_qarz' => fn($q) => $q->where('holat', '!=', 'yopilgan')], 'qoldiq_qarz')
             ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
             ->when($request->holat, fn($q) => $q->where('holat', $request->holat))
             ->when($request->qidiruv, fn($q) => $q->qidirish($request->qidiruv));
@@ -66,10 +69,18 @@ class MijozController extends Controller
     {
         $data = $request->validated();
         $telefonlar = $data['telefonlar'] ?? [];
-        unset($data['telefonlar']);
+        $kartalar   = $data['kartalar'] ?? [];
+        unset($data['telefonlar'], $data['kartalar']);
+
+        if ($request->hasFile('rasm')) {
+            $data['rasm'] = $this->rasmSaqla($request->file('rasm'));
+        } else {
+            unset($data['rasm']);
+        }
 
         $mijoz = Mijoz::create($data);
         $this->telefonlarSinxron($mijoz, $telefonlar);
+        $this->kartalarSinxron($mijoz, $kartalar);
 
         return redirect()
             ->route('mijozlar.show', $mijoz)
@@ -86,6 +97,7 @@ class MijozController extends Controller
             'viloyat',
             'tuman',
             'telefonlar',
+            'kartalar',
             'kreditlar' => fn($q) => $q->with('xodim')->orderByDesc('created_at'),
         ]);
 
@@ -102,7 +114,7 @@ class MijozController extends Controller
             ? Filial::faol()->get()
             : Filial::where('id', $user->filial_id)->get();
 
-        $mijoz->load('telefonlar');
+        $mijoz->load('telefonlar', 'kartalar');
 
         $viloyatlar = Viloyat::royhati();
         $tumanlar   = Tuman::orderBy('sort_order')->get(['id', 'viloyat_id', 'nomi']);
@@ -118,10 +130,23 @@ class MijozController extends Controller
 
         $data = $request->validated();
         $telefonlar = $data['telefonlar'] ?? [];
-        unset($data['telefonlar']);
+        $kartalar   = $data['kartalar'] ?? [];
+        unset($data['telefonlar'], $data['kartalar']);
+
+        if ($request->hasFile('rasm')) {
+            $data['rasm'] = $this->rasmSaqla($request->file('rasm'), $mijoz->rasm);
+        } elseif ($request->boolean('rasm_ochir')) {
+            if ($mijoz->rasm && Storage::disk('public')->exists($mijoz->rasm)) {
+                Storage::disk('public')->delete($mijoz->rasm);
+            }
+            $data['rasm'] = null;
+        } else {
+            unset($data['rasm']);
+        }
 
         $mijoz->update($data);
         $this->telefonlarSinxron($mijoz, $telefonlar);
+        $this->kartalarSinxron($mijoz, $kartalar);
 
         return redirect()
             ->route('mijozlar.show', $mijoz)
@@ -175,12 +200,88 @@ class MijozController extends Controller
             if (empty($t['telefon'])) continue;
             $mijoz->telefonlar()->create([
                 'telefon'        => $t['telefon'],
+                'egasi_ismi'     => $t['egasi_ismi'] ?? null,
                 'sms_yuborilsin' => !empty($t['sms_yuborilsin']),
                 'tartib'         => $i + 1,
             ]);
         }
     }
 
+
+    /** Mijozning plastik kartalarini (5 tagacha) qayta yozish — legacy karta_raqami ustuniga birinchisi ko'chiriladi */
+    private function kartalarSinxron(Mijoz $mijoz, array $kartalar): void
+    {
+        $mijoz->kartalar()->delete();
+        $tozalar = [];
+        foreach (array_slice($kartalar, 0, 5) as $k) {
+            if (empty($k['karta_raqami'])) continue;
+            $tozalar[] = trim($k['karta_raqami']);
+        }
+        foreach ($tozalar as $i => $raqam) {
+            $mijoz->kartalar()->create(['karta_raqami' => $raqam, 'tartib' => $i + 1]);
+        }
+        $mijoz->update(['karta_raqami' => $tozalar[0] ?? null]);
+    }
+
+    /**
+     * Mijoz rasmini saqlaydi: GD orqali max 800px tomonga qisqartirib, sifatli-ammo-yengil
+     * JPEG (sifat 78) formatga o'giradi. Eski rasm bo'lsa (tahrirlashda) uni o'chiradi.
+     * Qaytadi: storage/app/public ichidagi nisbiy yo'l (masalan "mijozlar/m_xxx.jpg").
+     */
+    private function rasmSaqla($file, ?string $eskiYol = null): string
+    {
+        $mime = $file->getMimeType();
+        $manba = match (true) {
+            str_contains($mime, 'png')  => imagecreatefrompng($file->getRealPath()),
+            str_contains($mime, 'webp') => imagecreatefromwebp($file->getRealPath()),
+            default                     => imagecreatefromjpeg($file->getRealPath()),
+        };
+
+        // EXIF orientatsiyasini to'g'rilash (telefon kamerasidan kelgan suratlar uchun)
+        if (function_exists('exif_read_data') && str_contains($mime, 'jpeg')) {
+            try {
+                $exif = @exif_read_data($file->getRealPath());
+                if (!empty($exif['Orientation'])) {
+                    $manba = match ($exif['Orientation']) {
+                        3       => imagerotate($manba, 180, 0),
+                        6       => imagerotate($manba, -90, 0),
+                        8       => imagerotate($manba, 90, 0),
+                        default => $manba,
+                    };
+                }
+            } catch (\Throwable) {
+                // EXIF o'qib bo'lmasa — o'girishsiz davom etamiz
+            }
+        }
+
+        $kenglik = imagesx($manba);
+        $balandlik = imagesy($manba);
+        $maxTomon = 800;
+
+        if ($kenglik > $maxTomon || $balandlik > $maxTomon) {
+            $nisbat = min($maxTomon / $kenglik, $maxTomon / $balandlik);
+            $yangiKenglik = (int) round($kenglik * $nisbat);
+            $yangiBalandlik = (int) round($balandlik * $nisbat);
+            $qisqargan = imagecreatetruecolor($yangiKenglik, $yangiBalandlik);
+            imagecopyresampled($qisqargan, $manba, 0, 0, 0, 0, $yangiKenglik, $yangiBalandlik, $kenglik, $balandlik);
+            imagedestroy($manba);
+            $manba = $qisqargan;
+        }
+
+        $nomFayl = 'mijozlar/' . uniqid('m_') . '.jpg';
+        $toliqYol = Storage::disk('public')->path($nomFayl);
+        if (!is_dir(dirname($toliqYol))) {
+            mkdir(dirname($toliqYol), 0755, true);
+        }
+        imagejpeg($manba, $toliqYol, 78);
+        imagedestroy($manba);
+
+        if ($eskiYol && Storage::disk('public')->exists($eskiYol)) {
+            Storage::disk('public')->delete($eskiYol);
+        }
+
+        return $nomFayl;
+    }
 
     /** AJAX JSON qidiruv — modal tanlov uchun */
     /** AJAX JSON qidiruv - modal tanlov uchun

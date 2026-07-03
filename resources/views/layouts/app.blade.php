@@ -6,8 +6,24 @@
     $temaId   = (int)($soz['tema'] ?? 1);
     $temalar  = AdminController::$temalar;
     $tema     = $temalar[$temaId] ?? $temalar[1];
-    $sidebarBg = $tema['sidebar'];
-    $accentRng = $tema['accent'];
+    $sidebarBg   = $tema['sidebar'];
+    $sidebarBg2  = $tema['sidebar2'] ?? $tema['sidebar'];
+    $accentRng   = $tema['accent'];
+    $accentRng2  = $tema['accent2'] ?? $tema['accent'];
+    if (($soz['tema_maxsus'] ?? '0') === '1') {
+        $sidebarBg  = $soz['tema_sidebar1'] ?: $sidebarBg;
+        $sidebarBg2 = $soz['tema_sidebar2'] ?: $sidebarBg2;
+        $accentRng  = $soz['tema_accent1']  ?: $accentRng;
+        $accentRng2 = $soz['tema_accent2']  ?: $accentRng2;
+    }
+    $grupFontXaritasi = [
+        'qora'  => ['#161616', 'rgba(255,255,255,.9)'],
+        'sariq' => ['#ffe066', 'rgba(0,0,0,.85)'],
+        'qizil' => ['#ff5252', 'rgba(0,0,0,.85)'],
+        'oq'    => ['#ffffff', 'rgba(0,0,0,.85)'],
+    ];
+    $grupFontTanlov = $soz['grup_font_rang'] ?? 'oq';
+    [$grupFontRang, $grupFontOutline] = $grupFontXaritasi[$grupFontTanlov] ?? $grupFontXaritasi['oq'];
 @endphp
 <!DOCTYPE html>
 <html lang="uz" data-bs-theme="light">
@@ -32,7 +48,13 @@
     <style>
         :root {
             --sidebar-bg: {{ $sidebarBg }};
+            --sidebar-bg-2: {{ $sidebarBg2 }};
+            --sidebar-gradient: linear-gradient(180deg, {{ $sidebarBg }} 0%, {{ $sidebarBg2 }} 100%);
             --accent-color: {{ $accentRng }};
+            --accent-color-2: {{ $accentRng2 }};
+            --accent-gradient: linear-gradient(90deg, {{ $accentRng }} 0%, {{ $accentRng2 }} 100%);
+            --grup-font-color: {{ $grupFontRang }};
+            --grup-font-outline: {{ $grupFontOutline }};
         }
         /* ── Asosiy stil ─────────────────────────────── */
         body { font-size: 14px; }
@@ -48,28 +70,63 @@
             min-height: 100vh;
             transition: width 0.25s;
         }
-        /* sidebar collapsed faqat mobile da ishlatiladi, desktop da hech qachon */
         @media (max-width: 767.98px) {
             #sidebar.collapsed { width: 280px !important; }
         }
+        /* Desktop'da sidebar'ni ixchamlashtirish — faqat ikonkalar qoladi */
+        @media (min-width: 768px) {
+            #sidebar.collapsed { width: 64px !important; }
+            #sidebar.collapsed .nav-label,
+            #sidebar.collapsed .sidebar-header-text,
+            #sidebar.collapsed .g-label,
+            #sidebar.collapsed .grup-toggle .g-icon { display: none !important; }
+            #sidebar.collapsed .nav-link { justify-content: center; padding-left: 0; padding-right: 0; }
+            #sidebar.collapsed .nav-link i { margin-right: 0 !important; }
+            #sidebar.collapsed #vendor-logo-btn { justify-content: center; }
+            #sidebar.collapsed #vendor-logo-btn i { margin-right: 0 !important; }
+            #sidebar.collapsed .grup-toggle { padding: 5px 0; justify-content: center; }
+        }
 
-        /* Guruh sarlavhalari — temaga mos aksent rang */
+        /* Guruh sarlavhalari — metalik yaltiroq gradient fon */
         /* ── Guruh sarlavhalar (to'liq keng, bosish mumkin) ─── */
         .grup-header { margin-top: 6px; list-style: none; }
         .grup-toggle {
             display: flex; align-items: center;
             justify-content: space-between;
             width: 100%; padding: 6px 10px;
-            background: var(--accent-color);
-            color: #fff;
+            background: linear-gradient(135deg,
+                var(--accent-color) 0%,
+                var(--accent-color-2) 22%,
+                var(--accent-color) 45%,
+                var(--accent-color-2) 68%,
+                var(--accent-color) 100%);
+            background-size: 220% 220%;
+            background-position: 0% 50%;
+            color: var(--grup-font-color, #fff);
             border: none; border-radius: 10px;
             cursor: pointer; font-size: 12px;
             font-weight: 900; letter-spacing: 2.5px;
             text-transform: uppercase;
-            transition: filter .18s;
-            box-shadow: 0 2px 6px rgba(0,0,0,.28);
+            position: relative; overflow: hidden;
+            transition: background-position .35s ease, filter .18s;
+            box-shadow: 0 2px 6px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.35);
         }
-        .grup-toggle:hover { filter: brightness(1.1); }
+        .grup-toggle::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.45) 47%, rgba(255,255,255,.65) 50%, rgba(255,255,255,.45) 53%, transparent 70%);
+            pointer-events: none;
+        }
+        .grup-toggle:hover { background-position: 100% 50%; filter: brightness(1.06); }
+        .grup-toggle .g-label {
+            position: relative; z-index: 1;
+            text-shadow:
+                -1px -1px 0 var(--grup-font-outline, rgba(0,0,0,.85)),
+                 1px -1px 0 var(--grup-font-outline, rgba(0,0,0,.85)),
+                -1px  1px 0 var(--grup-font-outline, rgba(0,0,0,.85)),
+                 1px  1px 0 var(--grup-font-outline, rgba(0,0,0,.85)),
+                 0    0   3px var(--grup-font-outline, rgba(0,0,0,.5));
+        }
         .grup-toggle .g-icon {
             font-size: 14px; font-weight: 900;
             line-height: 1; min-width: 16px;
@@ -79,7 +136,7 @@
           
         }
         .grup-toggle:has(+ ul:not(.closed)) .g-icon,
-        .grup-toggle .bi-dash-lg {
+        .grup-toggle .bi-plus-lg {
             color: var(--sidebar-bg);
         }
         .grup-items {
@@ -99,7 +156,7 @@
         .grup-divider { margin: 2px 0; }
 
         /* Tema ranglari */
-        .sidebar-bg { background-color: var(--sidebar-bg) !important; }
+        .sidebar-bg { background: var(--sidebar-gradient) var(--sidebar-bg) !important; }
         .text-warning { color: var(--accent-color) !important; }
         .grup-label { color: var(--sidebar-bg) !important; }
 
@@ -185,7 +242,7 @@
             position: fixed;
             bottom: 0; left: 0; right: 0;
             height: 60px;
-            background: var(--sidebar-bg);
+            background: var(--sidebar-gradient) var(--sidebar-bg);
             border-top: 1px solid rgba(255,255,255,.12);
             z-index: 1030;
             align-items: stretch;
@@ -335,6 +392,7 @@
         elseif (request()->routeIs('transfer.*'))                                                      $aktiv_grup = 'transfer';
         elseif (request()->routeIs('taminotchi.*'))                                                    $aktiv_grup = 'taminotchi';
         elseif (request()->routeIs('transfer.*'))                                                      $aktiv_grup = 'transfer';
+        elseif (request()->routeIs('qurilmalar.*','qurilma-provayderlar.*'))                          $aktiv_grup = 'qurilmalar-nazorati';
         elseif (request()->routeIs('admin.deploy','admin.github'))                                     $aktiv_grup = 'vendor';
         elseif (request()->routeIs('malumotnamalar.*','buxgalteriya.hisoblar.*'))                   $aktiv_grup = 'malumotnamalar-menu';
         elseif (request()->routeIs('admin.*'))                                                         $aktiv_grup = 'boshqaruv';
@@ -357,7 +415,7 @@
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="mijozlar">
                     <span class="g-label">&#128100; {{ __('ui.menu_mijozlar') }}</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='mijozlar' ? 'bi-dash-lg' : 'bi-plus-lg' }}"></i>
+                    <i class="g-icon bi {{ $aktiv_grup==='mijozlar' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
                 </button>
             </li>
             <ul class="grup-items {{ $aktiv_grup!=='mijozlar' ? 'closed' : '' }}" id="grup-mijozlar">
@@ -390,7 +448,7 @@
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="shartnomalar">
                     <span class="g-label">&#128196; {{ __('ui.menu_shartnomalar') }}</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='shartnomalar' ? 'bi-dash-lg' : 'bi-plus-lg' }}"></i>
+                    <i class="g-icon bi {{ $aktiv_grup==='shartnomalar' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
                 </button>
             </li>
             <ul class="grup-items {{ $aktiv_grup!=='shartnomalar' ? 'closed' : '' }}" id="grup-shartnomalar">
@@ -430,7 +488,7 @@
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="hisobotlar">
                     <span class="g-label">&#128202; {{ __('ui.menu_hisobotlar') }}</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='hisobotlar' ? 'bi-dash-lg' : 'bi-plus-lg' }}"></i>
+                    <i class="g-icon bi {{ $aktiv_grup==='hisobotlar' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
                 </button>
             </li>
             <ul class="grup-items {{ $aktiv_grup!=='hisobotlar' ? 'closed' : '' }}" id="grup-hisobotlar">
@@ -453,6 +511,13 @@
                        class="nav-link text-white py-1 {{ request()->routeIs('hisobotlar.chiqarilgan') ? 'active' : '' }}">
                         <i class="bi bi-file-plus me-2 text-primary"></i>
                         <span class="nav-label">Chiqarilgan kreditlar</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('hisobotlar.sotilgan_tovarlar') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('hisobotlar.sotilgan_tovarlar') ? 'active' : '' }}">
+                        <i class="bi bi-box-seam me-2 text-warning"></i>
+                        <span class="nav-label">Kreditga sotilgan tovarlar</span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -491,13 +556,14 @@
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="tovarlar">
                     <span class="g-label">&#127979; {{ __('ui.menu_tovarlar') }}</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='tovarlar' ? 'bi-dash-lg' : 'bi-plus-lg' }}"></i>
+                    <i class="g-icon bi {{ $aktiv_grup==='tovarlar' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
                 </button>
             </li>
             <ul class="grup-items {{ $aktiv_grup!=='tovarlar' ? 'closed' : '' }}" id="grup-tovarlar">
                 <li class="nav-item">
                     <a href="{{ route('pos.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('pos.index') ? 'active' : '' }}">
+                       class="nav-link text-white py-1 {{ request()->routeIs('pos.index') ? 'active' : '' }}"
+                       onclick="return (typeof litsenziyaPosTekshir==='function') ? litsenziyaPosTekshir() : true">
                         <i class="bi bi-cash-register me-2 text-warning"></i>
                         <span class="nav-label">{{ __('ui.menu_kassa') }}</span>
                     </a>
@@ -547,7 +613,7 @@
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="taminotchi">
                     <span class="g-label">🚛 TA'MINOTCHILAR</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='taminotchi' ? 'bi-dash-lg' : 'bi-plus-lg' }}"></i>
+                    <i class="g-icon bi {{ $aktiv_grup==='taminotchi' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
                 </button>
             </li>
             <ul class="grup-items {{ $aktiv_grup!=='taminotchi' ? 'closed' : '' }}" id="grup-taminotchi">
@@ -566,21 +632,19 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="{{ route('taminotchi.kirim_reestr') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('taminotchi.kirim_reestr') ? 'active' : '' }}">
+                        <i class="bi bi-journal-text me-2 text-info"></i>
+                        <span class="nav-label">Kirimlar reestri</span>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="{{ route('taminotchi.hisobot') }}"
                        class="nav-link text-white py-1 {{ request()->routeIs('taminotchi.hisobot') ? 'active' : '' }}">
                         <i class="bi bi-bar-chart me-2 text-info"></i>
                         <span class="nav-label">Hisobot / Balans</span>
                     </a>
                 </li>
-                @if(Auth::user()->isMenejerYoki())
-                <li class="nav-item">
-                    <a href="{{ route('taminotchi.create') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('taminotchi.create') ? 'active' : '' }}">
-                        <i class="bi bi-plus-circle me-2 text-warning"></i>
-                        <span class="nav-label">Yangi ta'minotchi</span>
-                    </a>
-                </li>
-                @endif
             </ul>
             @endif
 
@@ -590,7 +654,7 @@
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="harajatlar">
                     <span class="g-label">&#128181; HARAJATLAR</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='harajatlar' ? 'bi-dash-lg' : 'bi-plus-lg' }}"></i>
+                    <i class="g-icon bi {{ $aktiv_grup==='harajatlar' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
                 </button>
             </li>
             <ul class="grup-items {{ $aktiv_grup!=='harajatlar' ? 'closed' : '' }}" id="grup-harajatlar">
@@ -601,15 +665,6 @@
                         <span class="nav-label">Harajatlar</span>
                     </a>
                 </li>
-                @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki())
-                <li class="nav-item">
-                    <a href="{{ route('harajatlar.create') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('harajatlar.create') ? 'active' : '' }}">
-                        <i class="bi bi-plus-circle me-2 text-warning"></i>
-                        <span class="nav-label">Yangi harajat</span>
-                    </a>
-                </li>
-                @endif
             </ul>
             @endif
 
@@ -617,8 +672,8 @@
             @if(Auth::user()->ruxsat('pul_oqimlari'))
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="pul-oqimlari">
-                    <span class="g-label">&#9889; PUL OQIMLARI</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='pul-oqimlari' ? 'bi-dash-lg' : 'bi-plus-lg' }}"></i>
+                    <span class="g-label">&#9889; MOLIYA</span>
+                    <i class="g-icon bi {{ $aktiv_grup==='pul-oqimlari' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
                 </button>
             </li>
             <ul class="grup-items {{ $aktiv_grup!=='pul-oqimlari' ? 'closed' : '' }}" id="grup-pul-oqimlari">
@@ -630,17 +685,24 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{{ route('pul-oqimlari.create', ['yunalish'=>'kirim']) }}"
-                       class="nav-link text-white py-1">
-                        <i class="bi bi-arrow-up-circle me-2 text-success"></i>
-                        <span class="nav-label">Kirim qo'shish</span>
+                    <a href="{{ route('pul-oqimlari.moliyaviy-natija.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pul-oqimlari.moliyaviy-natija.*') ? 'active' : '' }}">
+                        <i class="bi bi-graph-up-arrow me-2 text-warning"></i>
+                        <span class="nav-label">Moliyaviy natija</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{{ route('pul-oqimlari.create', ['yunalish'=>'chiqim']) }}"
-                       class="nav-link text-white py-1">
-                        <i class="bi bi-arrow-down-circle me-2 text-danger"></i>
-                        <span class="nav-label">Chiqim qo'shish</span>
+                    <a href="{{ route('pul-oqimlari.balans.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pul-oqimlari.balans.*') ? 'active' : '' }}">
+                        <i class="bi bi-bar-chart-steps me-2 text-info"></i>
+                        <span class="nav-label">Balans hisoboti</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('pul-oqimlari.hisobot') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pul-oqimlari.hisobot') ? 'active' : '' }}">
+                        <i class="bi bi-clipboard-data me-2" style="color:#22c55e"></i>
+                        <span class="nav-label">Pul oqimi hisoboti</span>
                     </a>
                 </li>
             </ul>
@@ -651,8 +713,8 @@
         @if(Auth::user()->ruxsat('malumotnomalar'))
         <li class="grup-header">
             <button class="grup-toggle" data-grup="malumotnamalar-menu">
-                <span class="g-label">&#128218; MA'LUMOTNOMALAR</span>
-                <i class="g-icon bi {{ $aktiv_grup==='malumotnamalar-menu' ? 'bi-dash-lg' : 'bi-plus-lg' }}"></i>
+                <span class="g-label">&#128218; RO'YXATLAR</span>
+                <i class="g-icon bi {{ $aktiv_grup==='malumotnamalar-menu' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
             </button>
         </li>
         <ul class="grup-items {{ $aktiv_grup!=='malumotnamalar-menu' ? 'closed' : '' }}" id="grup-malumotnamalar-menu">
@@ -744,20 +806,20 @@
         <li class="grup-header">
             <button class="grup-toggle" data-grup="qurilmalar-nazorati">
                 <span class="g-label">&#128241; QURILMALAR</span>
-                <i class="g-icon bi {{ $aktiv_grup==='qurilmalar-nazorati' ? 'bi-dash-lg' : 'bi-plus-lg' }}"></i>
+                <i class="g-icon bi {{ $aktiv_grup==='qurilmalar-nazorati' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
             </button>
         </li>
         <ul class="grup-items {{ $aktiv_grup!=='qurilmalar-nazorati' ? 'closed' : '' }}" id="grup-qurilmalar-nazorati">
             <li class="nav-item">
                 <a href="{{ route('qurilmalar.index') }}"
-                   class="{{ request()->routeIs('qurilmalar.*') ? 'active' : '' }}">
+                   class="nav-link text-white py-1 {{ request()->routeIs('qurilmalar.index','qurilmalar.show','qurilmalar.edit','qurilmalar.loglar') ? 'active' : '' }}">
                    Qurilmalar ro'yxati
                 </a>
             </li>
             @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki() || Auth::user()->isOmborchi())
             <li class="nav-item">
                 <a href="{{ route('qurilmalar.create') }}"
-                   class="{{ request()->routeIs('qurilmalar.create') ? 'active' : '' }}">
+                   class="nav-link text-white py-1 {{ request()->routeIs('qurilmalar.create') ? 'active' : '' }}">
                    Qurilma qo'shish
                 </a>
             </li>
@@ -765,7 +827,7 @@
             @if(Auth::user()->isAdmin())
             <li class="nav-item">
                 <a href="{{ route('qurilma-provayderlar.index') }}"
-                   class="{{ request()->routeIs('qurilma-provayderlar.*') ? 'active' : '' }}">
+                   class="nav-link text-white py-1 {{ request()->routeIs('qurilma-provayderlar.*') ? 'active' : '' }}">
                    Provayderlar
                 </a>
             </li>
@@ -778,7 +840,7 @@
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="xabarnoma">
                     <span class="g-label">&#128241; XABARNOMA</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='xabarnoma' ? 'bi-dash-lg' : 'bi-plus-lg' }}"></i>
+                    <i class="g-icon bi {{ $aktiv_grup==='xabarnoma' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
                 </button>
             </li>
             <ul class="grup-items {{ $aktiv_grup!=='xabarnoma' ? 'closed' : '' }}" id="grup-xabarnoma">
@@ -832,7 +894,7 @@
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="transfer">
                     <span class="g-label">&#8644; TRANSFERLAR</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='transfer' ? 'bi-dash-lg' : 'bi-plus-lg' }}"></i>
+                    <i class="g-icon bi {{ $aktiv_grup==='transfer' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
                 </button>
             </li>
             <ul class="grup-items {{ $aktiv_grup!=='transfer' ? 'closed' : '' }}" id="grup-transfer">
@@ -897,7 +959,7 @@
             <li class="grup-header">
                 <button class="grup-toggle" data-grup="boshqaruv">
                     <span class="g-label">&#9881; {{ __('ui.menu_boshqaruv') }}</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='boshqaruv' ? 'bi-dash-lg' : 'bi-plus-lg' }}"></i>
+                    <i class="g-icon bi {{ $aktiv_grup==='boshqaruv' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
                 </button>
             </li>
             <ul class="grup-items {{ $aktiv_grup!=='boshqaruv' ? 'closed' : '' }}" id="grup-boshqaruv">
@@ -970,7 +1032,7 @@
             <li id="vendor-menu-group" class="grup-header" style="display:none">
                 <button class="grup-toggle" data-grup="vendor" style="background:#7c3aed;color:#fff">
                     <span class="g-label">&#128274; VENDOR</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='vendor' ? 'bi-dash-lg' : 'bi-plus-lg' }}"></i>
+                    <i class="g-icon bi {{ $aktiv_grup==='vendor' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
                 </button>
             </li>
             <ul class="grup-items vendor-menu-item {{ $aktiv_grup!=='vendor' ? 'closed' : '' }}"
@@ -1104,16 +1166,19 @@
         @if(Auth::user()->isAdmin() && \App\Services\Litsenziya::yoqilganmi() && in_array(\App\Services\Litsenziya::holati(), ['ogohlantirish','yengillik','yopiq']))
             @php $litHolat = \App\Services\Litsenziya::holati(); @endphp
             <div class="px-4 pt-3">
-                <div class="alert alert-{{ $litHolat === 'yopiq' ? 'danger' : 'warning' }} d-flex align-items-center justify-content-between py-2 mb-0">
+                <div class="alert alert-{{ $litHolat === 'yopiq' ? 'danger' : 'warning' }} alert-dismissible fade show d-flex align-items-center justify-content-between py-2 mb-0">
                     <span>
                         <i class="bi bi-shield-exclamation me-1"></i>
                         @if($litHolat === 'yopiq')
-                            <b>Litsenziya muddati tugagan.</b> Yangi mijoz/tovar/shartnoma qo'shish to'xtatilgan.
+                            <b>Litsenziya muddati tugagan.</b> Ba'zi bo'limlarda (mijoz/tovar/shartnoma qo'shish va h.k.) cheklov bor — qisman foydalanish davom etadi.
                         @else
                             <b>Litsenziya muddati tugashiga oz qoldi.</b> Vaqtida faollashtiring.
                         @endif
                     </span>
-                    <a href="{{ route('admin.litsenziya') }}" class="btn btn-sm btn-{{ $litHolat === 'yopiq' ? 'light' : 'dark' }} ms-2">Litsenziya bo'limi</a>
+                    <span class="d-flex align-items-center gap-2 ms-2">
+                        <a href="{{ route('admin.litsenziya') }}" class="btn btn-sm btn-{{ $litHolat === 'yopiq' ? 'light' : 'dark' }}">Litsenziya bo'limi</a>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Yopish"></button>
+                    </span>
                 </div>
             </div>
         @endif
@@ -1236,9 +1301,6 @@ const sidebar      = document.getElementById("sidebar");
 const sidebarToggle = document.getElementById("sidebar-toggle");
 const sidebarOverlay = document.getElementById("sidebar-overlay");
 
-// Sidebar desktop da HECH QACHON yashirilmaydi
-localStorage.removeItem("nasiya_sidebar");
-
 function isMobile() { return window.innerWidth < 768; }
 
 function openMobileSidebar() {
@@ -1255,9 +1317,17 @@ function closeMobileSidebar() {
     if (icon) icon.className = "bi bi-grid";
 }
 
+// Desktop'da — sidebar'ni ixchamlashtirish/yoyish, holati saqlanadi
+if (!isMobile() && localStorage.getItem("nasiya_sidebar") === "collapsed") {
+    sidebar.classList.add("collapsed");
+}
+
 sidebarToggle.addEventListener("click", function() {
     if (isMobile()) {
         sidebar.classList.contains("mobile-open") ? closeMobileSidebar() : openMobileSidebar();
+    } else {
+        sidebar.classList.toggle("collapsed");
+        localStorage.setItem("nasiya_sidebar", sidebar.classList.contains("collapsed") ? "collapsed" : "expanded");
     }
 });
 
@@ -1305,7 +1375,7 @@ window.addEventListener("resize", function() {
         var icon = btn ? btn.querySelector('.g-icon') : null;
         if (!icon) return;
         icon.classList.remove('bi-plus-lg','bi-dash-lg');
-        icon.classList.add(open ? 'bi-dash-lg' : 'bi-plus-lg');
+        icon.classList.add(open ? 'bi-plus-lg' : 'bi-dash-lg');
     }
 
     // Guruhni ochish yoki yopish
@@ -1565,6 +1635,268 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+{{-- ── Global Hujjat Ko'rish/Tahrirlash Modal (barcha sahifalarda) ──────── --}}
+<div class="modal fade" id="hujjatGlobalModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:960px">
+    <div class="modal-content border-0 shadow-lg" style="border-radius:12px;overflow:hidden">
+      <div class="modal-header py-2" style="background:#1a3a2a">
+        <h6 class="modal-title text-white fw-bold mb-0" id="hujjat-modal-title">
+          <i class="bi bi-file-earmark-text me-2"></i>Hujjat
+        </h6>
+        <div class="d-flex gap-2 ms-auto me-2">
+          <span id="hujjat-tahrirlash-info" class="badge bg-warning text-dark align-self-center d-none">
+            <i class="bi bi-pencil me-1"></i>Tahrirlash rejimi
+          </span>
+          <button type="button" class="btn btn-sm btn-success px-3"
+                  onclick="hujjatChopEt()" title="Chop etish (Ctrl+P)">
+            <i class="bi bi-printer me-1"></i> Chop etish
+          </button>
+          <a id="hujjat-new-tab" href="#" target="_blank"
+             class="btn btn-sm btn-outline-light px-2" title="Yangi oynada">
+            <i class="bi bi-box-arrow-up-right"></i>
+          </a>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <iframe id="hujjat-frame" src="about:blank"
+              style="width:100%;height:75vh;border:none;display:block;background:#fff"
+              onload="hujjatFrameYuklandi(this)">
+      </iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Global Hujjat Ko'rish/Tahrirlash Modal ────────────────────────
+var hujjatModalObj = null;
+
+function hujjatModalOch(url, nomi, tahrirlanadimi) {
+    var frame = document.getElementById('hujjat-frame');
+    frame.dataset.tahrirlanadi = tahrirlanadimi ? '1' : '0';
+    document.getElementById('hujjat-new-tab').href = url;
+    document.getElementById('hujjat-modal-title').innerHTML =
+        '<i class="bi bi-' + (tahrirlanadimi ? 'pencil' : 'eye') + ' me-2"></i>' + nomi;
+    document.getElementById('hujjat-tahrirlash-info').classList.toggle('d-none', !tahrirlanadimi);
+    frame.src = url;
+    if (!hujjatModalObj) hujjatModalObj = new bootstrap.Modal(document.getElementById('hujjatGlobalModal'));
+    hujjatModalObj.show();
+}
+
+function hujjatFrameYuklandi(frame) {
+    if (!frame.src || frame.src === 'about:blank') return;
+    // Tahrirlash rejimida — hujjat matnini to'g'ridan-to'g'ri (contenteditable)
+    // tahrirlash imkonini yoqamiz. Hech narsa bazaga saqlanmaydi — faqat
+    // chop etishdan oldin vaqtinchalik tuzatish uchun (xato so'z, manzil va h.k.).
+    if (frame.dataset.tahrirlanadi === '1') {
+        try {
+            var doc = frame.contentDocument || frame.contentWindow.document;
+            doc.body.setAttribute('contenteditable', 'true');
+            doc.body.style.cursor = 'text';
+        } catch(e) {}
+    }
+}
+
+function hujjatChopEt() {
+    var frame = document.getElementById('hujjat-frame');
+    try {
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+    } catch(e) {
+        var win = window.open(document.getElementById('hujjat-new-tab').href, '_blank');
+        if (win) setTimeout(function(){ win.print(); }, 900);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var hModal = document.getElementById('hujjatGlobalModal');
+    if (hModal) {
+        hModal.addEventListener('hidden.bs.modal', function() {
+            document.getElementById('hujjat-frame').src = 'about:blank';
+        });
+    }
+});
+</script>
+
+{{-- ── Litsenziya bloklash modali ──────────────────── --}}
+@auth
+@if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki())
+<div class="modal fade" id="litsenziyaBlokModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg" style="border-radius:18px;overflow:hidden">
+      <div class="text-center pt-4 pb-2">
+        <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#fef3c7,#fde68a);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+          <i class="bi bi-lock-fill" style="font-size:32px;color:#d97706"></i>
+        </div>
+        <span class="badge rounded-pill" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:6px 14px;font-size:13px">
+          <span id="litsenziya-blok-modul-nomi">—</span> — bloklangan
+        </span>
+        <h5 class="fw-bold mt-2 mb-1">Litsenziya muddati tugagan</h5>
+        <p class="text-muted small px-4 mb-3">
+          Bu amalni bajarish uchun litsenziya muddatini yangilang. Quyidagi aloqa orqali
+          administratorga murojaat qiling.
+        </p>
+      </div>
+      <div class="px-4 pb-2 d-flex flex-column gap-2">
+        <a href="https://t.me/ads253" target="_blank" class="d-flex align-items-center gap-2 p-2 border rounded-3 text-decoration-none text-dark">
+          <span class="d-flex align-items-center justify-content-center rounded-3" style="width:36px;height:36px;background:#229ed9;color:#fff"><i class="bi bi-telegram"></i></span>
+          <span><b class="d-block" style="font-size:13.5px">Telegram</b><span class="text-muted small">@ads253</span></span>
+        </a>
+        <a href="tel:+998945510600" class="d-flex align-items-center gap-2 p-2 border rounded-3 text-decoration-none text-dark">
+          <span class="d-flex align-items-center justify-content-center rounded-3" style="width:36px;height:36px;background:#16a34a;color:#fff"><i class="bi bi-telephone-fill"></i></span>
+          <span><b class="d-block" style="font-size:13.5px">Telefon</b><span class="text-muted small">+998 94 551 06 00</span></span>
+        </a>
+        <a href="mailto:adilshod.82@gmail.com" class="d-flex align-items-center gap-2 p-2 border rounded-3 text-decoration-none text-dark">
+          <span class="d-flex align-items-center justify-content-center rounded-3" style="width:36px;height:36px;background:#ef4444;color:#fff"><i class="bi bi-envelope-fill"></i></span>
+          <span><b class="d-block" style="font-size:13.5px">Email</b><span class="text-muted small">adilshod.82@gmail.com</span></span>
+        </a>
+      </div>
+      <div class="px-4 pb-4 pt-2">
+        <div class="bg-light rounded-3 p-3">
+          <div class="text-muted small fw-bold mb-2 text-uppercase" style="font-size:11px">Do'kon kodingiz</div>
+          <div class="font-monospace fw-bold text-center bg-white border rounded-3 py-2 mb-2" style="color:#4f46e5;font-size:18px;letter-spacing:1px" id="litsenziya-blok-dukon-kodi">{{ \App\Services\Litsenziya::dukonKodiChiroyli() }}</div>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-light flex-fill btn-sm" onclick="litsenziyaModalKodNusxa()"><i class="bi bi-clipboard me-1"></i>Nusxa olish</button>
+            <button type="button" class="btn btn-primary flex-fill btn-sm" style="background:#229ed9;border-color:#229ed9" onclick="litsenziyaModalTelegramgaYubor()"><i class="bi bi-send-fill me-1"></i>Telegramga yuborish</button>
+          </div>
+        </div>
+      </div>
+      <div class="px-4 pb-4">
+        <button type="button" class="btn btn-outline-secondary w-100" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-1"></i>Yopish
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{-- ── Litsenziya TARIF LIMITI modali (litsenziya FAOL bo'lsa ham ishlaydi) ──────────────────── --}}
+<div class="modal fade" id="litsenziyaLimitModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg" style="border-radius:18px;overflow:hidden">
+      <div class="text-center pt-4 pb-2">
+        <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#e0e7ff,#c7d2fe);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+          <i class="bi bi-graph-up-arrow" style="font-size:32px;color:#4f46e5"></i>
+        </div>
+        <span class="badge rounded-pill" style="background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;padding:6px 14px;font-size:13px">
+          <span id="litsenziya-limit-sarlavha">—</span>
+        </span>
+        <h5 class="fw-bold mt-2 mb-1">Tarif limiti</h5>
+        <p class="text-muted small px-4 mb-3" id="litsenziya-limit-matn">—</p>
+      </div>
+      <div class="px-4 pb-2 d-flex flex-column gap-2">
+        <a href="https://t.me/ads253" target="_blank" class="d-flex align-items-center gap-2 p-2 border rounded-3 text-decoration-none text-dark">
+          <span class="d-flex align-items-center justify-content-center rounded-3" style="width:36px;height:36px;background:#229ed9;color:#fff"><i class="bi bi-telegram"></i></span>
+          <span><b class="d-block" style="font-size:13.5px">Telegram</b><span class="text-muted small">@ads253</span></span>
+        </a>
+        <a href="tel:+998945510600" class="d-flex align-items-center gap-2 p-2 border rounded-3 text-decoration-none text-dark">
+          <span class="d-flex align-items-center justify-content-center rounded-3" style="width:36px;height:36px;background:#16a34a;color:#fff"><i class="bi bi-telephone-fill"></i></span>
+          <span><b class="d-block" style="font-size:13.5px">Telefon</b><span class="text-muted small">+998 94 551 06 00</span></span>
+        </a>
+        <a href="mailto:adilshod.82@gmail.com" class="d-flex align-items-center gap-2 p-2 border rounded-3 text-decoration-none text-dark">
+          <span class="d-flex align-items-center justify-content-center rounded-3" style="width:36px;height:36px;background:#ef4444;color:#fff"><i class="bi bi-envelope-fill"></i></span>
+          <span><b class="d-block" style="font-size:13.5px">Email</b><span class="text-muted small">adilshod.82@gmail.com</span></span>
+        </a>
+      </div>
+      <div class="px-4 pb-4 pt-2">
+        <div class="bg-light rounded-3 p-3">
+          <div class="text-muted small fw-bold mb-2 text-uppercase" style="font-size:11px">Do'kon kodingiz</div>
+          <div class="font-monospace fw-bold text-center bg-white border rounded-3 py-2 mb-2" style="color:#4f46e5;font-size:18px;letter-spacing:1px" id="litsenziya-limit-dukon-kodi">{{ \App\Services\Litsenziya::dukonKodiChiroyli() }}</div>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-light flex-fill btn-sm" onclick="litsenziyaLimitKodNusxa()"><i class="bi bi-clipboard me-1"></i>Nusxa olish</button>
+            <button type="button" class="btn btn-primary flex-fill btn-sm" style="background:#229ed9;border-color:#229ed9" onclick="litsenziyaLimitTelegramgaYubor()"><i class="bi bi-send-fill me-1"></i>Telegramga yuborish</button>
+          </div>
+        </div>
+      </div>
+      <div class="px-4 pb-4">
+        <button type="button" class="btn btn-outline-secondary w-100" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-1"></i>Yopish
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+window.LITSENZIYA_BLOK = {
+    bloklangan: {
+        mijoz: @json(\App\Services\Litsenziya::moduleBloklanganmi('mijoz')),
+        tovar: @json(\App\Services\Litsenziya::moduleBloklanganmi('tovar')),
+        shartnoma: @json(\App\Services\Litsenziya::moduleBloklanganmi('shartnoma')),
+        hisobot: @json(\App\Services\Litsenziya::moduleBloklanganmi('hisobot')),
+        dashboard: @json(\App\Services\Litsenziya::moduleBloklanganmi('dashboard'))
+    },
+    limit: {
+        mijoz: @json(\App\Services\Litsenziya::limitOshganmi('mijoz')),
+        tovar: @json(\App\Services\Litsenziya::limitOshganmi('tovar')),
+        shartnoma: @json(\App\Services\Litsenziya::limitOshganmi('shartnoma'))
+    },
+    limitMax: {
+        mijoz: @json(\App\Services\Litsenziya::limitQiymati('mijoz')),
+        tovar: @json(\App\Services\Litsenziya::limitQiymati('tovar')),
+        shartnoma: @json(\App\Services\Litsenziya::limitQiymati('shartnoma'))
+    },
+    posOchiq: @json(\App\Services\Litsenziya::posOchiqmi())
+};
+
+function litsenziyaLimitKorsat(sarlavha, matn) {
+    document.getElementById('litsenziya-limit-sarlavha').textContent = sarlavha;
+    document.getElementById('litsenziya-limit-matn').textContent = matn;
+    var elem = document.getElementById('litsenziyaLimitModal');
+    bootstrap.Modal.getOrCreateInstance(elem).show();
+}
+
+function litsenziyaTekshir(modul, modulNomi) {
+    if (window.LITSENZIYA_BLOK && window.LITSENZIYA_BLOK.bloklangan[modul]) {
+        document.getElementById('litsenziya-blok-modul-nomi').textContent = modulNomi;
+        var elem = document.getElementById('litsenziyaBlokModal');
+        bootstrap.Modal.getOrCreateInstance(elem).show();
+        return false;
+    }
+    if (window.LITSENZIYA_BLOK && window.LITSENZIYA_BLOK.limit && window.LITSENZIYA_BLOK.limit[modul]) {
+        var max = window.LITSENZIYA_BLOK.limitMax[modul];
+        litsenziyaLimitKorsat(modulNomi, "Joriy tarifingizda " + modulNomi.toLowerCase() + " limiti (" + max + " ta) ga yetdingiz. Tarifingizni kengaytirish uchun administratorga murojaat qiling.");
+        return false;
+    }
+    return true;
+}
+
+function litsenziyaPosTekshir() {
+    if (window.LITSENZIYA_BLOK && !window.LITSENZIYA_BLOK.posOchiq) {
+        litsenziyaLimitKorsat('Naqd sotish (POS)', "Joriy tarifingizda naqd sotish (POS) bo'limi yopiq. Bu funksiyani ochish uchun tarifingizni kengaytiring.");
+        return false;
+    }
+    return true;
+}
+
+function litsenziyaModalKodNusxa() {
+    var kod = document.getElementById('litsenziya-blok-dukon-kodi').textContent.trim();
+    navigator.clipboard.writeText(kod);
+}
+
+function litsenziyaModalTelegramgaYubor() {
+    var kod = document.getElementById('litsenziya-blok-dukon-kodi').textContent.trim();
+    var xabar = "Salom! Litsenziya muddati tugadi. Do'kon kodim: " + kod;
+    navigator.clipboard.writeText(xabar).then(function() {
+        window.open('https://t.me/ads253', '_blank');
+    });
+}
+
+function litsenziyaLimitKodNusxa() {
+    var kod = document.getElementById('litsenziya-limit-dukon-kodi').textContent.trim();
+    navigator.clipboard.writeText(kod);
+}
+
+function litsenziyaLimitTelegramgaYubor() {
+    var kod = document.getElementById('litsenziya-limit-dukon-kodi').textContent.trim();
+    var xabar = "Salom! Tarifimni kengaytirish kerak. Do'kon kodim: " + kod;
+    navigator.clipboard.writeText(xabar).then(function() {
+        window.open('https://t.me/ads253', '_blank');
+    });
+}
+</script>
+@endif
+@endauth
 
 @stack('scripts')
 </body>

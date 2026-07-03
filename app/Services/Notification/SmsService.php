@@ -78,6 +78,10 @@ class SmsService
             return $this->logSkipped($phone, $message, $customerId, $contractId, $templateId, $batchId, 'Noto\'g\'ri telefon raqam');
         }
 
+        if ($recipientType !== 'test' && NotificationSetting::get('sms', 'enabled', '1') !== '1') {
+            return $this->logSkipped($phone, $message, $customerId, $contractId, $templateId, $batchId, "SMS moduli o'chirilgan (Sozlamalarda yoqilmagan)");
+        }
+
         // Takroriy SMS oldini olish (so'nggi 24 soat ichida shu shartnoma+shablon uchun yuborilganmi)
         if ($recipientType !== 'test' && $this->isDuplicateToday($customerId, $contractId, $templateId)) {
             return $this->logSkipped($phone, $message, $customerId, $contractId, $templateId, $batchId, "Bu shablon ushbu shartnoma uchun so'nggi 24 soat ichida allaqachon yuborilgan");

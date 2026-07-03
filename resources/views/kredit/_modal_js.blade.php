@@ -297,7 +297,7 @@ function tovarGuruhFilter(guruhId, btn) {
     var visible = 0;
     rows.forEach(function(row) {
         var ok = (_aktifGuruh===0 || parseInt(row.dataset.guruh)===_aktifGuruh) &&
-                 (!q || (row.dataset.nomi||'').toLowerCase().includes(q));
+                 (!q || (row.dataset.nomi||'').toLowerCase().includes(q) || (row.dataset.barkod||'').includes(q));
         row.style.display = ok ? '' : 'none';
         if (ok) visible++;
     });
@@ -320,6 +320,48 @@ function tovarModalFiltr(q) {
         if (inp) inp.value = q;
     }
     tovarGuruhFilter(_aktifGuruh, document.querySelector('#tovar-guruh-tablar button.active'));
+}
+
+/**
+ * Shtrix-kod skaneri: qidiruv maydoniga tez matn kiritib Enter bosilganda,
+ * aniq barkodga mos qator topilsa avtomat tanlanadi (modal darhol yopiladi).
+ */
+function tovarModalBarkodSkan() {
+    var q = (document.getElementById('tovar-modal-qidiruv').value || '').trim();
+    if (!q) return;
+    var mos = null;
+    document.querySelectorAll('.tovar-modal-qator').forEach(function(row) {
+        if (row.dataset.barkod === q) mos = row;
+    });
+    if (mos) {
+        tovarModalTanlash(mos);
+        return;
+    }
+
+    // Oldindan yuklangan 30 tadan topilmadi — serverdan ANIQ barkod bo'yicha qidiramiz
+    // (masalan eski yoki kam sotiladigan tovar bo'lishi mumkin).
+    fetch('{{ route("kreditlar.ajax.tovar_barkod") }}?barkod=' + encodeURIComponent(q), {
+        headers: { 'Accept': 'application/json' }
+    }).then(function(res) { return res.json().then(function(data) { return {ok: res.ok, data: data}; }); })
+      .then(function(r) {
+        if (!r.ok) {
+            tovarModalFiltr();
+            return;
+        }
+        var t = r.data;
+        if (!_activeTovarRow) return;
+        _activeTovarRow.querySelector('.tovar-nomi-inp').value = t.nomi;
+        var narxInp = _activeTovarRow.querySelector('.tovar-narx');
+        var soniInp = _activeTovarRow.querySelector('.tovar-soni');
+        narxInp.value = t.nasiya_narx;
+        soniInp.value = 1;
+        _activeTovarRow.querySelector('.tovar-katalog-id').value = t.id;
+        var jamiEl = _activeTovarRow.querySelector('.tovar-jami');
+        if (jamiEl) jamiEl.value = formatSon(parseFloat(narxInp.value)||0);
+        if (typeof tovarJamiYig === 'function') tovarJamiYig();
+        if (typeof hisoblash === 'function') hisoblash();
+        if (_tovarModal) _tovarModal.hide();
+    });
 }
 </script>
 @endpush

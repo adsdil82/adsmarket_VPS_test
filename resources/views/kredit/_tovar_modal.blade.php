@@ -15,7 +15,8 @@
               <i class="bi bi-search text-primary"></i>
             </span>
             <input type="text" id="tovar-modal-qidiruv" class="form-control border-0"
-                   placeholder="Tovar nomini kiriting..." autocomplete="off">
+                   placeholder="Tovar nomi yoki shtrix-kod (skaner)..." autocomplete="off"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();tovarModalBarkodSkan();}">
             <button type="button" class="btn btn-outline-light btn-sm" id="tovar-modal-tozala"
                     onclick="document.getElementById('tovar-modal-qidiruv').value='';tovarModalFiltr('')"
                     title="Tozalash">
@@ -63,7 +64,8 @@
                 <tr class="tovar-modal-qator"
                     data-id="{{ $t->id }}"
                     data-nomi="{{ $t->nomi }}"
-                    data-narx="{{ (int)$t->sotish_narx }}"
+                    data-barkod="{{ $t->barkod }}"
+                    data-narx="{{ (int)$t->nasiya_narx }}"
                     data-qoldiq="{{ (float)$t->qoldiq }}"
                     data-birlik="{{ $t->birlik }}"
                     data-guruh="{{ $g->id }}"
@@ -84,7 +86,7 @@
                     @endif
                   </td>
                   <td class="text-end small fw-medium">
-                    {{ number_format($t->sotish_narx, 0, '.', ' ') }}
+                    {{ number_format($t->nasiya_narx, 0, '.', ' ') }}
                   </td>
                   <td class="text-center text-muted small">{{ $t->birlik }}</td>
                 </tr>

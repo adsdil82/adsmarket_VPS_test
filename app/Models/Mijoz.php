@@ -19,24 +19,36 @@ class Mijoz extends Model implements Auditable
         'familiya',
         'ism',
         'otasining_ismi',
+        'jinsi',
+        'rasm',
         'telefon',
         'passport_seriya',
         'passport_raqam',
         'pinfl',
         'karta_raqami',
         'passport_berilgan_joy',
+        'passport_berilgan_sana',
+        'passport_amal_muddati',
         'manzil',
         'viloyat_id',
         'tuman_id',
         'tug_sana',
         'ish_joyi',
         'lavozimi',
+        'oila_azolari_soni',
+        'daromad_manbai',
+        'oylik_daromad',
+        'oylik_harajat',
         'izoh',
         'holat',
     ];
 
     protected $casts = [
-        'tug_sana' => 'date',
+        'tug_sana'               => 'date',
+        'passport_berilgan_sana' => 'date',
+        'passport_amal_muddati'  => 'date',
+        'oylik_daromad'          => 'decimal:2',
+        'oylik_harajat'          => 'decimal:2',
     ];
 
     // ─── Accessors ────────────────────────────────────────────────
@@ -45,6 +57,22 @@ class Mijoz extends Model implements Auditable
     public function getTolikIsmAttribute(): string
     {
         return trim($this->familiya . ' ' . $this->ism . ' ' . $this->otasining_ismi);
+    }
+
+    /** Jinsi nomi (UI uchun) */
+    public function getJinsiNomiAttribute(): string
+    {
+        return match ($this->jinsi) {
+            'erkak' => 'Erkak',
+            'ayol'  => 'Ayol',
+            default => '—',
+        };
+    }
+
+    /** Mijoz rasmi URL manzili (bo'lmasa null) */
+    public function getRasmUrlAttribute(): ?string
+    {
+        return $this->rasm ? asset('storage/' . $this->rasm) : null;
     }
 
     /** Passport to'liq (AA 1234567) */
@@ -114,6 +142,12 @@ class Mijoz extends Model implements Auditable
     public function telefonlar(): HasMany
     {
         return $this->hasMany(MijozTelefon::class, 'mijoz_id')->orderBy('tartib');
+    }
+
+    /** Mijozning plastik kartalari (bir nechta bo'lishi mumkin) */
+    public function kartalar(): HasMany
+    {
+        return $this->hasMany(MijozKarta::class, 'mijoz_id')->orderBy('tartib');
     }
 
     /** SMS yuborish uchun barcha raqamlar (asosiy + "SMS yuborilsin" belgilangan qo'shimchalar) */

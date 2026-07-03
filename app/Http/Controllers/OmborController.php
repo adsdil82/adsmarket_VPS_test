@@ -2,45 +2,67 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Tovar;
-use Illuminate\Support\Facades\DB;
+use App\Models\Ombor;
+use App\Models\OmborQoldiq;
+use App\Models\StockLedger;
+use App\Models\TovarKatalog;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class OmborController extends Controller
 {
-    public function index()
+    /**
+     * Ombor qoldig'i — har bir ombor bo'yicha real tovar zaxirasi.
+     * Chap ustunda omborlar (filial bo'yicha), tanlangan ombor uchun
+     * o'ng tomonda tovarlar va ularning aniq miqdori ko'rsatiladi.
+     */
+    public function index(Request $request)
     {
-        $tovarlar = Tovar::select(
-                'nomi',
-                DB::raw('SUM(soni) as jami_soni'),
-                DB::raw('AVG(narx) as ort_narx'),
-                DB::raw('SUM(jami_narx) as jami_summa')
-            )
-            ->groupBy('nomi')
-            ->orderByDesc('jami_summa')
-            ->limit(200)
+        $user     = Auth::user();
+        $filialId = $user->isAdmin() ? null : $user->filial_id;
+
+        $omborlar = Ombor::with('filial')
+            ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
+            ->withCount(['qoldiqlar as tovar_turlari_soni' => fn($q) => $q->where('miqdor', '>', 0)])
+            ->orderBy('filial_id')->orderBy('tur')
             ->get();
 
-        $umumiy_soni  = Tovar::sum('soni');
-        $umumiy_narx  = Tovar::sum('jami_narx');
-        $tovar_turlari = Tovar::distinct('nomi')->count('nomi');
+        $tanlanganOmborId = $request->ombor_id ?: $omborlar->first()?->id;
+        $tanlanganOmbor   = $omborlar->firstWhere('id', $tanlanganOmborId);
 
-        return view('ombor.index', compact(
-            'tovarlar', 'umumiy_soni', 'umumiy_narx', 'tovar_turlari'
-        ));
+        $qoldiqlar = collect();
+        if ($tanlanganOmbor) {
+            $qoldiqlar = OmborQoldiq::with('tovar.guruh')
+                ->where('ombor_id', $tanlanganOmbor->id)
+                ->when($request->qidiruv, fn($q) => $q->whereHas('tovar', fn($qq) =>
+                    $qq->where('nomi', 'like', "%{$request->qidiruv}%")
+                ))
+                ->when($request->faqat_mavjud, fn($q) => $q->where('miqdor', '>', 0))
+                ->orderByDesc('miqdor')
+                ->get()
+                ->filter(fn($oq) => $oq->tovar); // o'chirilgan tovarlarni chetlab o'tamiz
+        }
+
+        $jamiSumma = $qoldiqlar->sum(fn($oq) => $oq->miqdor * ($oq->tovar->tan_narx ?? 0));
+
+        return view('ombor.index', compact('omborlar', 'tanlanganOmbor', 'qoldiqlar', 'jamiSumma'));
     }
 
-    public function kirim()
+    /** Bitta tovarning barcha omborlardagi taqsimoti + so'nggi harakatlari. */
+    public function tovar(TovarKatalog $tovar)
     {
-        return view('ombor.kirim');
-    }
-
-    public function chiqim()
-    {
-        $tovarlar = Tovar::with('kredit:id,shartnoma_raqam')
-            ->orderByDesc('created_at')
-            ->limit(200)
+        $taqsimot = OmborQoldiq::with('ombor.filial')
+            ->where('tovar_id', $tovar->id)
+            ->where('miqdor', '>', 0)
+            ->orderByDesc('miqdor')
             ->get();
 
-        return view('ombor.chiqim', compact('tovarlar'));
+        $harakatlar = StockLedger::with('ombor', 'xodim:id,ism_familiya')
+            ->where('tovar_id', $tovar->id)
+            ->latest()
+            ->limit(50)
+            ->get();
+
+        return view('ombor.tovar', compact('tovar', 'taqsimot', 'harakatlar'));
     }
 }

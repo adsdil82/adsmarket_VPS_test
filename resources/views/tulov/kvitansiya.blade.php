@@ -8,17 +8,12 @@
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: 'Times New Roman', Times, serif; font-size:10pt; color:#000; background:#fff; }
 
-  /* === NAMUNA suv belgisi === */
-  .namuna-bg {
-    position:fixed; top:0; left:0; width:100%; height:100%;
-    display:flex; align-items:center; justify-content:center;
-    pointer-events:none; z-index:0;
-  }
-  .namuna-bg span {
-    font-size:96pt; font-weight:900; color:#e00;
-    opacity:0.12; transform:rotate(-35deg);
-    white-space:nowrap; letter-spacing:8px;
-    font-family: Arial, sans-serif;
+  /* === DUBLIKAT kichik belgisi (eski sanadagi kvitansiya qayta chop etilganda) === */
+  .dublikat-belgi {
+    display:inline-block; font-size:6.5pt; font-weight:700; color:#b91c1c;
+    border:0.5pt solid #b91c1c; border-radius:2px; padding:0.5mm 1.5mm;
+    letter-spacing:1px; opacity:0.75; font-family: Arial, sans-serif;
+    vertical-align:middle; margin-left:2mm;
   }
 
   /* === ASOSIY TUZILMA === */
@@ -150,7 +145,7 @@
                ? \Carbon\Carbon::parse($tulov->tulov_sana)
                : now();
   $sana      = $tulovSana->format('d.m.Y');
-  $namuna    = $tulovSana->startOfDay()->lt(now()->startOfDay());
+  $dublikat  = $tulovSana->startOfDay()->lt(now()->startOfDay());
 
   $sum          = number_format($tulov->summa, 0, '.', ' ');
   $shartnoma    = $kredit->shartnoma_raqam ?? '—';
@@ -165,10 +160,6 @@
   $qoldiq       = number_format($qoldiqSana, 0, '.', ' ');
 @endphp
 
-@if($namuna)
-<div class="namuna-bg"><span>NAMUNA</span></div>
-@endif
-
 <div class="varaq">
 
   <!-- ====== CHAP 60% — KASSIR NUSXASI ====== -->
@@ -181,6 +172,7 @@
     <div class="nom">KASSA KIRIM ORDERI</div>
     <div class="raqam">
       № <strong>{{ $tulov->id }}</strong> &nbsp;|&nbsp; Sana: <strong>{{ $sana }}</strong>
+      @if($dublikat)<span class="dublikat-belgi">DUBLIKAT</span>@endif
     </div>
 
     <table class="info">
@@ -255,7 +247,9 @@
 
     <div class="talon-nom">Kvitansiya</div>
     <div class="talon-tashkilot">IMKONPLUS MChJ</div>
-    <div class="talon-raqam">№ <strong>{{ $tulov->id }}</strong> &nbsp;|&nbsp; {{ $sana }}</div>
+    <div class="talon-raqam">№ <strong>{{ $tulov->id }}</strong> &nbsp;|&nbsp; {{ $sana }}
+      @if($dublikat)<span class="dublikat-belgi">DUBLIKAT</span>@endif
+    </div>
 
     <table class="talon-info">
       <tr><td>Shartnoma:</td><td>{{ $shartnoma }}</td></tr>

@@ -40,27 +40,27 @@ class HisobotController extends Controller
             ->orderByDesc('tolov_sana')
             ->paginate(30)->withQueryString();
 
-        $kunlikTulovlar = Tulov::select(
-                DB::raw('DATE(tolov_sana) as sana'),
-                DB::raw('SUM(summa) as jami'),
+        $kunlikTulovlar = Tulov::when($filialId, fn($q) => $q->filialda($filialId))
+            ->select(
+                DB::raw('DATE(tulovlar.tolov_sana) as sana'),
+                DB::raw('SUM(tulovlar.summa) as jami'),
                 DB::raw('COUNT(*) as soni'))
-            ->when($filialId, fn($q) => $q->filialda($filialId))
             ->sanada(now()->subDays(29)->toDateString(), now()->toDateString())
             ->groupBy('sana')->orderBy('sana')->get();
 
-        $tulovTurlariStatistika = Tulov::select('tulov_turi_id',
-                DB::raw('SUM(summa) as jami'), DB::raw('COUNT(*) as soni'))
+        $tulovTurlariStatistika = Tulov::when($filialId, fn($q) => $q->filialda($filialId))
+            ->select('tulovlar.tulov_turi_id',
+                DB::raw('SUM(tulovlar.summa) as jami'), DB::raw('COUNT(*) as soni'))
             ->with('tulovTuri')
-            ->when($filialId, fn($q) => $q->filialda($filialId))
             ->sanada($danSana, $gachaSana)
-            ->groupBy('tulov_turi_id')->orderByDesc('jami')->get();
+            ->groupBy('tulovlar.tulov_turi_id')->orderByDesc('jami')->get();
 
-        $xodimlarStatistika = Tulov::select('xodim_id',
-                DB::raw('SUM(summa) as jami'), DB::raw('COUNT(*) as soni'))
+        $xodimlarStatistika = Tulov::when($filialId, fn($q) => $q->filialda($filialId))
+            ->select('tulovlar.xodim_id',
+                DB::raw('SUM(tulovlar.summa) as jami'), DB::raw('COUNT(*) as soni'))
             ->with('xodim')
-            ->when($filialId, fn($q) => $q->filialda($filialId))
             ->sanada($danSana, $gachaSana)
-            ->groupBy('xodim_id')->orderByDesc('jami')->get();
+            ->groupBy('tulovlar.xodim_id')->orderByDesc('jami')->get();
 
         $muddatiOtganlar = RegKredit::with(['mijoz','filial'])
             ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
@@ -151,6 +151,58 @@ class HisobotController extends Controller
         }
 
         return view('hisobot.chiqarilgan', compact('kreditlar','jami','filiallar','filialId','danSana','gachaSana'));
+    }
+
+    // ── 3b. Kreditga sotilgan tovarlar ──────────────────────────────
+    public function sotilganTovarlar(Request $request)
+    {
+        $filialId  = $this->filialId($request);
+        $danSana   = $request->dan_sana   ?? now()->startOfMonth()->toDateString();
+        $gachaSana = $request->gacha_sana ?? now()->toDateString();
+        $filiallar = Auth::user()->isAdmin() ? Filial::faol()->get() : collect();
+
+        $baseQuery = fn () => DB::table('tovarlar as t')
+            ->join('reg_kredit as rk', 'rk.id', '=', 't.reg_kredit_id')
+            ->leftJoin('tovar_katalog as tk', 'tk.id', '=', 't.tovar_katalog_id')
+            ->when($filialId, fn ($q) => $q->where('rk.filial_id', $filialId))
+            ->whereBetween('rk.boshlanish_sana', [$danSana, $gachaSana]);
+
+        $tovarlar = $baseQuery()
+            ->selectRaw("t.nomi,
+                COALESCE(tk.birlik,'dona') as birlik,
+                SUM(t.soni) as jami_soni,
+                COUNT(DISTINCT t.reg_kredit_id) as shartnoma_soni,
+                COALESCE(SUM(t.soni * COALESCE(tk.tan_narx,0)),0) as kirim_summasi,
+                COALESCE(SUM(t.jami_narx),0) as sotilgan_summasi")
+            ->groupBy('t.nomi', 'tk.birlik')
+            ->orderByDesc('sotilgan_summasi')
+            ->get()
+            ->map(function ($r) {
+                $r->farqi        = (float) $r->sotilgan_summasi - (float) $r->kirim_summasi;
+                $r->ustama_foizi = $r->kirim_summasi > 0 ? round($r->farqi / $r->kirim_summasi * 100, 1) : 0;
+                return $r;
+            });
+
+        $jami = (object) [
+            'turlar_soni'      => $tovarlar->count(),
+            'soni'             => $tovarlar->sum('jami_soni'),
+            'shartnoma_soni'   => $baseQuery()->distinct('t.reg_kredit_id')->count('t.reg_kredit_id'),
+            'kirim_summasi'    => $tovarlar->sum('kirim_summasi'),
+            'sotilgan_summasi' => $tovarlar->sum('sotilgan_summasi'),
+            'farqi'            => $tovarlar->sum('farqi'),
+        ];
+        $jami->ustama_foizi = $jami->kirim_summasi > 0 ? round($jami->farqi / $jami->kirim_summasi * 100, 1) : 0;
+
+        if ($request->get('format') === 'excel') {
+            return $this->excelResponse("Kreditga sotilgan tovarlar $danSana — $gachaSana",
+                ['#','Tovar nomi','Birlik','Soni','Shartnomalar soni','Kirim summasi','Sotilgan summasi','Farqi (ustama)','Ustama %'],
+                $tovarlar->values()->map(fn($r,$i) => [
+                    $i+1, $r->nomi, $r->birlik, (int)$r->jami_soni, (int)$r->shartnoma_soni,
+                    (float)$r->kirim_summasi, (float)$r->sotilgan_summasi, (float)$r->farqi, $r->ustama_foizi
+                ])->toArray());
+        }
+
+        return view('hisobot.sotilgan_tovarlar', compact('tovarlar','jami','filiallar','filialId','danSana','gachaSana'));
     }
 
     // Kechikish analizi -- AGING REPORT (paginate=20 bilan optimizatsiya)
@@ -329,6 +381,7 @@ class HisobotController extends Controller
         return match($tur) {
             'portfolio'   => $this->kreditPortfeli($request),
             'chiqarilgan' => $this->chiqarilganKreditlar($request),
+            'sotilgan_tovarlar' => $this->sotilganTovarlar($request),
             'aging'       => $this->kechikishAnaliz($request),
             default       => abort(404),
         };

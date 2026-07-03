@@ -90,6 +90,7 @@ class RegKredit extends Model implements Auditable
     public function getHolatNomiAttribute(): string
     {
         return match($this->holat) {
+            'kutilmoqda'    => 'Kutilmoqda',
             'faol'          => 'AKTIV',
             'yopilgan'      => 'PASSIV',
             'muddati_otgan' => "Muddati o'tgan",
@@ -102,6 +103,7 @@ class RegKredit extends Model implements Auditable
     public function getHolatRangiAttribute(): string
     {
         return match($this->holat) {
+            'kutilmoqda'    => 'info',
             'faol'          => 'success',
             'yopilgan'      => 'secondary',
             'muddati_otgan' => 'danger',

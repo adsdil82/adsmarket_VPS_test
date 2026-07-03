@@ -17,8 +17,13 @@ class TulovRequest extends FormRequest
         return [
             'tulov_turi_id'    => ['required', 'exists:tulov_turlari,id'],
             'summa'            => ['required', 'numeric', 'min:0.01'],
-            'tolov_sana'       => ['required', 'date', 'before_or_equal:today'],
-            'kvitansiya_raqam' => ['nullable', 'string', 'max:100'],
+            // tolov_sana va kvitansiya_raqam — controller ularni HAR DOIM
+            // server tomonda (bugungi kun, avtomatik raqam) bilan almashtiradi,
+            // formadan kelgan qiymatga ishonilmaydi (qarang: TulovController::store) —
+            // kassir orqaga sana qo'yib hisobotni buzishi yoki kvitansiya
+            // raqamini qo'lda yozib tartibni chalkashtirishi oldini olish uchun.
+            'tolov_sana'       => ['nullable'],
+            'kvitansiya_raqam' => ['nullable'],
             'izoh'             => ['nullable', 'string'],
         ];
     }

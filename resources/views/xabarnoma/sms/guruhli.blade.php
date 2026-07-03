@@ -22,7 +22,7 @@
     <li class="nav-item"><a class="nav-link" href="{{ route('xabarnoma.sms.yakka') }}">Yakka</a></li>
     <li class="nav-item"><a class="nav-link" href="{{ route('xabarnoma.sms.tarix') }}">Tarix</a></li>
     <li class="nav-item"><a class="nav-link" href="{{ route('xabarnoma.shablonlar.index') }}">Shablonlar</a></li>
-    <li class="nav-item"><a class="nav-link" href="{{ route('xabarnoma.sms.sozlamalar') }}">Sozlamalar</a></li>
+    <li class="nav-item"><a class="nav-link" href="{{ Auth::user()->isAdmin() ? route('admin.sozlamalar').'#collapseSms' : route('xabarnoma.sms.sozlamalar') }}">Sozlamalar</a></li>
 </ul>
 
 <form method="POST" action="{{ route('xabarnoma.sms.guruhli.send') }}" id="guruhli-form">

@@ -196,6 +196,11 @@ class SmsController extends Controller
     // ── Sozlamalar ──────────────────────────────────────────
     public function sozlamalar()
     {
+        // SMS sozlamalari Boshqaruv paneli (Sozlamalar) sahifasiga ko'chirildi — admin'lar shu yerga yo'naltiriladi
+        if (Auth::user()->isAdmin()) {
+            return redirect(route('admin.sozlamalar') . '#collapseSms');
+        }
+
         $sozlamalar = NotificationSetting::where('channel','sms')->get()->keyBy('key');
         $providerStatus = null;
         try { $providerStatus = $this->smsService->getProviderStatus(); } catch (\Exception $e) {}

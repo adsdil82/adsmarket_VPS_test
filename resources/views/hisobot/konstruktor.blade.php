@@ -7,18 +7,42 @@
 
 @push('styles')
 <style>
-.modul-card { border: 2px solid #dee2e6; border-radius: 10px; padding: 12px 16px;
-    cursor: pointer; transition: all .2s; }
-.modul-card:hover { border-color: #6366f1; background: #f8f7ff; }
-.modul-card.selected { border-color: #6366f1; background: #ede9fe; }
-.modul-card .mc-icon { font-size: 1.5rem; }
+.bft-section-title {
+    font-weight:700; color:#1e3a8a; background:linear-gradient(90deg,#1e3a8a,#1d4ed8); color:#fff;
+    padding:6px 12px; border-radius:6px 6px 0 0; margin-bottom:0; font-size:.82rem;
+    display:flex; justify-content:space-between; align-items:center;
+}
+.bft-step-num {
+    display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px;
+    background:#fbbf24; color:#1e3a8a; border-radius:50%; font-size:.68rem; font-weight:800; margin-right:6px;
+}
+.bft-wrap { border:1px solid #93c5fd; border-radius:0 0 6px 6px; overflow:hidden; background:#fff; }
+
+.modul-card { border: 2px solid #dee2e6; border-radius: 8px; padding: 10px 12px;
+    cursor: pointer; transition: all .15s; }
+.modul-card:hover { border-color: #2563eb; background: #f0f5ff; }
+.modul-card.selected { border-color: #2563eb; background: #eef3ff; }
+.modul-card .mc-icon { font-size: 1.3rem; }
 .col-check { display: flex; gap: 8px; align-items: center; padding: 4px 8px;
     border-radius: 6px; cursor: pointer; transition: background .15s; }
-.col-check:hover { background: #f3f4f6; }
+.col-check:hover { background: #eef3ff; }
 .col-check input { cursor: pointer; }
-.shart-row { background: #f8f9fa; border-radius: 8px; padding: 10px 14px; margin-bottom: 6px; }
-.result-table th { font-size: .72rem; white-space: nowrap; }
-.result-table td { font-size: .8rem; }
+.shart-row { background: #f8fafd; border:1px solid #e5edfb; border-radius: 6px; padding: 8px 12px; margin-bottom: 6px; }
+
+.bank-table { border-collapse:collapse; font-size:.8rem; width:100%; }
+.bank-table, .bank-table th, .bank-table td { border:1px solid #d7e2f5; }
+.bank-table thead { position:sticky; top:0; z-index:6; }
+.bank-table thead th {
+    background:linear-gradient(180deg,#3b82f6,#1d4ed8); color:#fff; font-weight:800;
+    font-size:.66rem; letter-spacing:.03em; text-transform:uppercase; padding:6px 8px;
+    white-space:nowrap;
+}
+.bank-table tbody tr { height:26px; }
+.bank-table tbody tr:hover td { background:#e0edff !important; }
+.bank-table tbody tr:nth-child(odd)  td { background:#ffffff; }
+.bank-table tbody tr:nth-child(even) td { background:#eef4ff; }
+.bank-table tbody td { padding:4px 8px; vertical-align:middle; white-space:nowrap; font-size:.8rem; }
+.bank-wrap-result { overflow:auto; max-height:520px; border:1px solid #93c5fd; border-radius:0 0 6px 6px; }
 </style>
 @endpush
 
@@ -41,11 +65,9 @@
     <div class="col-lg-4">
 
         {{-- 1. Modul tanlash --}}
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header py-2 fw-bold small">
-                <span class="badge bg-primary me-1">1</span> Modul tanlang
-            </div>
-            <div class="card-body">
+        <div class="bft-section-title mb-0"><span><span class="bft-step-num">1</span>Modul tanlang</span></div>
+        <div class="bft-wrap mb-3">
+            <div class="p-3">
                 <div class="d-flex flex-column gap-2">
                     @foreach($modullar as $key => $mod)
                     <label class="modul-card {{ $modul === $key ? 'selected' : '' }}"
@@ -54,7 +76,7 @@
                                {{ $modul === $key ? 'checked' : '' }}
                                class="d-none">
                         <div class="d-flex align-items-center gap-3">
-                            <i class="bi {{ $mod['icon'] }} mc-icon" style="color:#6366f1"></i>
+                            <i class="bi {{ $mod['icon'] }} mc-icon" style="color:#2563eb"></i>
                             <div>
                                 <div class="fw-bold" style="font-size:.88rem">{{ $mod['nomi'] }}</div>
                                 <div class="text-muted" style="font-size:.75rem">{{ $mod['sana_tur'] }} sanasi bo'yicha</div>
@@ -67,11 +89,9 @@
         </div>
 
         {{-- 2. Davr --}}
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header py-2 fw-bold small">
-                <span class="badge bg-primary me-1">2</span> Davr & Filial
-            </div>
-            <div class="card-body">
+        <div class="bft-section-title mb-0"><span><span class="bft-step-num">2</span>Davr &amp; Filial</span></div>
+        <div class="bft-wrap mb-3">
+            <div class="p-3">
                 <div class="row g-2">
                     <div class="col-6">
                         <label class="form-label small mb-1">Dan</label>
@@ -118,21 +138,17 @@
         </div>
 
         {{-- 3. Shartlar --}}
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header py-2 fw-bold small">
-                <span class="badge bg-primary me-1">3</span> Shartlar (ixtiyoriy)
-            </div>
-            <div class="card-body" id="shartlar-body">
+        <div class="bft-section-title mb-0"><span><span class="bft-step-num">3</span>Shartlar (ixtiyoriy)</span></div>
+        <div class="bft-wrap mb-3">
+            <div class="p-3" id="shartlar-body">
                 {{-- JS orqali to'ldiriladi --}}
             </div>
         </div>
 
         {{-- 4. Ko'rinish --}}
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header py-2 fw-bold small">
-                <span class="badge bg-primary me-1">4</span> Ko'rinish
-            </div>
-            <div class="card-body">
+        <div class="bft-section-title mb-0"><span><span class="bft-step-num">4</span>Ko'rinish</span></div>
+        <div class="bft-wrap mb-3">
+            <div class="p-3">
                 <div class="d-flex gap-3">
                     <label class="d-flex align-items-center gap-2">
                         <input type="radio" name="korinish" value="jadval" checked> Jadval
@@ -160,15 +176,15 @@
     <div class="col-lg-8">
 
         {{-- Ustunlar tanlash --}}
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header py-2 fw-bold small d-flex justify-content-between align-items-center">
-                <span><span class="badge bg-primary me-1">5</span> Ustunlar tanlang</span>
-                <div class="d-flex gap-2">
-                    <button type="button" onclick="barchasini(true)" class="btn btn-xs btn-outline-success" style="font-size:.72rem;padding:2px 8px">Barchasi</button>
-                    <button type="button" onclick="barchasini(false)" class="btn btn-xs btn-outline-danger" style="font-size:.72rem;padding:2px 8px">Tozalash</button>
-                </div>
+        <div class="bft-section-title mb-0">
+            <span><span class="bft-step-num">5</span>Ustunlar tanlang</span>
+            <div class="d-flex gap-2">
+                <button type="button" onclick="barchasini(true)" class="btn btn-xs btn-light" style="font-size:.72rem;padding:2px 8px;color:#16a34a;font-weight:700">Barchasi</button>
+                <button type="button" onclick="barchasini(false)" class="btn btn-xs btn-light" style="font-size:.72rem;padding:2px 8px;color:#dc2626;font-weight:700">Tozalash</button>
             </div>
-            <div class="card-body">
+        </div>
+        <div class="bft-wrap mb-3">
+            <div class="p-3">
                 <div id="ustunlar-body" class="row g-1">
                     {{-- JS orqali --}}
                 </div>
@@ -177,61 +193,58 @@
 
         {{-- Natija --}}
         @if($natija !== null)
-        <div class="card border-0 shadow-sm">
-            <div class="card-header py-2 d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 small">
-                    <i class="bi bi-table me-1"></i> Natija
-                    <span class="badge bg-primary ms-1">{{ $natija['soni'] }} qator</span>
-                </h6>
-                <button type="submit" form="konstruktor-form"
-                        formaction="{{ route('hisobotlar.konstruktor.excel') }}"
-                        name="format" value="excel"
-                        class="btn btn-sm btn-success">
-                    <i class="bi bi-file-earmark-excel me-1"></i> Excel
-                </button>
-            </div>
-            <div class="table-responsive" style="max-height:500px;overflow-y:auto">
-                <table class="table table-hover table-sm mb-0 result-table">
-                    <thead class="table-light sticky-top">
-                        <tr>
-                            @if(!empty($natija['rows']))
-                                @foreach(array_keys($natija['rows'][0]) as $col)
-                                @if(empty($ustunlar) || in_array($col,$ustunlar))
-                                <th>{{ $modullar[$modul]['ustunlar'][$col] ?? $col }}</th>
-                                @endif
-                                @endforeach
-                            @endif
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($natija['rows'] as $row)
-                        <tr>
-                            @foreach($row as $col => $val)
+        <div class="bft-section-title mb-0">
+            <span><i class="bi bi-table me-1"></i>Natija
+                <span class="badge bg-light text-primary ms-1">{{ $natija['soni'] }} qator</span>
+            </span>
+            <button type="submit" form="konstruktor-form"
+                    formaction="{{ route('hisobotlar.konstruktor.excel') }}"
+                    name="format" value="excel"
+                    class="btn btn-sm btn-success">
+                <i class="bi bi-file-earmark-excel me-1"></i> Excel
+            </button>
+        </div>
+        <div class="bank-wrap-result shadow-sm">
+            <table class="bank-table">
+                <thead>
+                    <tr>
+                        @if(!empty($natija['rows']))
+                            @foreach(array_keys($natija['rows'][0]) as $col)
                             @if(empty($ustunlar) || in_array($col,$ustunlar))
-                            <td @if(is_numeric($val) && $val > 0) class="text-end" @endif>
-                                @if(is_numeric($val) && $val > 100)
-                                    {{ number_format((float)$val,0,'.',' ') }}
-                                @else
-                                    {{ $val }}
-                                @endif
-                            </td>
+                            <th>{{ $modullar[$modul]['ustunlar'][$col] ?? $col }}</th>
                             @endif
                             @endforeach
-                        </tr>
+                        @endif
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($natija['rows'] as $row)
+                    <tr>
+                        @foreach($row as $col => $val)
+                        @if(empty($ustunlar) || in_array($col,$ustunlar))
+                        <td @if(is_numeric($val) && $val > 0) class="num" style="text-align:right" @endif>
+                            @if(is_numeric($val) && $val > 100)
+                                {{ number_format((float)$val,0,'.',' ') }}
+                            @else
+                                {{ $val }}
+                            @endif
+                        </td>
+                        @endif
                         @endforeach
-                    </tbody>
-                </table>
-            </div>
-            @if($natija['soni'] >= 5000)
-            <div class="card-footer py-1">
-                <small class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>
-                    Maksimal 5000 qator ko'rsatildi. To'liq ma'lumot uchun Excel yuklab oling.</small>
-            </div>
-            @endif
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
+        @if($natija['soni'] >= 5000)
+        <div class="alert alert-warning py-2 mt-2 mb-0">
+            <small><i class="bi bi-exclamation-triangle me-1"></i>
+                Maksimal 5000 qator ko'rsatildi. To'liq ma'lumot uchun Excel yuklab oling.</small>
+        </div>
+        @endif
         @else
-        <div class="card border-0 shadow-sm">
-            <div class="card-body text-center py-5 text-muted">
+        <div class="bft-wrap">
+            <div class="p-5 text-center text-muted">
                 <i class="bi bi-tools fs-2 d-block mb-2" style="color:#6366f1;opacity:.4"></i>
                 <div>Chap paneldan modul, davr va ustunlarni tanlang,</div>
                 <div>so'ng <strong>"Hisobotni shakllantirish"</strong> tugmasini bosing.</div>

@@ -42,18 +42,23 @@ class AdminController extends Controller
         'ochirish'   => ['nomi' => "O'chirish",  'icon' => 'trash',       'rang' => 'danger'],
     ];
 
-    // 10 ta tema
+    // 14 ta tema — har biri gradientli sidebar fon (sidebar → sidebar2) va gradientli aksent (accent → accent2)
     public static array $temalar = [
-        1  => ['nomi' => 'Klassik (Qora)',      'sidebar' => '#212529', 'accent' => '#ffc107'],
-        2  => ['nomi' => 'Navy (Ko\'k)',        'sidebar' => '#1a2744', 'accent' => '#4dabf7'],
-        3  => ['nomi' => 'Yashil',              'sidebar' => '#1a3a2a', 'accent' => '#51cf66'],
-        4  => ['nomi' => 'Binafsha',            'sidebar' => '#2d1b69', 'accent' => '#cc5de8'],
-        5  => ['nomi' => 'Qizil',               'sidebar' => '#3b1010', 'accent' => '#ff6b6b'],
-        6  => ['nomi' => 'Slate (Kulrang)',     'sidebar' => '#1e293b', 'accent' => '#94a3b8'],
-        7  => ['nomi' => 'Moviy (Teal)',        'sidebar' => '#0f3640', 'accent' => '#20c997'],
-        8  => ['nomi' => 'To\'q To\'q sariq',  'sidebar' => '#2d1f00', 'accent' => '#fd7e14'],
-        9  => ['nomi' => 'Qahva',               'sidebar' => '#2c1810', 'accent' => '#a0522d'],
-        10 => ['nomi' => 'Midnight (Tun ko\'k)', 'sidebar' => '#0a0f2c', 'accent' => '#4c6ef5'],
+        1  => ['nomi' => 'Klassik (Qora)',      'sidebar' => '#212529', 'sidebar2' => '#343a40', 'accent' => '#ffc107', 'accent2' => '#fca311'],
+        2  => ['nomi' => 'Navy (Ko\'k)',        'sidebar' => '#1a2744', 'sidebar2' => '#24365c', 'accent' => '#4dabf7', 'accent2' => '#1c7ed6'],
+        3  => ['nomi' => 'Yashil',              'sidebar' => '#1a3a2a', 'sidebar2' => '#235339', 'accent' => '#51cf66', 'accent2' => '#2f9e44'],
+        4  => ['nomi' => 'Binafsha',            'sidebar' => '#2d1b69', 'sidebar2' => '#3d2490', 'accent' => '#cc5de8', 'accent2' => '#9c36b5'],
+        5  => ['nomi' => 'Qizil',               'sidebar' => '#3b1010', 'sidebar2' => '#5c1a1a', 'accent' => '#ff6b6b', 'accent2' => '#e03131'],
+        6  => ['nomi' => 'Slate (Kulrang)',     'sidebar' => '#1e293b', 'sidebar2' => '#334155', 'accent' => '#94a3b8', 'accent2' => '#64748b'],
+        7  => ['nomi' => 'Moviy (Teal)',        'sidebar' => '#0f3640', 'sidebar2' => '#155e63', 'accent' => '#20c997', 'accent2' => '#0ca678'],
+        8  => ['nomi' => 'To\'q To\'q sariq',  'sidebar' => '#2d1f00', 'sidebar2' => '#45300a', 'accent' => '#fd7e14', 'accent2' => '#e8590c'],
+        9  => ['nomi' => 'Qahva',               'sidebar' => '#2c1810', 'sidebar2' => '#43261a', 'accent' => '#a0522d', 'accent2' => '#7a3a1f'],
+        10 => ['nomi' => 'Midnight (Tun ko\'k)', 'sidebar' => '#0a0f2c', 'sidebar2' => '#131a44', 'accent' => '#4c6ef5', 'accent2' => '#3b5bdb'],
+        // ── Bank-uslub temalar: yorqin, tiniq, zamonaviy gradientlar ──
+        11 => ['nomi' => 'Bank Ko\'k (Korporativ)', 'sidebar' => '#1e3a8a', 'sidebar2' => '#2563eb', 'accent' => '#fbbf24', 'accent2' => '#f59e0b'],
+        12 => ['nomi' => 'Bank Zumrad',              'sidebar' => '#064e3b', 'sidebar2' => '#10b981', 'accent' => '#fde68a', 'accent2' => '#fbbf24'],
+        13 => ['nomi' => 'Bank Feruza (Aqua)',       'sidebar' => '#0c4a6e', 'sidebar2' => '#0ea5e9', 'accent' => '#fef08a', 'accent2' => '#fbbf24'],
+        14 => ['nomi' => 'Bank Binafsha',            'sidebar' => '#312e81', 'sidebar2' => '#6366f1', 'accent' => '#f9a8d4', 'accent2' => '#ec4899'],
     ];
 
     /** Admin bosh sahifasi */
@@ -91,20 +96,30 @@ class AdminController extends Controller
             'kompaniya_hisob'    => 'nullable|string|max:30',
             'kompaniya_bank'     => 'nullable|string|max:200',
             'kompaniya_direktor' => 'nullable|string|max:200',
-            'tema'               => 'required|integer|between:1,10',
+            'tema'               => 'required|integer|between:1,14',
+            'tema_maxsus'        => 'nullable|in:0,1',
+            'tema_sidebar1'      => 'nullable|string|max:9',
+            'tema_sidebar2'      => 'nullable|string|max:9',
+            'tema_accent1'       => 'nullable|string|max:9',
+            'tema_accent2'       => 'nullable|string|max:9',
+            'grup_font_rang'     => 'nullable|in:qora,sariq,qizil,oq',
             'orqaga_sana_taqiqlansin' => 'nullable|in:0,1',
         ]);
 
-        Sozlama::saqlash($request->only([
+        $malumot = $request->only([
             'brand_nomi', 'kompaniya_nomi', 'kompaniya_manzil',
             'kompaniya_telefon', 'kompaniya_inn', 'kompaniya_mfo',
             'kompaniya_hisob', 'kompaniya_bank', 'kompaniya_direktor', 'tema',
+            'tema_sidebar1', 'tema_sidebar2', 'tema_accent1', 'tema_accent2', 'grup_font_rang',
             // Hybrid Pochta
             'hybrid_pochta_login', 'hybrid_pochta_password', 'hybrid_pochta_yoqilgan',
             'hybrid_pochta_region_id', 'hybrid_pochta_area_id',
             // Operatsion kun nazorati
             'orqaga_sana_taqiqlansin',
-        ]));
+        ]);
+        $malumot['tema_maxsus'] = $request->boolean('tema_maxsus') ? '1' : '0';
+
+        Sozlama::saqlash($malumot);
 
         return back()->with('muvaffaqiyat', 'Sozlamalar saqlandi!');
     }
@@ -200,12 +215,14 @@ class AdminController extends Controller
     /** Rollar ro'yxati */
     public function rollar()
     {
-        $rollar = Rol::tartibBoyicha()->get()->map(function ($r) {
+        $rollar = Rol::tartibBoyicha()->with('tulovTurlari:id')->get()->map(function ($r) {
             $r->foydalanuvchi_soni = Foydalanuvchi::where('rol', $r->kalit)->count();
             return $r;
         });
 
-        return view('admin.rollar', compact('rollar'));
+        $barchaTulovTurlari = \App\Models\TulovTuri::faol()->orderBy('nomi')->get(['id', 'nomi']);
+
+        return view('admin.rollar', compact('rollar', 'barchaTulovTurlari'));
     }
 
     /** Yangi rol qo'shish (masalan: sotuvchi, yetkazib_beruvchi) */
@@ -275,6 +292,25 @@ class AdminController extends Controller
         cache()->forget('ruxsatlar_all');
 
         return back()->with('muvaffaqiyat', "\"{$rolNomi}\" roli o'chirildi.");
+    }
+
+    /**
+     * Rol uchun to'lov bilan bog'liq sozlamalarni saqlash:
+     *  - ustama_korish: "Ustama" (foiz/markup) ustunini ko'rish huquqi —
+     *    moliyaviy maxfiy ma'lumot, standart holatda yopiq.
+     *  - tulov_turlari: shu rolga ko'rinadigan to'lov turlari ro'yxati.
+     *    Hech narsa belgilanmasa (bo'sh) — cheklov OLIB TASHLANADI, ya'ni
+     *    hammasi yana ko'rinadi (orqaga moslik uchun standart shu).
+     */
+    public function rollarTulovSozlama(Request $request, Rol $rol)
+    {
+        $rol->update([
+            'ustama_korish' => $request->boolean('ustama_korish'),
+        ]);
+
+        $rol->tulovTurlari()->sync($request->input('tulov_turlari', []));
+
+        return back()->with('muvaffaqiyat', "\"{$rol->nomi}\" roli uchun to'lov sozlamalari saqlandi.");
     }
 
     /** Foydalanuvchilar ro'yxati + yaratish */

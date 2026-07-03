@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(request('embed') ? 'layouts.iframe' : 'layouts.app')
 
 @section('title', $kredit->shartnoma_raqam)
 
@@ -9,111 +9,134 @@
 
 @section('content')
 
-{{-- ── Sarlavha ──────────────────────────────────────────────────── --}}
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+@push('styles')
+<style>
+.sh-header {
+    background:linear-gradient(90deg,#dbeafe,#bfdbfe); border:1px solid #93c5fd;
+    border-radius:8px; padding:10px 14px; margin-bottom:10px;
+}
+.sh-stat { text-align:center; padding:2px 8px; border-right:1px solid #93c5fd; }
+.sh-stat:last-child { border-right:none; }
+.sh-stat .lbl { font-size:.62rem; text-transform:uppercase; letter-spacing:.03em; color:#3b5fc0; font-weight:700; }
+.sh-stat .val { font-size:.92rem; font-weight:800; color:#1e293b; }
+
+.bank-table { border-collapse:collapse; font-size:.8rem; width:100%; }
+.bank-table, .bank-table th, .bank-table td { border:1px solid #d7e2f5; }
+.bank-table thead { position:sticky; top:0; z-index:5; }
+.bank-table thead th {
+    background:linear-gradient(180deg,#3b82f6,#1d4ed8); color:#fff; font-weight:800;
+    font-size:.66rem; letter-spacing:.03em; text-transform:uppercase; padding:6px 8px;
+    white-space:nowrap; text-align:right;
+}
+.bank-table thead th.tl { text-align:left; }
+.bank-table tbody tr { height:26px; }
+.bank-table tbody tr:hover td { background:#e0edff !important; }
+.bank-table tbody tr:nth-child(odd)  td { background:#ffffff; }
+.bank-table tbody tr:nth-child(even) td { background:#eef4ff; }
+.bank-table tbody tr.row-muddati-otgan td { background:#fee2e2 !important; }
+.bank-table tbody td { padding:4px 8px; vertical-align:middle; white-space:nowrap; }
+.bank-table .num { font-family:'Roboto Mono','Courier New',monospace; text-align:right; }
+.bank-wrap-15 { overflow:auto; height:410px; border:1px solid #93c5fd; border-radius:0 0 6px 6px; }
+.bank-table tfoot { position:sticky; bottom:0; z-index:5; }
+.bank-table tfoot td {
+    background:linear-gradient(90deg,#1e3a8a,#1d4ed8) !important; color:#fff; font-weight:800;
+    padding:7px 8px; border-top:2px solid #60a5fa; white-space:nowrap;
+}
+
+/* Bank-uslub ixcham jadval (Hujjatlar, Versiyalar, Kafil, Boshlang'ich to'lov) */
+.bft-section-title {
+    font-weight:700; color:#1e3a8a; background:#eef3ff; border-left:4px solid #2563eb;
+    padding:6px 12px; border-radius:0 6px 6px 0; margin-bottom:8px; font-size:.85rem;
+}
+.bft-wrap { max-width:640px; border:1px solid #93c5fd; border-radius:6px; overflow:hidden; }
+.bft-wrap-lg { max-width:960px; }
+.bft-table { width:auto; margin-bottom:0 !important; font-size:.83rem; }
+.bft-table td, .bft-table th { padding:7px 10px; vertical-align:middle; border-bottom:1px solid #e5edfb; }
+.bft-table tbody tr:last-child td { border-bottom:none; }
+.bft-table tbody tr:nth-child(even) { background:#f8fafd; }
+.bft-label { font-weight:700; color:#334155; white-space:nowrap; width:1%; background:#f1f5fd; }
+.bft-wide { width:auto; }
+.bft-doc-table { width:100%; table-layout:fixed; }
+.bft-doc-table thead th {
+    background:linear-gradient(90deg,#1e3a8a,#1d4ed8); color:#fff; font-weight:600;
+    padding:7px 10px; border-bottom:none;
+}
+.bft-doc-table tbody tr:hover { background:#eef3ff !important; }
+.bft-doc-table tfoot td { background:#eef3ff; font-weight:700; border-top:2px solid #93c5fd; border-bottom:none; }
+</style>
+@endpush
+
+{{-- ── Ixcham sarlavha ───────────────────────────────────────────── --}}
+<div class="sh-header d-flex flex-wrap align-items-center gap-3">
     <div>
-        <h5 class="fw-bold mb-1">
+        <div class="fw-bold" style="font-size:1.05rem">
             {{ $kredit->shartnoma_raqam }}
-            <span class="badge bg-{{ $kredit->holat_rangi }} ms-2">{{ $kredit->holatNomi }}</span>
-        </h5>
-        <div class="text-muted small">
+            <span class="badge bg-{{ $kredit->holat_rangi }} ms-1">{{ $kredit->holatNomi }}</span>
+        </div>
+        <div class="text-muted" style="font-size:.76rem">
             <a href="{{ route('mijozlar.show', $kredit->mijoz) }}" class="text-decoration-none">
                 <i class="bi bi-person me-1"></i>{{ $kredit->mijoz->tolik_ism }}
             </a>
             · {{ $kredit->filial->nomi }}
-            · {{ $kredit->boshlanish_sana?->format('d.m.Y') ?? '—' }} — {{ $kredit->tugash_sana?->format('d.m.Y') ?? '—' }}
+            · {{ $kredit->boshlanish_sana?->format('d.m.Y') ?? '—' }}–{{ $kredit->tugash_sana?->format('d.m.Y') ?? '—' }}
             · {{ $kredit->muddati_oy }} oy
         </div>
     </div>
-    <div class="d-flex gap-2 flex-wrap">
-        @if(Auth::user()->isKassir() && $kredit->holat !== 'yopilgan')
-        <a href="{{ route('kreditlar.tulov.create', $kredit) }}" class="btn btn-success btn-sm">
-            <i class="bi bi-cash-coin me-1"></i> To'lov qabul qilish
-        </a>
+
+    <div class="d-flex flex-wrap" style="border-left:1px solid #93c5fd;border-right:1px solid #93c5fd;padding:0 10px">
+        <div class="sh-stat"><div class="lbl">Jami</div><div class="val">{{ number_format($kredit->jami_summa,0,'.',' ') }}</div></div>
+        <div class="sh-stat"><div class="lbl">Boshlang'ich</div><div class="val">{{ number_format($kredit->boshlangich_tolov,0,'.',' ') }}</div></div>
+        <div class="sh-stat"><div class="lbl">Kredit</div><div class="val" style="color:#1d4ed8">{{ number_format($kredit->kredit_summa,0,'.',' ') }}</div></div>
+        <div class="sh-stat"><div class="lbl">To'langan</div><div class="val" style="color:#16a34a">{{ number_format($kredit->tolov_qilingan,0,'.',' ') }}</div></div>
+        <div class="sh-stat"><div class="lbl">Qoldiq</div><div class="val" style="color:{{ $kredit->qoldiq_qarz>0?'#dc2626':'#16a34a' }}">{{ number_format($kredit->qoldiq_qarz,0,'.',' ') }}</div></div>
+        <div class="sh-stat"><div class="lbl">Oylik</div><div class="val">{{ number_format($kredit->oylik_tolov_miqdori,0,'.',' ') }}</div></div>
+    </div>
+
+    <div class="mini-progress" style="width:90px;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden" title="{{ $kredit->tolov_foizi }}% to'langan">
+        <div style="height:100%;width:{{ $kredit->tolov_foizi }}%;background:#22c55e"></div>
+    </div>
+
+@unless(request('embed'))
+    <div class="d-flex gap-1 flex-wrap ms-auto">
+        @if($kredit->holat === 'kutilmoqda' && in_array(Auth::user()->rol, ['admin','menejer']))
+        <form action="{{ route('kreditlar.activate', $kredit) }}" method="POST" class="d-inline"
+              onsubmit="return confirm('Aktivlashtirilsinmi? Bu amaldan keyin ombordan tovar chiqariladi va boshlang\'ich to\'lov rasmiylashtiriladi.');">
+            @csrf
+            <button type="submit" class="btn btn-info btn-sm"><i class="bi bi-check2-circle me-1"></i>Aktivlashtirish</button>
+        </form>
         @endif
-        <a href="{{ route('kreditlar.pdf', $kredit) }}" class="btn btn-outline-secondary btn-sm" target="_blank">
-            <i class="bi bi-file-pdf me-1"></i> PDF
-        </a>
+        @if(Auth::user()->isKassir() && $kredit->holat !== 'yopilgan' && $kredit->holat !== 'kutilmoqda')
+        <a href="{{ route('kreditlar.tulov.create', $kredit) }}" class="btn btn-success btn-sm"><i class="bi bi-cash-coin me-1"></i>To'lov</a>
+        @endif
+        <a href="{{ route('kreditlar.pdf', $kredit) }}" class="btn btn-outline-secondary btn-sm" target="_blank"><i class="bi bi-file-pdf"></i></a>
         @if(Auth::user()->isMenejerYoki())
-        <a href="{{ route('kreditlar.edit', $kredit) }}" class="btn btn-outline-primary btn-sm">
-            <i class="bi bi-pencil me-1"></i> Tahrirlash
-        </a>
-        <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#xodimTayinModal"
-                title="Shartnomani boshqa xodimga qayta tayinlash">
-            <i class="bi bi-person-gear me-1"></i> Xodim
-        </button>
-        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#filialKochirModal"
-                title="Shartnomani boshqa filialga ko'chirish">
-            <i class="bi bi-building-gear me-1"></i> Filial
-        </button>
+        <a href="{{ route('kreditlar.edit', $kredit) }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
+        <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#xodimTayinModal" title="Xodimga qayta tayinlash"><i class="bi bi-person-gear"></i></button>
+        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#filialKochirModal" title="Filialga ko'chirish"><i class="bi bi-building-gear"></i></button>
+        @endif
+        @if($hp_yoqilgan && in_array(Auth::user()->rol, ['admin','menejer']))
+        @php $kechikkan = $kredit->holat === 'muddati_otgan' || ($kredit->tugash_sana && $kredit->tugash_sana->lt(today())); @endphp
+        @if($kechikkan)
+        <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#pochtaXatModal"><i class="bi bi-envelope-paper"></i></button>
+        @endif
         @endif
     </div>
-    @if($hp_yoqilgan && in_array(Auth::user()->rol, ['admin','menejer']))
-    @php
-        $kechikkan = $kredit->holat === 'muddati_otgan' ||
-            ($kredit->tugash_sana && $kredit->tugash_sana->lt(today()));
-    @endphp
-    @if($kechikkan)
-    <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#pochtaXatModal">
-        <i class="bi bi-envelope-paper me-1"></i>Xat yuborish
-    </button>
-    @endif
-    @endif
+@endunless
 </div>
 
-{{-- ── Moliyaviy ko'rsatkichlar ─────────────────────────────────── --}}
-<div class="row g-2 mb-3">
-    <div class="col-sm-4 col-lg-2">
-        <div class="card border-0 bg-body-secondary text-center py-2">
-            <div class="text-muted small">Jami summa</div>
-            <div class="fw-bold">{{ number_format($kredit->jami_summa, 0, '.', ' ') }}</div>
-        </div>
-    </div>
-    <div class="col-sm-4 col-lg-2">
-        <div class="card border-0 bg-body-secondary text-center py-2">
-            <div class="text-muted small">Boshlang'ich</div>
-            <div class="fw-bold">{{ number_format($kredit->boshlangich_tolov, 0, '.', ' ') }}</div>
-        </div>
-    </div>
-    <div class="col-sm-4 col-lg-2">
-        <div class="card border-0 bg-body-secondary text-center py-2">
-            <div class="text-muted small">Kredit summasi</div>
-            <div class="fw-bold text-primary">{{ number_format($kredit->kredit_summa, 0, '.', ' ') }}</div>
-        </div>
-    </div>
-    <div class="col-sm-4 col-lg-2">
-        <div class="card border-0 bg-body-secondary text-center py-2">
-            <div class="text-muted small">To'langan</div>
-            <div class="fw-bold text-success">{{ number_format($kredit->tolov_qilingan, 0, '.', ' ') }}</div>
-        </div>
-    </div>
-    <div class="col-sm-4 col-lg-2">
-        <div class="card border-0 bg-body-secondary text-center py-2">
-            <div class="text-muted small">Qoldiq qarz</div>
-            <div class="fw-bold text-{{ $kredit->qoldiq_qarz > 0 ? 'danger' : 'success' }}">
-                {{ number_format($kredit->qoldiq_qarz, 0, '.', ' ') }}
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-4 col-lg-2">
-        <div class="card border-0 bg-body-secondary text-center py-2">
-            <div class="text-muted small">Oylik to'lov</div>
-            <div class="fw-bold">{{ number_format($kredit->oylik_tolov_miqdori, 0, '.', ' ') }}</div>
-        </div>
-    </div>
-</div>
-
-{{-- To'lov progress --}}
-<div class="progress mb-4" style="height: 10px;" title="{{ $kredit->tolov_foizi }}% to'langan">
-    <div class="progress-bar bg-success" style="width: {{ $kredit->tolov_foizi }}%"></div>
-</div>
+@php
+    // Ba'zi eski (legacy) shartnomalarda grafik jadvali haqiqiy muddatdan
+    // ko'proq (masalan 12 ta) bo'sh qator bilan saqlangan (sana=NULL,
+    // summa=0) — bular ko'rsatilmasligi kerak, faqat haqiqiy oylar.
+    $grafikQatorlari = $kredit->grafik->filter(fn($g) => $g->tolov_sana !== null);
+@endphp
 
 {{-- ── Tablar ───────────────────────────────────────────────────── --}}
 <ul class="nav nav-tabs mb-3" id="kreditTabs">
     <li class="nav-item">
         <a class="nav-link active" data-bs-toggle="tab" href="#tab-grafik">
             <i class="bi bi-calendar3 me-1"></i> To'lov grafigi
-            <span class="badge bg-secondary ms-1">{{ $kredit->grafik->count() }}</span>
+            <span class="badge bg-secondary ms-1">{{ $grafikQatorlari->count() }}</span>
         </a>
     </li>
     <li class="nav-item">
@@ -172,89 +195,162 @@
 
     {{-- ── To'lov grafigi ─────────────────────────────────────────── --}}
     <div class="tab-pane fade show active" id="tab-grafik">
-        <div class="card border-0 shadow-sm">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>#</th>
-                            <th>To'lov sanasi</th>
-                            <th class="text-end">Rejadagi summa</th>
-                            <th class="text-end">shu jumladan ustama</th>
-                            <th class="text-end">To'langan</th>
-                            <th class="text-end">Qoldiq</th>
-                            <th>Holat</th>
-                            <th>To'langan sana</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($kredit->grafik as $g)
-                        <tr class="{{ $g->holat === 'muddati_otgan' ? 'row-muddati-otgan' : '' }}">
-                            <td class="text-muted small">{{ $g->oylik_tartib }}</td>
-                            <td>{{ $g->tolov_sana?->format('d.m.Y') ?? '—' }}</td>
-                            <td class="text-end">{{ $g->tolov_summa !== null ? number_format($g->tolov_summa, 0, '.', ' ') : '—' }}</td>
-                            <td class="text-end text-warning-emphasis">
-                                {{ $g->ustama_summa > 0 ? number_format($g->ustama_summa, 0, '.', ' ') : '—' }}
-                            </td>
-                            <td class="text-end text-success">
-                                {{ $g->tolangan_summa > 0 ? number_format($g->tolangan_summa, 0, '.', ' ') : '—' }}
-                            </td>
-                            <td class="text-end">{{ $g->qoldiq_suma !== null ? number_format($g->qoldiq_suma, 0, '.', ' ') : '—' }}</td>
-                            <td>
-                                <span class="badge bg-{{ $g->holat_rangi }} badge-holat">
-                                    {{ $g->holat === 'faol' ? 'AKTIV' : ($g->holat === 'yopilgan' ? 'PASSIV' : $g->holat) }}
-                                </span>
-                                @if($g->kechikish_kunlari > 0)
-                                    <span class="text-danger small ms-1">{{ $g->kechikish_kunlari }} kun</span>
+        <div class="d-flex justify-content-end align-items-center mb-2">
+            <a href="{{ route('kreditlar.hujjat.html', [$kredit, 'plan_fakt']) }}"
+               class="btn btn-sm btn-outline-primary"
+               onclick="event.preventDefault(); hujjatModalOch('{{ route('kreditlar.hujjat.html', [$kredit, 'plan_fakt']) }}', 'Plan / Fakt vidoma (sverka)', false)">
+                <i class="bi bi-printer me-1"></i>Plan/Fakt vidoma
+            </a>
+        </div>
+        <div class="row g-3">
+            {{-- ── Reja (plan) — o'zgarmaydi ─────────────────────────── --}}
+            <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header py-1" style="background:linear-gradient(90deg,#eef3ff,#e8f0fe)">
+                    <h6 class="mb-0 small fw-bold text-muted"><i class="bi bi-calendar3 me-1"></i>Reja (shartnoma bo'yicha)</h6>
+                </div>
+                <div class="bank-wrap-15">
+                    <table class="bank-table">
+                        <thead>
+                            <tr>
+                                <th class="tl" style="width:30px">#</th>
+                                <th class="tl">Sana</th>
+                                <th>Summa</th>
+                                @if($ustamaKorishMumkin)
+                                <th class="ustama-col-2 d-none">Ustama</th>
                                 @endif
-                            </td>
-                            <td class="text-muted small">{{ $g->tolangan_sana?->format('d.m.Y') ?? '—' }}</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                                <th>Qoldiq</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($grafikQatorlari as $g)
+                            <tr>
+                                <td class="tl text-muted">{{ $g->oylik_tartib }}</td>
+                                <td class="tl">{{ $g->tolov_sana?->format('d.m.Y') ?? '—' }}</td>
+                                <td class="num">{{ $g->tolov_summa !== null ? number_format($g->tolov_summa, 0, '.', ' ') : '—' }}</td>
+                                @if($ustamaKorishMumkin)
+                                <td class="num ustama-col-2 d-none" style="color:#b45309">
+                                    {{ $g->ustama_summa > 0 ? number_format($g->ustama_summa, 0, '.', ' ') : '—' }}
+                                </td>
+                                @endif
+                                <td class="num text-muted">{{ $g->qoldiq_suma !== null ? number_format($g->qoldiq_suma, 0, '.', ' ') : '—' }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td class="tl" colspan="2">Jami:</td>
+                                <td class="num">{{ number_format($grafikQatorlari->sum('tolov_summa'), 0, '.', ' ') }}</td>
+                                @if($ustamaKorishMumkin)
+                                <td class="num ustama-col-2 d-none">{{ number_format($grafikQatorlari->sum('ustama_summa'), 0, '.', ' ') }}</td>
+                                @endif
+                                <td class="num">0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            </div>
+
+            {{-- ── Fakt — haqiqiy to'lovlardan keyingi holat ─────────── --}}
+            <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header py-1 d-flex justify-content-between align-items-center" style="background:linear-gradient(90deg,#eef3ff,#e8f0fe)">
+                    <h6 class="mb-0 small fw-bold"><i class="bi bi-check2-circle me-1 text-success"></i>Fakt (haqiqiy to'langan)</h6>
+                    @if($ustamaKorishMumkin)
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" id="ustama-toggle-btn-2"
+                            onclick="ustamaKoUrish2()" title="Ustama ustunini ko'rsatish/yashirish">
+                        <i class="bi bi-eye-slash"></i>
+                    </button>
+                    @endif
+                </div>
+                <div class="bank-wrap-15">
+                    <table class="bank-table">
+                        <thead>
+                            <tr>
+                                <th class="tl" style="width:30px">#</th>
+                                <th>To'langan</th>
+                                <th class="tl">Sana</th>
+                                <th>Qoldiq</th>
+                                <th class="tl">Holat</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @php $faktTolangan = 0; $faktQoldiq = $kredit->kredit_summa; @endphp
+                            @foreach($grafikQatorlari as $g)
+                            @php
+                                $faktTolangan += (float) $g->tolangan_summa;
+                                $faktQoldiq = max(0, $kredit->kredit_summa - $faktTolangan);
+                            @endphp
+                            <tr class="{{ $g->holat === 'muddati_otgan' ? 'row-muddati-otgan' : '' }}">
+                                <td class="tl text-muted">{{ $g->oylik_tartib }}</td>
+                                <td class="num" style="color:#16a34a">
+                                    {{ $g->tolangan_summa > 0 ? number_format($g->tolangan_summa, 0, '.', ' ') : '—' }}
+                                </td>
+                                <td class="tl text-muted">{{ $g->tolangan_sana?->format('d.m.Y') ?? '—' }}</td>
+                                <td class="num fw-semibold">{{ number_format($faktQoldiq, 0, '.', ' ') }}</td>
+                                <td class="tl">
+                                    <span class="badge bg-{{ $g->holat_rangi }} badge-holat">
+                                        {{ $g->holat === 'faol' ? 'AKTIV' : ($g->holat === 'yopilgan' ? 'PASSIV' : $g->holat) }}
+                                    </span>
+                                    @if($g->kechikish_kunlari > 0)
+                                        <span class="text-danger small ms-1">{{ $g->kechikish_kunlari }} kun</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td class="tl" colspan="2">Jami: {{ number_format($faktTolangan, 0, '.', ' ') }}</td>
+                                <td class="tl"></td>
+                                <td class="num">{{ number_format($faktQoldiq, 0, '.', ' ') }}</td>
+                                <td class="tl"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
             </div>
         </div>
     </div>
 
     {{-- ── Tovarlar ────────────────────────────────────────────────── --}}
     <div class="tab-pane fade" id="tab-tovarlar">
-        <div class="card border-0 shadow-sm">
-            <div class="table-responsive">
-                <table class="table mb-0 align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>#</th>
-                            <th>Tovar nomi</th>
-                            <th class="text-center">Soni</th>
-                            <th class="text-end">Narx</th>
-                            <th class="text-end">Jami</th>
-                            <th>Barkod</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($kredit->tovarlar as $i => $tovar)
-                        <tr>
-                            <td class="text-muted small">{{ $i + 1 }}</td>
-                            <td class="fw-medium">{{ $tovar->nomi }}</td>
-                            <td class="text-center">{{ $tovar->soni }}</td>
-                            <td class="text-end">{{ number_format($tovar->narx, 0, '.', ' ') }}</td>
-                            <td class="text-end fw-bold">{{ number_format($tovar->jami_narx, 0, '.', ' ') }}</td>
-                            <td class="text-muted small">{{ $tovar->barkod ?? '—' }}</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                    <tfoot class="table-light">
-                        <tr>
-                            <td colspan="4" class="text-end fw-bold">Jami:</td>
-                            <td class="text-end fw-bold text-primary">
-                                {{ number_format($kredit->tovarlar->sum('jami_narx'), 0, '.', ' ') }}
-                            </td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
+        <div class="bft-wrap bft-wrap-lg">
+            <table class="bft-table bft-doc-table">
+                <thead>
+                    <tr>
+                        <th style="width:36px">#</th>
+                        <th>Tovar nomi</th>
+                        <th class="text-center" style="width:70px">Soni</th>
+                        <th class="text-end" style="width:130px">Narx</th>
+                        <th class="text-end" style="width:130px">Jami</th>
+                        <th style="width:120px">Barkod</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($kredit->tovarlar as $i => $tovar)
+                    <tr>
+                        <td class="text-muted small">{{ $i + 1 }}</td>
+                        <td class="fw-medium">{{ $tovar->nomi }}</td>
+                        <td class="text-center">{{ $tovar->soni }}</td>
+                        <td class="text-end">{{ number_format($tovar->narx, 0, '.', ' ') }}</td>
+                        <td class="text-end fw-bold">{{ number_format($tovar->jami_narx, 0, '.', ' ') }}</td>
+                        <td class="text-muted small">{{ $tovar->barkod ?? '—' }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" class="text-end fw-bold">Jami:</td>
+                        <td class="text-end fw-bold text-primary">
+                            {{ number_format($kredit->tovarlar->sum('jami_narx'), 0, '.', ' ') }}
+                        </td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
     </div>
 
@@ -267,19 +363,18 @@
             </a>
         </div>
         @endif
-        <div class="card border-0 shadow-sm">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead class="table-light">
+        <div class="bft-wrap bft-wrap-lg">
+                <table class="bft-table bft-doc-table">
+                    <thead>
                         <tr>
                             <th style="width:55px">ID</th>
-                            <th>Sana</th>
-                            <th class="text-end">Summa</th>
-                            <th>To'lov turi</th>
-                            <th>Kassir</th>
-                            <th>Kvitansiya #</th>
+                            <th style="width:100px">Sana</th>
+                            <th class="text-end" style="width:120px">Summa</th>
+                            <th style="width:120px">To'lov turi</th>
+                            <th style="width:130px">Kassir</th>
+                            <th style="width:110px">Kvitansiya #</th>
                             <th>Izoh</th>
-                            <th class="text-center" style="width:46px">Chop</th>
+                            <th class="text-center" style="width:100px">Chop</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -338,55 +433,52 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">To'lovlar yo'q</td>
+                            <td colspan="8" class="text-center text-muted py-4">To'lovlar yo'q</td>
                         </tr>
                         @endforelse
                     </tbody>
                     @if($kredit->tulovlar->count() > 0)
-                    <tfoot class="table-light">
+                    <tfoot>
                         <tr>
                             <td class="fw-bold">Jami:</td>
                             <td class="text-end fw-bold text-success">
                                 {{ number_format($kredit->tulovlar->sum('summa'), 0, '.', ' ') }}
                             </td>
-                            <td colspan="5"></td>
+                            <td colspan="6"></td>
                         </tr>
                     </tfoot>
                     @endif
                 </table>
-            </div>
         </div>
     </div>
 
     {{-- ── Boshlang'ich to'lov ─────────────────────────────────────── --}}
     <div class="tab-pane fade" id="tab-oldin">
-        <div class="card border-0 shadow-sm">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Sana</th>
-                            <th class="text-end">Summa</th>
-                            <th>To'lov turi</th>
-                            <th>Kassir</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($kredit->oldinTulovlar as $ot)
-                        <tr>
-                            <td>{{ $ot->tolov_sana?->format('d.m.Y') ?? '—' }}</td>
-                            <td class="text-end fw-bold">{{ number_format($ot->summa, 0, '.', ' ') }}</td>
-                            <td>{{ $ot->tulovTuri->nomi }}</td>
-                            <td class="text-muted small">{{ $ot->xodim->ism_familiya }}</td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="4" class="text-center text-muted py-4">Boshlang'ich to'lov yo'q</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+        <div class="bft-wrap">
+            <table class="bft-table bft-doc-table">
+                <thead>
+                    <tr>
+                        <th style="width:110px">Sana</th>
+                        <th class="text-end" style="width:140px">Summa</th>
+                        <th style="width:150px">To'lov turi</th>
+                        <th>Kassir</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($kredit->oldinTulovlar as $ot)
+                    <tr>
+                        <td>{{ $ot->tolov_sana?->format('d.m.Y') ?? '—' }}</td>
+                        <td class="text-end fw-bold">{{ number_format($ot->summa, 0, '.', ' ') }}</td>
+                        <td>{{ $ot->tulovTuri->nomi }}</td>
+                        <td class="text-muted small">{{ $ot->xodim->ism_familiya }}</td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">Boshlang'ich to'lov yo'q</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -395,95 +487,92 @@
         @if($kredit->kafil)
         {{-- Kafil mijozlar jadvalida mavjud — to'liq karta --}}
         @php $kaf = $kredit->kafil; @endphp
-        <div class="card border-0 shadow-sm">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">
-                    <i class="bi bi-person-check me-1 text-success"></i> Kafil — mijoz kartasi
-                </h6>
-                <a href="{{ route('mijozlar.show', $kaf) }}"
-                   class="btn btn-sm btn-outline-primary py-0">
-                    <i class="bi bi-eye me-1"></i> Kartani ko'rish
-                </a>
+        <div class="bft-section-title d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-person-check me-1"></i> Kafil — mijoz kartasi</span>
+            <a href="{{ route('mijozlar.show', $kaf) }}" class="btn btn-sm btn-outline-primary py-0">
+                <i class="bi bi-eye me-1"></i> Kartani ko'rish
+            </a>
+        </div>
+        <div class="d-flex flex-wrap gap-3">
+            <div class="bft-wrap">
+                <table class="bft-table">
+                    <tbody>
+                        <tr>
+                            <td class="bft-label">F.I.O.</td>
+                            <td class="bft-wide fw-medium">{{ $kaf->tolik_ism }}</td>
+                        </tr>
+                        <tr>
+                            <td class="bft-label">Telefon</td>
+                            <td class="bft-wide"><a href="tel:{{ $kaf->telefon }}">{{ $kaf->telefon }}</a></td>
+                        </tr>
+                        <tr>
+                            <td class="bft-label">Passport</td>
+                            <td class="bft-wide">{{ $kaf->passport_tolik ?? '—' }}</td>
+                        </tr>
+                        @if($kaf->pinfl)
+                        <tr>
+                            <td class="bft-label">PINFL</td>
+                            <td class="bft-wide"><code>{{ $kaf->pinfl }}</code></td>
+                        </tr>
+                        @endif
+                        @if($kaf->passport_berilgan_joy)
+                        <tr>
+                            <td class="bft-label">Passport berilgan joy</td>
+                            <td class="bft-wide">{{ $kaf->passport_berilgan_joy }}</td>
+                        </tr>
+                        @endif
+                        <tr>
+                            <td class="bft-label">Tug'ilgan</td>
+                            <td class="bft-wide">{{ $kaf->tug_sana?->format('d.m.Y') ?? '—' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <table class="table table-sm table-borderless mb-0">
-                            <tr>
-                                <td class="text-muted" style="width:160px">F.I.O.</td>
-                                <td class="fw-medium">{{ $kaf->tolik_ism }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted">Telefon</td>
-                                <td><a href="tel:{{ $kaf->telefon }}">{{ $kaf->telefon }}</a></td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted">Passport</td>
-                                <td>{{ $kaf->passport_tolik ?? '—' }}</td>
-                            </tr>
-                            @if($kaf->pinfl)
-                            <tr>
-                                <td class="text-muted">PINFL</td>
-                                <td><code>{{ $kaf->pinfl }}</code></td>
-                            </tr>
-                            @endif
-                            @if($kaf->passport_berilgan_joy)
-                            <tr>
-                                <td class="text-muted">Passport berilgan joy</td>
-                                <td>{{ $kaf->passport_berilgan_joy }}</td>
-                            </tr>
-                            @endif
-                            <tr>
-                                <td class="text-muted">Tug'ilgan</td>
-                                <td>{{ $kaf->tug_sana?->format('d.m.Y') ?? '—' }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        <table class="table table-sm table-borderless mb-0">
-                            <tr>
-                                <td class="text-muted" style="width:160px">Manzil</td>
-                                <td>{{ $kaf->manzil ?? '—' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted">Ish joyi</td>
-                                <td>{{ $kaf->ish_joyi ?? '—' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted">Lavozim</td>
-                                <td>{{ $kaf->lavozimi ?? '—' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted">Filial</td>
-                                <td><span class="badge bg-secondary">{{ $kaf->filial->nomi ?? '—' }}</span></td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted">Holat</td>
-                                <td>
-                                    <span class="badge bg-{{ $kaf->holat === 'faol' ? 'success' : 'secondary' }}">
-                                        {{ $kaf->holat === 'faol' ? 'AKTIV' : 'PASSIV' }}
-                                    </span>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
+            <div class="bft-wrap">
+                <table class="bft-table">
+                    <tbody>
+                        <tr>
+                            <td class="bft-label">Manzil</td>
+                            <td class="bft-wide">{{ $kaf->manzil ?? '—' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="bft-label">Ish joyi</td>
+                            <td class="bft-wide">{{ $kaf->ish_joyi ?? '—' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="bft-label">Lavozim</td>
+                            <td class="bft-wide">{{ $kaf->lavozimi ?? '—' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="bft-label">Filial</td>
+                            <td class="bft-wide"><span class="badge bg-secondary">{{ $kaf->filial->nomi ?? '—' }}</span></td>
+                        </tr>
+                        <tr>
+                            <td class="bft-label">Holat</td>
+                            <td class="bft-wide">
+                                <span class="badge bg-{{ $kaf->holat === 'faol' ? 'success' : 'secondary' }}">
+                                    {{ $kaf->holat === 'faol' ? 'AKTIV' : 'PASSIV' }}
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
         @elseif($kredit->kafil_ism)
         {{-- Kafil faqat matn sifatida saqlangan (FK yo'q) --}}
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <table class="table table-sm table-borderless mb-0">
-                    <tr><td class="text-muted" style="width:150px">F.I.O.</td><td>{{ $kredit->kafil_ism }}</td></tr>
-                    <tr><td class="text-muted">Telefon</td><td>{{ $kredit->kafil_telefon ?? '—' }}</td></tr>
-                    <tr><td class="text-muted">Manzil</td><td>{{ $kredit->kafil_manzil ?? '—' }}</td></tr>
-                </table>
-            </div>
+        <div class="bft-wrap">
+            <table class="bft-table">
+                <tbody>
+                    <tr><td class="bft-label">F.I.O.</td><td class="bft-wide">{{ $kredit->kafil_ism }}</td></tr>
+                    <tr><td class="bft-label">Telefon</td><td class="bft-wide">{{ $kredit->kafil_telefon ?? '—' }}</td></tr>
+                    <tr><td class="bft-label">Manzil</td><td class="bft-wide">{{ $kredit->kafil_manzil ?? '—' }}</td></tr>
+                </tbody>
+            </table>
         </div>
         @else
-        <div class="card border-0 shadow-sm">
-            <div class="card-body text-center text-muted py-5">
+        <div class="bft-wrap">
+            <div class="text-center text-muted py-5">
                 <i class="bi bi-person-dash fs-3 d-block mb-2 opacity-25"></i>
                 Kafil ma'lumotlari kiritilmagan
             </div>
@@ -493,103 +582,105 @@
 
     {{-- ── Hujjatlar ────────────────────────────────────────────────── --}}
     <div class="tab-pane fade" id="tab-hujjatlar">
-        <div class="row g-3">
-            @php
-            $hujjatlar = [
-              ['key'=>'shartnoma',   'icon'=>'file-earmark-text',  'rang'=>'primary',  'nom'=>'Nasiya shartnoma'],
-              ['key'=>'kafillik',    'icon'=>'people-fill',        'rang'=>'secondary','nom'=>'Kafillik shartnomasi'],
-              ['key'=>'grafik',      'icon'=>'table',              'rang'=>'info',     'nom'=>"To'lov grafigi"],
-              ['key'=>'yuk_xati',    'icon'=>'truck',              'rang'=>'warning',  'nom'=>'Yuk xati'],
-              ['key'=>'schyot',      'icon'=>'receipt',            'rang'=>'success',  'nom'=>'Schyot-faktura'],
-              ['key'=>'ariza',       'icon'=>'envelope-text',      'rang'=>'danger',   'nom'=>'Rahbarga ariza'],
-              ['key'=>'til_xat',     'icon'=>'pen-fill',           'rang'=>'dark',     'nom'=>"Til xat (majburiyat)"],
-            ];
-            $kafilBiriktirilgan = $kredit->kafil_mijoz_id || $kredit->kafil_ism;
-            @endphp
+        @php
+        $hujjatlar = [
+          ['key'=>'shartnoma',   'icon'=>'file-earmark-text',  'rang'=>'primary',  'nom'=>'Nasiya shartnoma'],
+          ['key'=>'kafillik',    'icon'=>'people-fill',        'rang'=>'secondary','nom'=>'Kafillik shartnomasi'],
+          ['key'=>'grafik',      'icon'=>'table',              'rang'=>'info',     'nom'=>"To'lov grafigi"],
+          ['key'=>'yuk_xati',    'icon'=>'truck',              'rang'=>'warning',  'nom'=>'Yuk xati'],
+          ['key'=>'schyot',      'icon'=>'receipt',            'rang'=>'success',  'nom'=>'Schyot-faktura'],
+          ['key'=>'ariza',       'icon'=>'envelope-text',      'rang'=>'danger',   'nom'=>'Rahbarga ariza'],
+          ['key'=>'til_xat',     'icon'=>'pen-fill',           'rang'=>'dark',     'nom'=>"Til xat (majburiyat)"],
+          ['key'=>'plan_fakt',   'icon'=>'clipboard2-data',    'rang'=>'success',  'nom'=>"Plan/Fakt vidoma (sverka)"],
+        ];
+        $kafilBiriktirilgan = $kredit->kafil_mijoz_id || $kredit->kafil_ism;
+        @endphp
+        <div class="bft-wrap">
+            <table class="bft-table bft-doc-table">
+                <thead>
+                    <tr><th style="width:36px"></th><th>Hujjat nomi</th><th style="width:110px">Chop etish</th><th style="width:80px">Ko'rish</th><th style="width:90px">Tahrirlash</th></tr>
+                </thead>
+                <tbody>
             @foreach($hujjatlar as $h)
               @continue($h['key'] === 'kafillik' && !$kafilBiriktirilgan)
-            <div class="col-sm-6 col-lg-4">
-              <div class="card border-{{ $h['rang'] }} border-opacity-25 h-100">
-                <div class="card-body d-flex flex-column">
-                  <div class="d-flex align-items-center gap-2 mb-2">
-                    <span class="bg-{{ $h['rang'] }} bg-opacity-10 text-{{ $h['rang'] }} rounded p-2">
-                      <i class="bi bi-{{ $h['icon'] }} fs-5"></i>
-                    </span>
-                    <span class="fw-semibold small">{{ $h['nom'] }}</span>
-                  </div>
-                  <div class="mt-auto pt-2">
-                    <a href="{{ route('kreditlar.hujjat', [$kredit, $h['key']]) }}"
-                       target="_blank"
-                       class="btn btn-sm btn-outline-{{ $h['rang'] }} w-100">
-                      <i class="bi bi-printer me-1"></i>Chop etish
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
+                <tr>
+                    <td class="text-center"><i class="bi bi-{{ $h['icon'] }} text-{{ $h['rang'] }}"></i></td>
+                    <td class="fw-semibold">{{ $h['nom'] }}</td>
+                    <td class="text-center">
+                        <a href="{{ route('kreditlar.hujjat', [$kredit, $h['key']]) }}"
+                           target="_blank"
+                           class="btn btn-sm btn-outline-{{ $h['rang'] }}"
+                           title="Chop etish">
+                            <i class="bi bi-printer"></i>
+                        </a>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-{{ $h['rang'] }}"
+                                title="Ko'rish"
+                                onclick="hujjatModalOch('{{ route('kreditlar.hujjat.html', [$kredit, $h['key']]) }}', '{{ $h['nom'] }}', false)">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-{{ $h['rang'] }}"
+                                title="Tahrirlash"
+                                onclick="hujjatModalOch('{{ route('kreditlar.hujjat.html', [$kredit, $h['key']]) }}', '{{ $h['nom'] }}', true)">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </td>
+                </tr>
             @endforeach
             @if(!$kafilBiriktirilgan)
-            <div class="col-sm-6 col-lg-4">
-              <div class="card border-secondary border-opacity-25 h-100 bg-light">
-                <div class="card-body d-flex flex-column">
-                  <div class="d-flex align-items-center gap-2 mb-2">
-                    <span class="bg-secondary bg-opacity-10 text-secondary rounded p-2">
-                      <i class="bi bi-people-fill fs-5"></i>
-                    </span>
-                    <span class="fw-semibold small text-muted">Kafillik shartnomasi</span>
-                  </div>
-                  <div class="mt-auto pt-2">
-                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Kafil biriktirilmagan.</small>
-                  </div>
-                </div>
-              </div>
-            </div>
+                <tr class="text-muted">
+                    <td class="text-center"><i class="bi bi-people-fill"></i></td>
+                    <td colspan="4"><small><i class="bi bi-info-circle me-1"></i>Kafillik shartnomasi — Kafil biriktirilmagan.</small></td>
+                </tr>
             @endif
+                </tbody>
+            </table>
         </div>
     </div>
 
     {{-- ── Versiyalar ──────────────────────────────────────────────── --}}
     <div class="tab-pane fade" id="tab-versiyalar">
-        <div class="card border-0 shadow-sm">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Versiya</th>
-                            <th>Sana</th>
-                            <th>Xodim</th>
-                            <th>Sabab</th>
-                            <th>O'zgarishlar</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($kredit->versiyalar as $v)
-                        <tr>
-                            <td><span class="badge bg-primary">v{{ $v->versiya_raqam }}</span></td>
-                            <td class="small">{{ $v->created_at->format('d.m.Y H:i') }}</td>
-                            <td class="small">{{ $v->xodim->ism_familiya }}</td>
-                            <td class="small">{{ $v->sabab }}</td>
-                            <td class="small text-muted">
-                                @if($v->ozgargan_maydonlar)
-                                    {{ implode(', ', $v->ozgargan_maydonlar) }}
-                                @endif
-                            </td>
-                            <td>
-                                <a href="{{ route('kreditlar.versiyalar.show', [$kredit, $v]) }}"
-                                   class="btn btn-sm btn-outline-secondary py-0">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">Versiyalar yo'q</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+        <div class="bft-wrap bft-wrap-lg">
+            <table class="bft-table bft-doc-table">
+                <thead>
+                    <tr>
+                        <th style="width:70px">Versiya</th>
+                        <th style="width:130px">Sana</th>
+                        <th style="width:160px">Xodim</th>
+                        <th>Sabab</th>
+                        <th>O'zgarishlar</th>
+                        <th style="width:56px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($kredit->versiyalar as $v)
+                    <tr>
+                        <td><span class="badge bg-primary">v{{ $v->versiya_raqam }}</span></td>
+                        <td class="small">{{ $v->created_at->format('d.m.Y H:i') }}</td>
+                        <td class="small">{{ $v->xodim->ism_familiya }}</td>
+                        <td class="small">{{ $v->sabab }}</td>
+                        <td class="small text-muted">
+                            @if($v->ozgargan_maydonlar)
+                                {{ implode(', ', $v->ozgargan_maydonlar) }}
+                            @endif
+                        </td>
+                        <td class="text-center">
+                            <a href="{{ route('kreditlar.versiyalar.show', [$kredit, $v]) }}"
+                               class="btn btn-sm btn-outline-secondary py-0">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">Versiyalar yo'q</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -803,6 +894,15 @@
 
 @push('scripts')
 <script>
+// ── "Ustama" ustunini ko'rsatish/yashirish (faqat ruxsat etilgan rol uchun) ──
+function ustamaKoUrish2() {
+    var ustunlar = document.querySelectorAll('.ustama-col-2');
+    var btn = document.getElementById('ustama-toggle-btn-2');
+    var korinadi = ustunlar.length && !ustunlar[0].classList.contains('d-none');
+    ustunlar.forEach(function (el) { el.classList.toggle('d-none', korinadi); });
+    if (btn) btn.innerHTML = '<i class="bi bi-' + (korinadi ? 'eye-slash' : 'eye') + ' me-1"></i>Ustama';
+}
+
 // ── Xodim tayinlash ──────────────────────────────────────────────
 function xodimTayin() {
     var xodimId = document.getElementById('xt-xodim').value;

@@ -39,16 +39,23 @@ class TulovService
                 'tolov_qilingan', 'qoldiq_qarz', 'holat'
             ]);
 
-            // Birinchi to'lanmagan grafik qatorini topish (tartib bo'yicha)
-            $grafikQator = Grafik::where('reg_kredit_id', $kredit->id)
+            // Barcha to'lanmagan grafik qatorlari (tartib bo'yicha) — to'lov
+            // summasi bitta oyning rejasidan katta bo'lsa (masalan mijoz bir
+            // necha oylik to'lovni birdaniga to'lasa), ortiqcha qism KEYINGI
+            // oy(lar)ga "oqib o'tishi" kerak — aks holda bitta qatorga butun
+            // summa yopishib qolib, qolgan oylar "to'lanmagan"ligicha qoladi
+            // va har bir qatordagi "qoldiq" noto'g'ri ko'rinadi.
+            $qatorlar = Grafik::where('reg_kredit_id', $kredit->id)
                 ->whereIn('holat', ['tolanmagan', 'qisman', 'muddati_otgan'])
                 ->orderBy('oylik_tartib')
-                ->first();
+                ->get();
+
+            $birinchiQator = $qatorlar->first();
 
             // To'lovni saqlash
             $tulov = Tulov::create([
                 'reg_kredit_id'    => $kredit->id,
-                'grafik_id'        => $grafikQator?->id,
+                'grafik_id'        => $birinchiQator?->id,
                 'xodim_id'         => Auth::id(),
                 'tulov_turi_id'    => $malumot['tulov_turi_id'],
                 'summa'            => $malumot['summa'],
@@ -57,19 +64,31 @@ class TulovService
                 'izoh'             => $malumot['izoh'] ?? null,
             ]);
 
-            // Grafik holatini yangilash
-            if ($grafikQator) {
-                $yangiTolangan = $grafikQator->tolangan_summa + $malumot['summa'];
-                $grafikHolat   = $yangiTolangan >= ($grafikQator->tolov_summa ?? 0)
-                    ? 'tolangan'
-                    : 'qisman';
+            // To'lov summasini qatorlar bo'yicha ketma-ket (FIFO) tarqatish —
+            // har bir qatorning faqat o'z rejadagi summasigacha bo'lgan qismi
+            // to'ldiriladi, ortig'i keyingi qatorga o'tadi.
+            $qolganSumma = (float) $malumot['summa'];
+            foreach ($qatorlar as $g) {
+                if ($qolganSumma <= 0) break;
 
-                $grafikQator->update([
+                $kerak = max(0, (float) ($g->tolov_summa ?? 0) - (float) $g->tolangan_summa);
+                if ($kerak <= 0) continue;
+
+                $qoshiladi     = min($kerak, $qolganSumma);
+                $yangiTolangan = (float) $g->tolangan_summa + $qoshiladi;
+                $grafikHolat   = $yangiTolangan >= ($g->tolov_summa ?? 0) ? 'tolangan' : 'qisman';
+
+                $g->update([
                     'tolangan_summa' => $yangiTolangan,
                     'tolangan_sana'  => $malumot['tolov_sana'],
                     'holat'          => $grafikHolat,
                 ]);
+
+                $qolganSumma -= $qoshiladi;
             }
+            // Eslatma: agar $qolganSumma jadvaldagi BARCHA qatorlarni to'ldirgandan
+            // keyin ham qolsa (rejadan ortiq to'lov) — bu holat reg_kredit.qoldiq_qarz
+            // darajasida hisobga olinadi (pastda), grafik qatorlariga taqsimlanmaydi.
 
             // Shartnomaning moliyaviy ko'rsatkichlarini yangilash
             $yangiTolovQilingan = $kredit->tolov_qilingan + $malumot['summa'];
@@ -89,6 +108,19 @@ class TulovService
 
             // Kechikkan to'lovlarni muddati_otgan deb belgilash
             $this->muddatiOtganniYangilash($kredit->id);
+
+            // Naqd/terminal/bank — pulga oid to'lov turlari uchun avtomatik
+            // "Pul oqimlari" kirim yozuvi (CF-1100 — Nasiya to'lovlari).
+            $this->pulOqimigaYoz(
+                filialId: $kredit->filial_id,
+                tulovTuriId: $malumot['tulov_turi_id'],
+                summa: (float) $malumot['summa'],
+                sana: $malumot['tolov_sana'],
+                kategoriyaKodi: 'CF-1100',
+                izoh: "Shartnoma {$kredit->shartnoma_raqam} bo'yicha to'lov (kv. {$tulov->kvitansiya_raqam})",
+                manbaTur: 'tulov',
+                manbaId: $tulov->id,
+            );
 
             Log::info("To'lov qabul qilindi", [
                 'kredit_id'  => $kredit->id,
@@ -188,20 +220,59 @@ class TulovService
         ]);
     }
 
+    /**
+     * Kvitansiya raqamini avtomatik yaratish — har bir to'lov turi bo'yicha,
+     * har oy uchun ALOHIDA tartib raqami (oy boshlanganda 1dan boshlanadi).
+     * Prefiks to'lov turining ID'siga bog'langan — shu sababli ikki xil
+     * to'lov turi (masalan "NAQD" va "UzCard termi.") bir-biriga aralashib
+     * ketmaydi, har biri o'z mustaqil hisobiga ega.
+     */
     private function kvitansiyaRaqamYarat(int $tulovTuriId, string $tolovSana): string
     {
-        $oy  = \Carbon\Carbon::parse($tolovSana)->format('Ym');
-        $tur = TulovTuri::find($tulovTuriId);
-        $nom = mb_strtolower((string)($tur->nomi ?? ''));
+        return $this->kvitansiyaHisobla($tulovTuriId, $tolovSana, true);
+    }
 
-        // Naqd: lotincha "naqd" yoki kirilcha "накд"
-        $isNaqd = str_contains($nom, 'naqd') || str_contains($nom, 'накд');
-        $prefix = $isNaqd ? 'N' : 'B';
+    /**
+     * "To'lov qabul qilish" formasida — to'lov hali saqlanmasdan oldin,
+     * tanlangan to'lov turi bo'yicha keyingi kvitansiya raqami qanday
+     * bo'lishini OLDINDAN ko'rsatish uchun (lockForUpdate'siz, faqat o'qish).
+     * Haqiqiy raqam saqlash paytida kvitansiyaRaqamYarat() orqali (lock bilan,
+     * poyga holatidan himoyalangan) qayta hisoblanadi — bu yerdagi qiymat
+     * faqat taxminiy ko'rsatma, foydalanuvchi tomonidan o'zgartirilmaydi.
+     */
+    public function keyingiKvitansiyaOldindanKorish(int $tulovTuriId): string
+    {
+        return $this->kvitansiyaHisobla($tulovTuriId, today()->toDateString(), false);
+    }
 
-        $last = Tulov::where('kvitansiya_raqam', 'like', $prefix . '-' . $oy . '-%')
-            ->lockForUpdate()
-            ->orderByDesc('id')
-            ->value('kvitansiya_raqam');
+    /**
+     * To'lov turi nomiga qarab kvitansiya prefiksini aniqlash:
+     *   NQ — naqd pul, TR — terminal/karta orqali, BK — bank o'tkazmasi
+     *   (yoki boshqa — chegirma, qaytarish, write-off va h.k.).
+     */
+    private function kvitansiyaPrefiks(int $tulovTuriId): string
+    {
+        $nomi = mb_strtolower((string) (TulovTuri::find($tulovTuriId)?->nomi ?? ''));
+
+        if (str_contains($nomi, 'накд') || str_contains($nomi, 'naqd')) {
+            return 'NQ';
+        }
+        if (str_contains($nomi, 'терм') || str_contains($nomi, 'term')) {
+            return 'TR';
+        }
+        return 'BK';
+    }
+
+    private function kvitansiyaHisobla(int $tulovTuriId, string $tolovSana, bool $lock): string
+    {
+        $oy     = \Carbon\Carbon::parse($tolovSana)->format('Ym');
+        $prefix = $this->kvitansiyaPrefiks($tulovTuriId);
+
+        $query = Tulov::where('kvitansiya_raqam', 'like', $prefix . '-' . $oy . '-%');
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+        $last = $query->orderByDesc('id')->value('kvitansiya_raqam');
 
         $tartib = 1;
         if ($last && preg_match('/-(\d+)$/', $last, $m)) {
@@ -209,5 +280,127 @@ class TulovService
         }
 
         return sprintf('%s-%s-%03d', $prefix, $oy, $tartib);
+    }
+
+    /**
+     * To'lov turi nomi bo'yicha tegishli kassa turini aniqlaydi (naqd/terminal/bank)
+     * va shu turdagi REAL pul harakati ekanini tekshiradi. Chegirma, tovar
+     * qaytarilishi, hisobdan chiqarish kabi pul harakati bo'lmagan "to'lov
+     * turlari" pul oqimiga yozilmasligi kerak.
+     */
+    private function tulovTuriKassaTuri(int $tulovTuriId): ?string
+    {
+        $nomi = mb_strtolower((string) (TulovTuri::find($tulovTuriId)?->nomi ?? ''));
+
+        // Pul harakati BO'LMAGAN (faqat hisob-kitob/tuzatish) turlar — pul
+        // oqimiga yozilmaydi.
+        $polMasMatnlar = ['чегирма', 'кайтиб', 'қайтиб', 'списат', 'акция', 'spisaniye', 'discount'];
+        foreach ($polMasMatnlar as $m) {
+            if (str_contains($nomi, $m)) return null;
+        }
+
+        if (str_contains($nomi, 'накд') || str_contains($nomi, 'naqd')) {
+            return 'naqd';
+        }
+        if (str_contains($nomi, 'терм') || str_contains($nomi, 'term')) {
+            return 'terminal';
+        }
+        // Qolgan barcha real to'lov kanallari (bank, klik, autopay, paynet
+        // va h.k.) — bank kassasiga yoziladi.
+        return 'bank';
+    }
+
+    /**
+     * Shartnoma bo'yicha qabul qilingan naqd/terminal/bank to'lovini
+     * "Pul oqimlari" jadvaliga avtomatik kirim sifatida yozadi — kassir
+     * qo'lda kirim kiritishiga hojat qolmaydi va sverka osonlashadi.
+     * Pul harakati bo'lmagan to'lov turlari (chegirma va h.k.) uchun
+     * hech narsa yozilmaydi.
+     */
+    public function pulOqimigaYoz(
+        int $filialId,
+        int $tulovTuriId,
+        float $summa,
+        string $sana,
+        string $kategoriyaKodi,
+        string $izoh,
+        string $manbaTur,
+        int $manbaId,
+    ): void {
+        $kassaTuri = $this->tulovTuriKassaTuri($tulovTuriId);
+        if (!$kassaTuri) return;
+
+        $this->pulOqimigaYozKassaTuri(
+            filialId: $filialId,
+            kassaTuri: $kassaTuri,
+            summa: $summa,
+            sana: $sana,
+            kategoriyaKodi: $kategoriyaKodi,
+            izoh: $izoh,
+            manbaTur: $manbaTur,
+            manbaId: $manbaId,
+        );
+    }
+
+    /**
+     * Pul oqimlariga avtomatik kirim yozish — kassa turi (naqd/terminal/bank)
+     * to'g'ridan-to'g'ri beriladi (masalan POS savdosi kabi to'lov turi
+     * tulov_turlari jadvaliga bog'liq bo'lmagan joylarda foydalaniladi).
+     */
+    public function pulOqimigaYozKassaTuri(
+        int $filialId,
+        string $kassaTuri,
+        float $summa,
+        string $sana,
+        string $kategoriyaKodi,
+        string $izoh,
+        string $manbaTur,
+        int $manbaId,
+        string $yunalish = 'kirim',
+    ): void {
+        if ($summa <= 0) return;
+
+        // Shu xil yozuv allaqachon mavjud bo'lsa (masalan qayta urinish) —
+        // ikki marta yozilmasin.
+        $mavjud = \App\Models\PulOqim::where('manba_tur', $manbaTur)
+            ->where('manba_id', $manbaId)->exists();
+        if ($mavjud) return;
+
+        $kategoriya = \App\Models\PulKategoriya::where('kod', $kategoriyaKodi)->first();
+        if (!$kategoriya) return;
+
+        $kassa = \App\Models\Kassa::where('filial_id', $filialId)
+            ->where('tur', $kassaTuri)->faol()->first()
+            ?? \App\Models\Kassa::where('filial_id', $filialId)->faol()->first();
+        if (!$kassa) return;
+
+        \App\Models\PulOqim::create([
+            'filial_id'      => $filialId,
+            'kassa_id'       => $kassa->id,
+            'kategoriya_id'  => $kategoriya->id,
+            'xodim_id'       => Auth::id(),
+            'yunalish'       => $yunalish,
+            'sana'           => $sana,
+            'summa'          => $summa,
+            'izoh'           => $izoh,
+            'manba_tur'      => $manbaTur,
+            'manba_id'       => $manbaId,
+            'holat'          => 'tasdiqlangan',
+            'tasdiqlagan_id' => Auth::id(),
+        ]);
+    }
+
+    /**
+     * Manba o'chirilganda (shartnoma to'lovi, ta'minotchiga to'lov va h.k.)
+     * shu manbadan avtomatik yaratilgan "Pul oqimlari" yozuvini ham
+     * o'chiradi — aks holda kassa qoldig'ida "osilib qolgan" yozuv qoladi.
+     * Pul oqimlariga TO'G'RIDAN-TO'G'RI ("qo'lda") kiritilgan yozuvlar
+     * bunga aloqasi yo'q — ular faqat shu modulning o'zidan o'chiriladi.
+     */
+    public function pulOqiminiOchir(string $manbaTur, int $manbaId): void
+    {
+        \App\Models\PulOqim::where('manba_tur', $manbaTur)
+            ->where('manba_id', $manbaId)
+            ->delete();
     }
 }

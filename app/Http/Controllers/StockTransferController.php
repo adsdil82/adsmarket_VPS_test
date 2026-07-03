@@ -43,7 +43,7 @@ class StockTransferController extends Controller
         $user      = Auth::user();
         $filiallar = Filial::faol()->get();
         $omborlar  = Ombor::faol()->with('filial')->get()->groupBy('filial_id');
-        $tovarlar  = TovarKatalog::faol()->where('qoldiq','>',0)->orderBy('nomi')->get(['id','nomi','birlik','qoldiq','tan_narx','guruh_id']);
+        $tovarlar  = TovarKatalog::faol()->where('qoldiq','>',0)->orderBy('nomi')->get(['id','nomi','barkod','birlik','qoldiq','tan_narx','guruh_id']);
         $mening_filial_id = $user->filial_id;
 
         return view('transfer.tovar.create', compact('filiallar','omborlar','tovarlar','mening_filial_id'));

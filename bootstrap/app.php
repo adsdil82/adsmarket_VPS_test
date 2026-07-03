@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'filial.check'      => \App\Http\Middleware\FilialCheck::class,
             'rol.check'         => \App\Http\Middleware\RolCheck::class,
             'litsenziya.tekshir' => \App\Http\Middleware\LitsenziyaTekshir::class,
+            'litsenziya.limit' => \App\Http\Middleware\LitsenziyaLimitTekshir::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -23,7 +23,7 @@
             <thead class="table-light">
                 <tr>
                     <th>#</th><th>Rol</th><th>Kalit</th><th>Turi</th>
-                    <th>Foydalanuvchilar</th><th>Amallar</th>
+                    <th>Foydalanuvchilar</th><th>To'lov sozlamasi</th><th>Amallar</th>
                 </tr>
             </thead>
             <tbody>
@@ -45,6 +45,16 @@
                         <span class="badge bg-{{ $r->foydalanuvchi_soni ? 'info' : 'light text-dark border' }}">
                             {{ $r->foydalanuvchi_soni }} ta
                         </span>
+                    </td>
+                    <td>
+                        @if($r->kalit === 'admin')
+                            <span class="text-muted small">Hammasi (cheklov yo'q)</span>
+                        @else
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    onclick='tulovSozlamaOch({{ $r->id }}, {{ $r->ustama_korish ? "true" : "false" }}, {!! json_encode($r->tulovTurlari->pluck("id")) !!})'>
+                                <i class="bi bi-cash-coin me-1"></i>Sozlash
+                            </button>
+                        @endif
                     </td>
                     <td>
                         <div class="d-flex gap-1 flex-wrap">
@@ -154,6 +164,50 @@
     </div>
   </div>
 </div>
+
+{{-- === To'lov sozlamasi Modal === --}}
+<div class="modal fade" id="tulovSozlamaModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:480px">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-success text-white">
+        <h6 class="modal-title fw-bold mb-0"><i class="bi bi-cash-coin me-2"></i>To'lov sozlamasi</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" id="tulov-sozlama-form">
+        @csrf
+        @method('PUT')
+        <div class="modal-body">
+          <div class="form-check form-switch mb-3">
+            <input type="checkbox" class="form-check-input" name="ustama_korish" id="ts-ustama" value="1">
+            <label class="form-check-label fw-medium" for="ts-ustama">
+              "Ustama" (foiz/markup) ustunini ko'rish huquqi
+            </label>
+            <div class="form-text">
+              <i class="bi bi-shield-lock me-1"></i>Moliyaviy maxfiy ma'lumot — odatda faqat admin ko'radi.
+            </div>
+          </div>
+          <hr>
+          <label class="form-label fw-medium">Ko'rinadigan to'lov turlari</label>
+          <div class="form-text mb-2">Hech biri belgilanmasa — cheklov bo'lmaydi, barchasi ko'rinadi.</div>
+          <div style="max-height:260px;overflow-y:auto" class="border rounded p-2">
+            @foreach($barchaTulovTurlari as $tur)
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input ts-turi" name="tulov_turlari[]" value="{{ $tur->id }}" id="ts-turi-{{ $tur->id }}">
+              <label class="form-check-label small" for="ts-turi-{{ $tur->id }}">{{ $tur->nomi }}</label>
+            </div>
+            @endforeach
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Bekor</button>
+          <button type="submit" class="btn btn-sm btn-success fw-bold">
+            <i class="bi bi-check2 me-1"></i>Saqlash
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -164,6 +218,16 @@ function rolTahrirOch(id, nomi, icon) {
     document.getElementById('rol-tahrir-form').action = '/admin/rollar/' + id;
     if (!window._rolTahrirModal) window._rolTahrirModal = new bootstrap.Modal(document.getElementById('rolTahrirModal'));
     window._rolTahrirModal.show();
+}
+
+function tulovSozlamaOch(rolId, ustamaKorish, tanlanganIdlar) {
+    document.getElementById('ts-ustama').checked = !!ustamaKorish;
+    document.querySelectorAll('.ts-turi').forEach(function (el) {
+        el.checked = tanlanganIdlar.includes(parseInt(el.value, 10));
+    });
+    document.getElementById('tulov-sozlama-form').action = '/admin/rollar/' + rolId + '/tulov-sozlama';
+    if (!window._tulovSozlamaModal) window._tulovSozlamaModal = new bootstrap.Modal(document.getElementById('tulovSozlamaModal'));
+    window._tulovSozlamaModal.show();
 }
 @if($errors->any())
 document.addEventListener('DOMContentLoaded', function() {

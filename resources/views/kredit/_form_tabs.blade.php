@@ -36,18 +36,121 @@
   };
 @endphp
 
+@push('styles')
+<style>
+/* ═══ Shartnoma formasi — bank stili skin (mavjud id/JS o'zgarmagan) ═══ */
+#kreditTabs { border-bottom:none; background:linear-gradient(90deg,#1e3a8a,#1d4ed8); border-radius:8px 8px 0 0; padding:4px 4px 0; }
+#kreditTabs .nav-link { color:#bfdbfe; border:none; border-radius:6px 6px 0 0; font-weight:600; transition:all .15s; }
+#kreditTabs .nav-link:hover { color:#fff; background:rgba(255,255,255,.08); }
+#kreditTabs .nav-link.active { background:#fff; color:#1e3a8a; }
+#kreditTabsContent { border:1px solid #93c5fd; border-top:none; border-radius:0 0 8px 8px; background:#fff; }
+
+#kreditTabsContent h6.fw-bold {
+    border-bottom:none !important; border-left:4px solid #2563eb; background:#eef3ff;
+    padding:8px 12px !important; border-radius:0 6px 6px 0; color:#1e3a8a !important;
+    font-size:.88rem; margin-bottom:16px !important;
+}
+#kreditTabsContent h6.text-secondary { border-left-color:#94a3b8; background:#f8fafc; }
+
+#kreditTabsContent .form-label { font-weight:700; color:#334155; font-size:.82rem; }
+#kreditTabsContent .form-control, #kreditTabsContent .form-select {
+    border:1px solid #cbd5e1;
+}
+#kreditTabsContent .form-control:focus, #kreditTabsContent .form-select:focus {
+    border-color:#2563eb; box-shadow:0 0 0 .2rem rgba(37,99,235,.15);
+}
+#kreditTabsContent .form-control:read-only, #kreditTabsContent .form-control.bg-body-secondary {
+    background:#f1f5f9 !important; font-weight:700;
+}
+#kreditTabsContent .form-text { font-size:.72rem; color:#64748b; }
+
+/* Tovar qatorlari — mini bank-jadval ko'rinishi */
+.tovar-qator { background:#fff; border:none; border-bottom:1px solid #e5edfb; border-radius:0; padding:5px 10px; margin-bottom:0 !important; }
+.tovar-qator:nth-child(even) { background:#f8fafd; }
+.tovar-qator:hover { background:#eef3ff; }
+.bft-tovar-head {
+    background:linear-gradient(90deg,#1e3a8a,#1d4ed8); color:#fff; font-weight:600;
+    font-size:.72rem; text-transform:uppercase; letter-spacing:.03em; padding:7px 10px; margin:0;
+}
+.bft-tovar-jami { border-top:1px solid #93c5fd; background:#eef3ff; padding:10px 14px; }
+.bft-tovar-jami #tovar-jami-display { color:#1d4ed8; }
+
+/* Graf jadvali — bank-stil, ixcham, sticky header/footer */
+.graf-bank-wrap {
+    overflow:auto; max-height:480px; border:1px solid #93c5fd; border-radius:6px;
+}
+.graf-bank-table { font-size:.8rem; margin-bottom:0 !important; }
+.graf-bank-table thead { position:sticky; top:0; z-index:5; }
+.graf-bank-table thead.table-dark, .graf-bank-table .table-dark {
+    background:linear-gradient(180deg,#3b82f6,#1d4ed8) !important;
+}
+.graf-bank-table thead th {
+    color:#fff !important; font-weight:800; font-size:.68rem; text-transform:uppercase;
+    letter-spacing:.03em; border-color:rgba(255,255,255,.15) !important; padding:6px 8px;
+}
+.graf-bank-table tbody td { padding:3px 8px; vertical-align:middle; }
+.graf-bank-table tbody tr:nth-child(odd)  td { background:#fff; }
+.graf-bank-table tbody tr:nth-child(even) td { background:#eef4ff; }
+.graf-bank-table tbody tr:hover td { background:#dbeafe !important; }
+.graf-bank-table .graf-sana { padding:2px 6px; font-size:.76rem; height:26px; }
+.graf-bank-table tfoot { position:sticky; bottom:0; z-index:5; }
+.graf-bank-table tfoot.table-secondary td {
+    background:linear-gradient(90deg,#1e3a8a,#1d4ed8) !important; color:#fff !important;
+    padding:7px 8px; font-size:.82rem; border-top:2px solid #60a5fa;
+}
+.graf-bank-table tfoot .text-warning-emphasis { color:#fde68a !important; }
+.graf-bank-table tfoot .text-success { color:#86efac !important; }
+
+/* Bank-uslub forma jadvallari (tab1, tab6) */
+.bft-section-title {
+    font-weight:700; color:#1e3a8a; background:#eef3ff; border-left:4px solid #2563eb;
+    padding:6px 12px; border-radius:0 6px 6px 0; margin-bottom:8px; font-size:.85rem;
+}
+.bft-section-title.bft-secondary { color:#475569; background:#f8fafc; border-left-color:#94a3b8; }
+.bft-wrap { max-width:640px; border:1px solid #93c5fd; border-radius:6px; overflow:hidden; }
+.bft-wrap-lg { max-width:900px; }
+.bft-table { width:auto; margin-bottom:0 !important; font-size:.83rem; }
+.bft-table td, .bft-table th { padding:7px 10px; vertical-align:middle; border-bottom:1px solid #e5edfb; }
+.bft-table tbody tr:last-child td { border-bottom:none; }
+.bft-table tbody tr:nth-child(even) { background:#f8fafd; }
+.bft-label { font-weight:700; color:#334155; white-space:nowrap; width:1%; background:#f1f5fd; }
+.bft-wide { width:auto; }
+.bft-doc-table { width:100%; table-layout:fixed; }
+.bft-doc-table thead th {
+    background:linear-gradient(90deg,#1e3a8a,#1d4ed8); color:#fff; font-weight:600;
+    padding:7px 10px; border-bottom:none;
+}
+.bft-doc-table tbody tr:hover { background:#eef3ff !important; }
+
+/* Hisob-kitob (tab4) — ixcham, chap tomonga tortilgan bank-jadval ko'rinishi */
+.hisob-wrap { max-width:640px; border:1px solid #93c5fd; border-radius:8px; overflow:hidden; }
+.hisob-table { width:100%; border-collapse:collapse; font-size:.83rem; }
+.hisob-table tr { border-bottom:1px solid #e2e8f4; }
+.hisob-table tr:nth-child(odd)  td { background:#fff; }
+.hisob-table tr:nth-child(even) td { background:#f5f8fd; }
+.hisob-table td { padding:6px 12px; vertical-align:middle; }
+.hisob-table .h-label { font-weight:700; color:#334155; white-space:nowrap; width:1%; }
+.hisob-table .h-inp { width:230px; }
+.hisob-table .h-inp .form-control, .hisob-table .h-inp .form-select { font-size:.82rem; }
+.hisob-table .h-hint { color:#64748b; font-size:.72rem; }
+.hisob-table .h-highlight td { background:#eef3ff !important; font-weight:700; }
+.hisob-table tr.h-sep td { padding:0; height:2px; background:#93c5fd !important; border:none; }
+</style>
+@endpush
+
 {{-- ═══════════════════════════════════════════════════════════════
      TAB SARLAVHALARI
 ══════════════════════════════════════════════════════════════════ --}}
 <ul class="nav nav-tabs mb-0 flex-nowrap overflow-auto" id="kreditTabs" role="tablist"
-    style="border-bottom:2px solid #dee2e6;scrollbar-width:none">
+    style="scrollbar-width:none">
   @php $tabs=[
-    ['id'=>'tab1','icon'=>'person-fill','label'=>'Mijoz &amp; Kafil'],
-    ['id'=>'tab2','icon'=>'file-text-fill','label'=>'Shartnoma'],
+    ['id'=>'tab1','icon'=>'person-fill','label'=>'Mijoz va kafil'],
+    ['id'=>'tab2','icon'=>'file-text-fill','label'=>'Shartnoma shartlari'],
     ['id'=>'tab3','icon'=>'cart-fill','label'=>'Tovarlar'],
     ['id'=>'tab4','icon'=>'calculator-fill','label'=>'Hisob-kitob'],
-    ['id'=>'tab5','icon'=>'table','label'=>'Graf'],
+    ['id'=>'tab5','icon'=>'table','label'=>"To'lov grafigi"],
     ['id'=>'tab6','icon'=>'printer-fill','label'=>'Hujjatlar'],
+    ['id'=>'tab7','icon'=>'person-badge-fill','label'=>'Mas\'ul xodim'],
   ]; @endphp
   @foreach($tabs as $i=>$t)
   <li class="nav-item" role="presentation">
@@ -69,113 +172,129 @@
 
 {{-- ─────────────────────── TAB 1: MIJOZ & KAFIL ─────────────────── --}}
 <div class="tab-pane fade show active p-3" id="tab1" role="tabpanel">
-  <div class="row g-3">
 
-    {{-- Mijoz tanlash --}}
-    <div class="col-12">
-      <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
-        <i class="bi bi-person-check me-1"></i>Asosiy mijoz
-      </h6>
-      <input type="hidden" name="mijoz_id" id="mijoz_id"
-             value="{{ $old('mijoz_id') }}" required>
-      <div class="input-group">
-        <input type="text" id="mijoz-tanlangan" class="form-control fw-semibold"
-               placeholder="Mijoz tanlanmagan — qidirish uchun bosing..."
-               value="{{ $isEdit && $kr?->mijoz ? $kr->mijoz->familiya.' '.$kr->mijoz->ism : '' }}"
-               readonly style="cursor:pointer;background:#fff" onclick="mijozModalOch()">
-        <button type="button" class="btn btn-primary" onclick="mijozModalOch()">
-          <i class="bi bi-person-search me-1"></i><span class="d-none d-sm-inline">Qidirish</span>
-        </button>
-      </div>
-      <div id="mijoz-info" class="small mt-1">
-        @if($isEdit && $kr?->mijoz)
-          {!! $mijozInfoHtml($kr->mijoz) !!}
-        @else
-          <span class="text-danger" id="mijoz-info-xato"><i class="bi bi-exclamation-circle me-1"></i>Mijoz tanlanmagan</span>
-        @endif
-      </div>
-    </div>
-
-    {{-- Filial --}}
-    <div class="col-sm-6">
-      <label class="form-label fw-medium">Filial <span class="text-danger">*</span></label>
-      <select name="filial_id" class="form-select @error('filial_id') is-invalid @enderror"
-              {{ count($filiallar) === 1 ? 'disabled' : '' }}>
-        @foreach($filiallar as $f)
-          <option value="{{ $f->id }}"
-            {{ $old('filial_id', count($filiallar)===1?$filiallar->first()->id:'') == $f->id ? 'selected':'' }}>
-            {{ $f->nomi }}
-          </option>
-        @endforeach
-      </select>
-      @if(count($filiallar) === 1)
-        <input type="hidden" name="filial_id" value="{{ $filiallar->first()->id }}">
-      @endif
-    </div>
-
-    {{-- Kafil --}}
-    <div class="col-12 mt-2">
-      <h6 class="fw-bold text-secondary border-bottom pb-2 mb-3">
-        <i class="bi bi-people me-1"></i>Kafil <small class="fw-normal text-muted">(ixtiyoriy)</small>
-      </h6>
-    </div>
-    <div class="col-12">
-      <input type="hidden" name="kafil_mijoz_id" id="kafil_mijoz_id"
-             value="{{ $old('kafil_mijoz_id') }}">
-      <div class="input-group">
-        <input type="text" id="kafil-tanlangan" class="form-control fw-semibold"
-               placeholder="Kafil tanlanmagan — qidirish uchun bosing..."
-               value="{{ $isEdit && $kr?->kafil ? $kr->kafil->familiya.' '.$kr->kafil->ism : '' }}"
-               readonly style="cursor:pointer;background:#fff" onclick="mijozModalOch('kafil')">
-        <button type="button" class="btn btn-secondary" onclick="mijozModalOch('kafil')">
-          <i class="bi bi-person-search me-1"></i><span class="d-none d-sm-inline">Qidirish</span>
-        </button>
-        <button type="button" class="btn btn-outline-danger" onclick="kafilTanlovniTozala()" title="Kafilni olib tashlash">
-          <i class="bi bi-x-lg"></i>
-        </button>
-      </div>
-      <div id="kafil-info" class="small mt-1">
-        @if($isEdit && $kr?->kafil)
-          {!! $mijozInfoHtml($kr->kafil) !!}
-        @else
-          <span class="text-muted">Kafil tanlanmagan (ixtiyoriy)</span>
-        @endif
-      </div>
-    </div>
-
-    <div class="col-12">
-      <a href="#" class="small text-decoration-none"
-         onclick="document.getElementById('kafil-qolda').classList.toggle('d-none'); return false;">
-        <i class="bi bi-pencil-square me-1"></i>Kafil ro'yxatda topilmasa — qo'lda kiritish
-      </a>
-      <div id="kafil-qolda" class="row g-3 mt-2 {{ ($isEdit && $kr?->kafil_ism && !$kr?->kafil_mijoz_id) ? '' : 'd-none' }}">
-        <div class="col-sm-4">
-          <label class="form-label">F.I.O.</label>
-          <input type="text" name="kafil_ism" class="form-control"
-                 value="{{ $old('kafil_ism') }}" placeholder="Kafil ismi familiyasi">
-        </div>
-        <div class="col-sm-4">
-          <label class="form-label">Telefon</label>
-          <input type="text" name="kafil_telefon" class="form-control"
-                 value="{{ $old('kafil_telefon') }}" placeholder="+998 90 000 00 00">
-        </div>
-        <div class="col-sm-4">
-          <label class="form-label">Manzil</label>
-          <input type="text" name="kafil_manzil" class="form-control"
-                 value="{{ $old('kafil_manzil') }}" placeholder="Kafil manzili">
-        </div>
-      </div>
-    </div>
-
-    {{-- Izoh --}}
-    <div class="col-12">
-      <label class="form-label">Izoh / Eslatma</label>
-      <textarea name="izoh" class="form-control" rows="2"
-                placeholder="Qo'shimcha ma'lumot...">{{ $old('izoh') }}</textarea>
-    </div>
+  <div class="bft-section-title"><i class="bi bi-person-check me-1"></i>Asosiy mijoz</div>
+  <div class="bft-wrap mb-3">
+    <table class="bft-table">
+      <tbody>
+        <tr>
+          <td class="bft-label">Mijoz <span class="text-danger">*</span></td>
+          <td class="bft-wide">
+            @php
+              // Mijoz kartochkasidan "Yangi shartnoma" bosilganda controller'dan keladigan oldindan tanlangan mijoz
+              $oldindanMijoz = $isEdit ? $kr?->mijoz : ($mijoz ?? null);
+            @endphp
+            <input type="hidden" name="mijoz_id" id="mijoz_id" value="{{ old('mijoz_id', $oldindanMijoz?->id) }}" required>
+            <div class="input-group input-group-sm">
+              <input type="text" id="mijoz-tanlangan" class="form-control fw-semibold"
+                     placeholder="Mijoz tanlanmagan — qidirish uchun bosing..."
+                     value="{{ $oldindanMijoz ? $oldindanMijoz->familiya.' '.$oldindanMijoz->ism : '' }}"
+                     readonly style="cursor:pointer;background:#fff" onclick="mijozModalOch()">
+              <button type="button" class="btn btn-primary" onclick="mijozModalOch()">
+                <i class="bi bi-person-search me-1"></i><span class="d-none d-sm-inline">Qidirish</span>
+              </button>
+            </div>
+            <div id="mijoz-info" class="small mt-1">
+              @if($oldindanMijoz)
+                {!! $mijozInfoHtml($oldindanMijoz) !!}
+              @else
+                <span class="text-danger" id="mijoz-info-xato"><i class="bi bi-exclamation-circle me-1"></i>Mijoz tanlanmagan</span>
+              @endif
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td class="bft-label">Filial <span class="text-danger">*</span></td>
+          <td class="bft-wide">
+            <select name="filial_id" class="form-select form-select-sm @error('filial_id') is-invalid @enderror"
+                    style="max-width:280px" {{ count($filiallar) === 1 ? 'disabled' : '' }}>
+              @foreach($filiallar as $f)
+                <option value="{{ $f->id }}"
+                  {{ $old('filial_id', count($filiallar)===1?$filiallar->first()->id:($oldindanMijoz->filial_id ?? '')) == $f->id ? 'selected':'' }}>
+                  {{ $f->nomi }}
+                </option>
+              @endforeach
+            </select>
+            @if(count($filiallar) === 1)
+              <input type="hidden" name="filial_id" value="{{ $filiallar->first()->id }}">
+            @endif
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
-  <div class="d-flex justify-content-end mt-4">
+  <div class="bft-section-title bft-secondary"><i class="bi bi-people me-1"></i>Kafil <small class="fw-normal" style="opacity:.8">(ixtiyoriy)</small></div>
+  <div class="bft-wrap mb-2">
+    <table class="bft-table">
+      <tbody>
+        <tr>
+          <td class="bft-label">Kafil</td>
+          <td class="bft-wide">
+            <input type="hidden" name="kafil_mijoz_id" id="kafil_mijoz_id" value="{{ $old('kafil_mijoz_id') }}">
+            <div class="input-group input-group-sm">
+              <input type="text" id="kafil-tanlangan" class="form-control fw-semibold"
+                     placeholder="Kafil tanlanmagan — qidirish uchun bosing..."
+                     value="{{ $isEdit && $kr?->kafil ? $kr->kafil->familiya.' '.$kr->kafil->ism : '' }}"
+                     readonly style="cursor:pointer;background:#fff" onclick="mijozModalOch('kafil')">
+              <button type="button" class="btn btn-secondary" onclick="mijozModalOch('kafil')">
+                <i class="bi bi-person-search me-1"></i><span class="d-none d-sm-inline">Qidirish</span>
+              </button>
+              <button type="button" class="btn btn-outline-danger" onclick="kafilTanlovniTozala()" title="Kafilni olib tashlash">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div id="kafil-info" class="small mt-1">
+              @if($isEdit && $kr?->kafil)
+                {!! $mijozInfoHtml($kr->kafil) !!}
+              @else
+                <span class="text-muted">Kafil tanlanmagan (ixtiyoriy)</span>
+              @endif
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <a href="#" class="small text-decoration-none d-inline-block mb-2"
+     onclick="document.getElementById('kafil-qolda').classList.toggle('d-none'); return false;">
+    <i class="bi bi-pencil-square me-1"></i>Kafil ro'yxatda topilmasa — qo'lda kiritish
+  </a>
+  <div id="kafil-qolda" class="bft-wrap mb-3 {{ ($isEdit && $kr?->kafil_ism && !$kr?->kafil_mijoz_id) ? '' : 'd-none' }}">
+    <table class="bft-table">
+      <tbody>
+        <tr>
+          <td class="bft-label">F.I.O.</td>
+          <td class="bft-wide"><input type="text" name="kafil_ism" class="form-control form-control-sm" style="max-width:320px" value="{{ $old('kafil_ism') }}" placeholder="Kafil ismi familiyasi"></td>
+        </tr>
+        <tr>
+          <td class="bft-label">Telefon</td>
+          <td class="bft-wide"><input type="text" name="kafil_telefon" class="form-control form-control-sm" style="max-width:320px" value="{{ $old('kafil_telefon') }}" placeholder="+998 90 000 00 00"></td>
+        </tr>
+        <tr>
+          <td class="bft-label">Manzil</td>
+          <td class="bft-wide"><input type="text" name="kafil_manzil" class="form-control form-control-sm" style="max-width:320px" value="{{ $old('kafil_manzil') }}" placeholder="Kafil manzili"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="bft-wrap mb-3">
+    <table class="bft-table">
+      <tbody>
+        <tr>
+          <td class="bft-label">Izoh</td>
+          <td class="bft-wide">
+            <textarea name="izoh" class="form-control form-control-sm" rows="2"
+                      placeholder="Qo'shimcha ma'lumot...">{{ $old('izoh') }}</textarea>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="d-flex justify-content-end mt-2">
     <button type="button" class="btn btn-primary" onclick="tabKetish('tab2')">
       Keyingi: Shartnoma shartlari <i class="bi bi-arrow-right ms-1"></i>
     </button>
@@ -196,72 +315,82 @@
   </div>
   @endif
 
-  @if($isEdit)
-  <div class="mb-3">
-    <label class="form-label fw-medium">Holat</label>
-    <select name="holat" class="form-select @error('holat') is-invalid @enderror">
-      @foreach(['faol'=>'Faol','muddati_otgan'=>"Muddati o'tgan",'muzlatilgan'=>'Muzlatilgan','yopilgan'=>'Yopilgan'] as $v=>$l)
-        <option value="{{ $v }}" {{ $old('holat','faol') === $v ? 'selected':'' }}>{{ $l }}</option>
-      @endforeach
-    </select>
-  </div>
-  @endif
+  @php
+    $orqagaSanaTaqiqlangan = \App\Models\Sozlama::ol('orqaga_sana_taqiqlansin','1') === '1'
+        && (Auth::user()->rol ?? null) !== 'admin';
+  @endphp
 
-  <div class="row g-3">
-    @if($isEdit)
-    <div class="col-sm-6">
-      <label class="form-label fw-medium">Shartnoma raqami</label>
-      <input type="text" class="form-control bg-body-secondary fw-bold text-primary"
-             value="{{ $kr->shartnoma_raqam }}" readonly>
-    </div>
-    @endif
-
-    @php
-      $orqagaSanaTaqiqlangan = \App\Models\Sozlama::ol('orqaga_sana_taqiqlansin','1') === '1'
-          && (Auth::user()->rol ?? null) !== 'admin';
-    @endphp
-    <div class="col-sm-6">
-      <label class="form-label fw-medium">Boshlanish sanasi <span class="text-danger">*</span></label>
-      <input type="date" name="boshlanish_sana" id="boshlanish_sana"
-             class="form-control @error('boshlanish_sana') is-invalid @enderror"
-             value="{{ old('boshlanish_sana', $isEdit && $kr?->boshlanish_sana ? $kr->boshlanish_sana->format('Y-m-d') : date('Y-m-d')) }}"
-             @if($orqagaSanaTaqiqlangan) min="{{ date('Y-m-d') }}" @endif
-             onchange="tugashSanaHisoblash();grafikKorsatish()">
-      @if($orqagaSanaTaqiqlangan)
-      <div class="form-text"><i class="bi bi-info-circle me-1"></i>O'tgan kunga sana qo'yish faqat admin uchun ochiq.</div>
-      @endif
-    </div>
-
-    <div class="col-sm-6">
-      <label class="form-label fw-medium">Tugash sanasi</label>
-      <input type="date" name="tugash_sana" id="tugash_sana"
-             class="form-control bg-body-secondary"
-             value="{{ $old('tugash_sana', $isEdit && $kr?->tugash_sana ? $kr->tugash_sana->format('Y-m-d') : '') }}"
-             readonly>
-    </div>
-
-    <div class="col-sm-4">
-      <label class="form-label fw-medium">Muddat <span class="text-danger">*</span></label>
-      <select name="muddati_oy" id="muddati_oy"
-              class="form-select @error('muddati_oy') is-invalid @enderror"
-              onchange="hisoblash();tugashSanaHisoblash();grafikKorsatish()">
-        @for($m=1; $m<=36; $m++)
-          <option value="{{ $m }}" {{ $old('muddati_oy',12) == $m ? 'selected':'' }}>{{ $m }} oy</option>
-        @endfor
-      </select>
-    </div>
-
-    <div class="col-sm-4">
-      <label class="form-label fw-medium">To'lov kuni <span class="text-danger">*</span></label>
-      <select name="tolov_kuni" id="tolov_kuni"
-              class="form-select @error('tolov_kuni') is-invalid @enderror"
-              onchange="tugashSanaHisoblash();grafikKorsatish()">
-        @for($d=1; $d<=31; $d++)
-          <option value="{{ $d }}" {{ $old('tolov_kuni',5) == $d ? 'selected':'' }}>Har oyning {{ $d }}-si</option>
-        @endfor
-      </select>
-    </div>
-
+  <div class="bft-wrap mb-3">
+    <table class="bft-table">
+      <tbody>
+        @if($isEdit)
+        <tr>
+          <td class="bft-label">Shartnoma raqami</td>
+          <td class="bft-wide">
+            <input type="text" class="form-control form-control-sm bg-body-secondary fw-bold text-primary"
+                   style="max-width:280px" value="{{ $kr->shartnoma_raqam }}" readonly>
+          </td>
+        </tr>
+        <tr>
+          <td class="bft-label">Holat</td>
+          <td class="bft-wide">
+            <select name="holat" class="form-select form-select-sm @error('holat') is-invalid @enderror" style="max-width:280px">
+              @foreach(['faol'=>'Faol','muddati_otgan'=>"Muddati o'tgan",'muzlatilgan'=>'Muzlatilgan','yopilgan'=>'Yopilgan'] as $v=>$l)
+                <option value="{{ $v }}" {{ $old('holat','faol') === $v ? 'selected':'' }}>{{ $l }}</option>
+              @endforeach
+            </select>
+          </td>
+        </tr>
+        @endif
+        <tr>
+          <td class="bft-label">Boshlanish sanasi <span class="text-danger">*</span></td>
+          <td class="bft-wide">
+            <input type="date" name="boshlanish_sana" id="boshlanish_sana"
+                   class="form-control form-control-sm @error('boshlanish_sana') is-invalid @enderror"
+                   style="max-width:200px"
+                   value="{{ old('boshlanish_sana', $isEdit && $kr?->boshlanish_sana ? $kr->boshlanish_sana->format('Y-m-d') : date('Y-m-d')) }}"
+                   @if($orqagaSanaTaqiqlangan) min="{{ date('Y-m-d') }}" @endif
+                   onchange="tugashSanaHisoblash();grafikKorsatish()">
+            @if($orqagaSanaTaqiqlangan)
+            <div class="form-text"><i class="bi bi-info-circle me-1"></i>O'tgan kunga sana qo'yish faqat admin uchun ochiq.</div>
+            @endif
+          </td>
+        </tr>
+        <tr>
+          <td class="bft-label">Tugash sanasi</td>
+          <td class="bft-wide">
+            <input type="date" name="tugash_sana" id="tugash_sana"
+                   class="form-control form-control-sm bg-body-secondary" style="max-width:200px"
+                   value="{{ $old('tugash_sana', $isEdit && $kr?->tugash_sana ? $kr->tugash_sana->format('Y-m-d') : '') }}"
+                   readonly>
+          </td>
+        </tr>
+        <tr>
+          <td class="bft-label">Muddat <span class="text-danger">*</span></td>
+          <td class="bft-wide">
+            <select name="muddati_oy" id="muddati_oy"
+                    class="form-select form-select-sm @error('muddati_oy') is-invalid @enderror" style="max-width:200px"
+                    onchange="hisoblash();tugashSanaHisoblash();grafikKorsatish()">
+              @for($m=1; $m<=36; $m++)
+                <option value="{{ $m }}" {{ $old('muddati_oy',12) == $m ? 'selected':'' }}>{{ $m }} oy</option>
+              @endfor
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td class="bft-label">To'lov kuni <span class="text-danger">*</span></td>
+          <td class="bft-wide">
+            <select name="tolov_kuni" id="tolov_kuni"
+                    class="form-select form-select-sm @error('tolov_kuni') is-invalid @enderror" style="max-width:200px"
+                    onchange="tugashSanaHisoblash();grafikKorsatish()">
+              @for($d=1; $d<=31; $d++)
+                <option value="{{ $d }}" {{ $old('tolov_kuni',5) == $d ? 'selected':'' }}>Har oyning {{ $d }}-si</option>
+              @endfor
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
   <div class="d-flex justify-content-between mt-4">
@@ -276,6 +405,14 @@
 
 {{-- ─────────────────────── TAB 3: TOVARLAR ─────────────────────── --}}
 <div class="tab-pane fade p-3" id="tab3" role="tabpanel">
+  <div class="bft-wrap bft-wrap-lg">
+  <div class="row g-2 mb-0 fw-bold bft-tovar-head">
+    <div class="col-sm-5">Tovar nomi</div>
+    <div class="col-sm-2">Soni</div>
+    <div class="col-sm-3">Narx (so'm)</div>
+    <div class="col-4 col-sm-1">Jami</div>
+    <div class="col-4 col-sm-1"></div>
+  </div>
   <div id="tovarlar-container">
     @if($isEdit && $kr?->tovarlar->count())
       @foreach($kr->tovarlar as $i=>$tv)
@@ -350,24 +487,15 @@
     </div>
     @endif
   </div>
-
-  {{-- Tovar qo'shish tugmasi + sarlavhalar --}}
-  <div class="row g-2 mb-1 mt-1 d-none d-sm-flex text-muted" style="font-size:.75rem">
-    <div class="col-sm-5">Tovar nomi</div>
-    <div class="col-sm-2">Soni</div>
-    <div class="col-sm-3">Narx (so'm)</div>
-    <div class="col-sm-1">Jami</div>
+  <div class="p-2">
+    <button type="button" class="btn btn-sm btn-outline-success" onclick="tovarQosh()">
+      <i class="bi bi-plus-lg me-1"></i>Tovar qo'shish
+    </button>
   </div>
-
-  <button type="button" class="btn btn-sm btn-outline-success mt-2" onclick="tovarQosh()">
-    <i class="bi bi-plus-lg me-1"></i>Tovar qo'shish
-  </button>
-
-  <div class="mt-3 p-3 bg-light rounded border">
-    <div class="d-flex justify-content-between align-items-center">
-      <span class="fw-semibold">Jami tovar summasi:</span>
-      <span class="fs-5 fw-bold text-primary" id="tovar-jami-display">0 so'm</span>
-    </div>
+  <div class="bft-tovar-jami d-flex justify-content-between align-items-center">
+    <span class="fw-semibold">Jami tovar summasi:</span>
+    <span class="fs-5 fw-bold" id="tovar-jami-display">0 so'm</span>
+  </div>
   </div>
 
   <div class="d-flex justify-content-between mt-4">
@@ -382,84 +510,102 @@
 
 {{-- ─────────────────────── TAB 4: HISOB-KITOB ──────────────────── --}}
 <div class="tab-pane fade p-3" id="tab4" role="tabpanel">
-  <div class="row g-3 align-items-end">
+  <div class="hisob-wrap">
+    <table class="hisob-table">
+      <tbody>
+        <tr>
+          <td class="h-label">1. Jami tovar summasi</td>
+          <td class="h-inp">
+            <div class="input-group input-group-sm">
+              <input type="text" id="tovar_summa_display" class="form-control bg-body-secondary fw-semibold text-end" readonly>
+              <span class="input-group-text">so'm</span>
+            </div>
+          </td>
+          <td class="h-hint">Tab 3 dagi tovarlar yig'indisi</td>
+        </tr>
+        <tr>
+          <td class="h-label">Ustama</td>
+          <td class="h-inp">
+            <div class="input-group input-group-sm">
+              <input type="number" name="foiz_stavka" id="foiz_stavka"
+                     class="form-control text-end" value="{{ $old('foiz_stavka',0) }}"
+                     min="0" max="500" step="0.1" oninput="hisoblash();grafikKorsatish()">
+              <span class="input-group-text">%</span>
+            </div>
+          </td>
+          <td class="h-hint">0 = ustamasiz</td>
+        </tr>
+        <tr>
+          <td class="h-label">+ Ustama summasi</td>
+          <td class="h-inp">
+            <div class="input-group input-group-sm">
+              <input type="text" id="foiz_summa_display" class="form-control bg-body-secondary fw-semibold text-warning-emphasis text-end" readonly>
+              <span class="input-group-text">so'm</span>
+            </div>
+          </td>
+          <td class="h-hint"></td>
+        </tr>
+        <tr class="h-highlight">
+          <td class="h-label">= Jami summa (ustama bilan)</td>
+          <td class="h-inp">
+            <div class="input-group input-group-sm">
+              <input type="text" id="jami_summa_display" class="form-control bg-body-secondary fw-bold text-primary text-end" readonly>
+              <span class="input-group-text">so'm</span>
+            </div>
+          </td>
+          <td class="h-hint"></td>
+        </tr>
 
-    <div class="col-sm-4">
-      <label class="form-label fw-medium">1. Jami tovar summasi</label>
-      <div class="input-group">
-        <input type="text" id="tovar_summa_display" class="form-control bg-body-secondary fw-semibold" readonly>
-        <span class="input-group-text">so'm</span>
-      </div>
-      <div class="form-text">Tab 3 dagi tovarlar yig'indisi</div>
-    </div>
+        <tr class="h-sep"><td colspan="3"></td></tr>
 
-    <div class="col-sm-3">
-      <label class="form-label fw-medium">Ustama</label>
-      <div class="input-group">
-        <input type="number" name="foiz_stavka" id="foiz_stavka"
-               class="form-control" value="{{ $old('foiz_stavka',0) }}"
-               min="0" max="500" step="0.1" oninput="hisoblash();grafikKorsatish()">
-        <span class="input-group-text">%</span>
-      </div>
-      <div class="form-text">0 = ustamasiz</div>
-    </div>
-
-    <div class="col-sm-5">
-      <label class="form-label fw-medium">+ Ustama summasi</label>
-      <div class="input-group">
-        <input type="text" id="foiz_summa_display" class="form-control bg-body-secondary fw-semibold text-warning-emphasis" readonly>
-        <span class="input-group-text">so'm</span>
-      </div>
-    </div>
-
-    <div class="col-sm-12">
-      <label class="form-label fw-medium">= Jami summa (ustama bilan)</label>
-      <div class="input-group">
-        <input type="text" id="jami_summa_display" class="form-control bg-body-secondary fw-bold text-primary fs-5" readonly>
-        <span class="input-group-text">so'm</span>
-      </div>
-    </div>
-
-    <div class="col-12"><hr class="my-1"></div>
-
-    <div class="col-sm-4">
-      <label class="form-label fw-medium">- Oldindan to'lov <span class="text-danger">*</span></label>
-      <div class="input-group">
-        <input type="number" name="boshlangich_tolov" id="boshlangich_tolov"
-               class="form-control @error('boshlangich_tolov') is-invalid @enderror"
-               value="{{ $old('boshlangich_tolov',0) }}" min="0" step="1000"
-               oninput="hisoblash();grafikKorsatish()">
-        <span class="input-group-text">so'm</span>
-      </div>
-      <div class="form-text text-danger d-none" id="oldindan-tolov-xato">Oldindan to'lov jami summadan oshib ketdi!</div>
-    </div>
-
-    <div class="col-sm-4">
-      <label class="form-label fw-medium">To'lov turi</label>
-      <select name="oldin_tolov_turi" id="oldin_tolov_turi" class="form-select">
-        <option value="">— tanlang —</option>
-        <option value="naqd">Naqd</option>
-        <option value="terminal">Terminal (karta)</option>
-        <option value="bank">Bank o'tkazmasi</option>
-        <option value="online">Online</option>
-      </select>
-    </div>
-
-    <div class="col-sm-4">
-      <label class="form-label fw-medium">= Qoldiq (nasiya summasi)</label>
-      <div class="input-group">
-        <input type="text" id="kredit_summa_display" class="form-control bg-body-secondary fw-bold text-success fs-5" readonly>
-        <span class="input-group-text">so'm</span>
-      </div>
-    </div>
-
-    <div class="col-sm-6">
-      <label class="form-label fw-medium">Oylik to'lov</label>
-      <div class="input-group">
-        <input type="text" id="oylik_display" class="form-control bg-body-secondary fw-bold text-info" readonly>
-        <span class="input-group-text">so'm</span>
-      </div>
-    </div>
+        <tr>
+          <td class="h-label">- Oldindan to'lov <span class="text-danger">*</span></td>
+          <td class="h-inp">
+            <div class="input-group input-group-sm">
+              <input type="number" name="boshlangich_tolov" id="boshlangich_tolov"
+                     class="form-control text-end @error('boshlangich_tolov') is-invalid @enderror"
+                     value="{{ $old('boshlangich_tolov',0) }}" min="0" step="1000"
+                     oninput="hisoblash();grafikKorsatish()">
+              <span class="input-group-text">so'm</span>
+            </div>
+          </td>
+          <td class="h-hint text-danger d-none" id="oldindan-tolov-xato">Jami summadan oshib ketdi!</td>
+        </tr>
+        <tr>
+          <td class="h-label">To'lov turi</td>
+          <td class="h-inp">
+            <select name="oldin_tolov_turi" id="oldin_tolov_turi" class="form-select form-select-sm">
+              <option value="">— tanlang —</option>
+              <option value="naqd">Naqd</option>
+              <option value="terminal">Terminal (karta)</option>
+              <option value="bank">Bank o'tkazmasi</option>
+              <option value="online">Online</option>
+            </select>
+          </td>
+          <td class="h-hint"></td>
+        </tr>
+        <tr class="h-highlight">
+          <td class="h-label">= Qoldiq (nasiya summasi)</td>
+          <td class="h-inp">
+            <div class="input-group input-group-sm">
+              <input type="text" id="kredit_summa_display" class="form-control bg-body-secondary fw-bold text-success text-end" readonly>
+              <span class="input-group-text">so'm</span>
+            </div>
+          </td>
+          <td class="h-hint"></td>
+        </tr>
+        <tr class="h-highlight">
+          <td class="h-label">Oylik to'lov</td>
+          <td class="h-inp">
+            <div class="input-group input-group-sm">
+              <input type="text" id="oylik_display" class="form-control bg-body-secondary fw-bold text-info text-end" readonly>
+              <span class="input-group-text">so'm</span>
+            </div>
+          </td>
+          <td class="h-hint"></td>
+        </tr>
+      </tbody>
+    </table>
 
     {{-- Hidden computed fields --}}
     <input type="hidden" id="tovar_summa_hidden" value="{{ $old('jami_summa',0) }}">
@@ -509,7 +655,12 @@
 {{-- ─────────────────────── TAB 6: HUJJATLAR ────────────────────── --}}
 <div class="tab-pane fade p-3" id="tab6" role="tabpanel">
   @if($isEdit)
-  <div class="row g-3">
+  <div class="bft-wrap">
+    <table class="bft-table bft-doc-table">
+      <thead>
+        <tr><th style="width:36px"></th><th>Hujjat nomi</th><th style="width:110px">Chop etish</th><th style="width:80px">Ko'rish</th><th style="width:90px">Tahrirlash</th></tr>
+      </thead>
+      <tbody>
     @php
     $hujjatlar = [
       ['key'=>'shartnoma',   'icon'=>'file-earmark-text',  'rang'=>'primary',  'nom'=>'Nasiya shartnoma'],
@@ -524,43 +675,47 @@
     @php $kafilBiriktirilgan = $kredit->kafil_mijoz_id || $kredit->kafil_ism; @endphp
     @foreach($hujjatlar as $h)
       @continue($h['key'] === 'kafillik' && !$kafilBiriktirilgan)
-    <div class="col-sm-6 col-lg-4">
-      <div class="card border-{{ $h['rang'] }} border-opacity-25 h-100">
-        <div class="card-body d-flex flex-column">
-          <div class="d-flex align-items-center gap-2 mb-2">
-            <span class="bg-{{ $h['rang'] }} bg-opacity-10 text-{{ $h['rang'] }} rounded p-2">
-              <i class="bi bi-{{ $h['icon'] }} fs-5"></i>
-            </span>
-            <span class="fw-semibold small">{{ $h['nom'] }}</span>
-          </div>
-          <div class="mt-auto pt-2">
+        <tr>
+          <td class="text-center"><i class="bi bi-{{ $h['icon'] }} text-{{ $h['rang'] }}"></i></td>
+          <td class="fw-semibold">{{ $h['nom'] }}</td>
+          <td class="text-center">
             <a href="{{ route('kreditlar.hujjat', [$kredit, $h['key']]) }}"
                target="_blank"
-               class="btn btn-sm btn-outline-{{ $h['rang'] }} w-100">
-              <i class="bi bi-printer me-1"></i>Chop etish
+               class="btn btn-sm btn-outline-{{ $h['rang'] }}"
+               title="Chop etish">
+              <i class="bi bi-printer{{ $admimi ? '' : ' me-1' }}"></i>{{ $admimi ? '' : 'Chop etish' }}
             </a>
-          </div>
-        </div>
-      </div>
-    </div>
+          </td>
+          <td class="text-center">
+            @if($admimi)
+            <button type="button" class="btn btn-sm btn-outline-{{ $h['rang'] }}"
+                    title="Ko'rish"
+                    onclick="hujjatModalOch('{{ route('kreditlar.hujjat.html', [$kredit, $h['key']]) }}', '{{ $h['nom'] }}', false)">
+              <i class="bi bi-eye"></i>
+            </button>
+            @endif
+          </td>
+          <td class="text-center">
+            @if($admimi)
+            <button type="button" class="btn btn-sm btn-outline-{{ $h['rang'] }}"
+                    title="Tahrirlash"
+                    onclick="hujjatModalOch('{{ route('kreditlar.hujjat.html', [$kredit, $h['key']]) }}', '{{ $h['nom'] }}', true)">
+              <i class="bi bi-pencil"></i>
+            </button>
+            @endif
+          </td>
+        </tr>
     @endforeach
     @if(!$kafilBiriktirilgan)
-    <div class="col-sm-6 col-lg-4">
-      <div class="card border-secondary border-opacity-25 h-100 bg-light">
-        <div class="card-body d-flex flex-column">
-          <div class="d-flex align-items-center gap-2 mb-2">
-            <span class="bg-secondary bg-opacity-10 text-secondary rounded p-2">
-              <i class="bi bi-people-fill fs-5"></i>
-            </span>
-            <span class="fw-semibold small text-muted">Kafillik shartnomasi</span>
-          </div>
-          <div class="mt-auto pt-2">
-            <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Kafil biriktirilmagan — "Kafil" tabidan kafil qo'shing.</small>
-          </div>
-        </div>
-      </div>
-    </div>
+        <tr class="text-muted">
+          <td class="text-center"><i class="bi bi-people-fill"></i></td>
+          <td colspan="4">
+            Kafillik shartnomasi — <small><i class="bi bi-info-circle me-1"></i>Kafil biriktirilmagan — "Mijoz va kafil" tabidan kafil qo'shing.</small>
+          </td>
+        </tr>
     @endif
+      </tbody>
+    </table>
   </div>
   @else
   <div class="alert alert-info py-3">
@@ -571,6 +726,80 @@
 
   <div class="d-flex justify-content-between mt-4">
     <button type="button" class="btn btn-outline-secondary" onclick="tabKetish('tab5')">
+      <i class="bi bi-arrow-left me-1"></i>Oldingi
+    </button>
+    <button type="button" class="btn btn-primary" onclick="tabKetish('tab7')">
+      Keyingi<i class="bi bi-arrow-right ms-1"></i>
+    </button>
+  </div>
+</div>
+
+{{-- ─────────────────────── TAB 7: KREDITNIK ──────────────────────── --}}
+<div class="tab-pane fade p-3" id="tab7" role="tabpanel">
+  <div class="bft-section-title"><i class="bi bi-person-badge-fill me-1"></i>Mas'ul kredit xodimi</div>
+  <div class="bft-wrap mb-3">
+    <table class="bft-table">
+      <tbody>
+        <tr>
+          <td class="bft-label">Kredit xodimi (kreditnik)</td>
+          <td class="bft-wide">
+            <select name="joriy_xodim_id" class="form-select form-select-sm" style="max-width:340px">
+              <option value="">— Shartnomani tuzayotgan xodim ({{ Auth::user()->ism_familiya }}) —</option>
+              @foreach($xodimlar as $x)
+                <option value="{{ $x->id }}"
+                  {{ $old('joriy_xodim_id', $isEdit ? ($kr->joriy_xodim_id ?? $kr->xodim_id) : '') == $x->id ? 'selected':'' }}>
+                  {{ $x->ism_familiya }}
+                </option>
+              @endforeach
+            </select>
+            <div class="form-text">Shartnoma bo'yicha to'lovlarni nazorat qiluvchi/mas'ul xodim. Bo'sh qoldirilsa — shartnomani tuzgan xodim mas'ul bo'ladi.</div>
+          </td>
+        </tr>
+        <tr>
+          <td class="bft-label">Biriktirilgan sana</td>
+          <td class="bft-wide">
+            <input type="text" class="form-control form-control-sm bg-body-secondary" style="max-width:220px" readonly
+                   value="{{ $isEdit ? (($xodimTarixi->first()?->created_at ?? $kr->created_at)->format('d.m.Y H:i')) : now()->format('d.m.Y H:i') }}">
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  @if($isEdit)
+  <div class="bft-section-title bft-secondary"><i class="bi bi-clock-history me-1"></i>Tayinlash tarixi</div>
+  @if($xodimTarixi->isEmpty())
+  <p class="text-muted small">Bu shartnoma hali boshqa xodimga qayta tayinlanmagan — boshidan beri <strong>{{ $kr->xodim->ism_familiya ?? '—' }}</strong> mas'ul.</p>
+  @else
+  <div class="bft-wrap bft-wrap-lg mb-3">
+    <table class="bft-table bft-doc-table">
+      <thead>
+        <tr>
+          <th>Sana</th>
+          <th>Eski xodim</th>
+          <th>Yangi xodim</th>
+          <th>Sabab</th>
+          <th>O'zgartirgan</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach($xodimTarixi as $tx)
+        <tr>
+          <td class="text-nowrap small">{{ $tx->created_at->format('d.m.Y H:i') }}</td>
+          <td>{{ $tx->eskiXodim->ism_familiya ?? '—' }}</td>
+          <td>{{ $tx->yangiXodim->ism_familiya ?? '—' }}</td>
+          <td class="small">{{ $tx->sabab }}</td>
+          <td class="small text-muted">{{ $tx->ozgartirgan->ism_familiya ?? '—' }}</td>
+        </tr>
+        @endforeach
+      </tbody>
+    </table>
+  </div>
+  @endif
+  @endif
+
+  <div class="d-flex justify-content-between mt-4">
+    <button type="button" class="btn btn-outline-secondary" onclick="tabKetish('tab6')">
       <i class="bi bi-arrow-left me-1"></i>Oldingi
     </button>
     <button type="submit" class="btn btn-success btn-lg px-5">
@@ -655,6 +884,23 @@ function hisoblash() {
     tugashSanaHisoblash();
 }
 
+// ── Oy/yil/kun bo'yicha sana hisoblash (Date.setMonth overflow'siz) ──
+// MUHIM: oddiy "dt.setMonth(dt.getMonth()+n); dt.setDate(kun)" usuli xato beradi —
+// agar boshlang'ich kun (masalan 31) keyingi oyda mavjud bo'lmasa (Fevral),
+// JS Date avtomatik keyingi oyga "to'kilib" ketadi (31-yanvar + 1 oy = 3-mart,
+// fevral butunlay tashlab ketiladi), va shu oy uchun to'lov sanasi 2 oy keyinga
+// siljiydi — grafik qatorlari orasida 31 kundan ortiq farq paydo bo'lib,
+// "to'lovlar orasi 1 oydan oshmasligi kerak" xatosini keltirib chiqaradi.
+// Shu sabab yil/oy/kunni alohida hisoblab, Date faqat oxirida quriladi.
+function oyQushibSana(boshSana, oyQoshish, kuni) {
+    const bosh = new Date(boshSana);
+    const jamiOy = bosh.getMonth() + oyQoshish;
+    const yil = bosh.getFullYear() + Math.floor(jamiOy / 12);
+    const oy  = ((jamiOy % 12) + 12) % 12;
+    const maxDay = new Date(yil, oy + 1, 0).getDate();
+    return new Date(yil, oy, Math.min(kuni, maxDay));
+}
+
 // ── Tugash sanasi hisoblash ──────────────────────────────────────
 function tugashSanaHisoblash() {
     const bosh   = document.getElementById('boshlanish_sana')?.value;
@@ -662,11 +908,7 @@ function tugashSanaHisoblash() {
     const kuni   = parseInt(document.getElementById('tolov_kuni')?.value) || 5;
     if (!bosh) return;
 
-    const dt = new Date(bosh);
-    dt.setMonth(dt.getMonth() + muddat);
-    // To'lov kuniga moslashtirish
-    var maxDay = new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate();
-    dt.setDate(Math.min(kuni, maxDay));
+    const dt = oyQushibSana(bosh, muddat, kuni);
 
     const y = dt.getFullYear();
     const m = String(dt.getMonth() + 1).padStart(2, '0');
@@ -702,10 +944,7 @@ function grafikKorsatish() {
     let qoldiq = kredit;
     let asosiyJami = 0, ustamaJamiYig = 0;
     for (let i = 1; i <= muddat; i++) {
-        const dt = new Date(bosh);
-        dt.setMonth(dt.getMonth() + i - 1);
-        var maxDay = new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate();
-        dt.setDate(Math.min(kuni, maxDay));
+        const dt = oyQushibSana(bosh, i - 1, kuni);
         const isoSana = dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
 
         const buoy = i === muddat ? qoldiq : Math.round(oylik);
@@ -733,12 +972,12 @@ function grafikKorsatish() {
     }
 
     cont.innerHTML = `
-    <div class="table-responsive">
-    <table class="table table-sm table-hover table-bordered mb-0">
+    <div class="graf-bank-wrap">
+    <table class="table table-sm table-bordered mb-0 graf-bank-table">
       <thead class="table-dark">
         <tr>
-          <th class="text-center" style="width:50px">#</th>
-          <th>Sana</th>
+          <th class="text-center" style="width:40px">#</th>
+          <th style="min-width:150px">Sana</th>
           <th class="text-end">Asosiy qarz (so'm)</th>
           <th class="text-end">Ustama (so'm)</th>
           <th class="text-end">Jami to'lov (so'm)</th>
