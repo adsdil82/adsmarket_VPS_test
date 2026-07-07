@@ -22,6 +22,9 @@ use App\Http\Controllers\TovarKatalogController;
 use App\Http\Controllers\KirimController;
 use App\Http\Controllers\ChiqimController;
 use App\Http\Controllers\PosController;
+use App\Http\Controllers\PosSmenaController;
+use App\Http\Controllers\PosQaytimController;
+use App\Http\Controllers\PosTerminalController;
 use App\Http\Controllers\RegKreditController;
 use App\Http\Controllers\TulovController;
 use App\Http\Controllers\TilController;
@@ -176,11 +179,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/kredit-portfolio',    [HisobotController::class, 'kreditPortfeli'])->name('kredit_portfolio');
         Route::get('/chiqarilgan',         [HisobotController::class, 'chiqarilganKreditlar'])->name('chiqarilgan');
         Route::get('/sotilgan-tovarlar',   [HisobotController::class, 'sotilganTovarlar'])->name('sotilgan_tovarlar');
+        Route::get('/bonus-tovarlar',      [HisobotController::class, 'bonusTovarlar'])->name('bonus_tovarlar');
         Route::get('/kechikish-analiz',    [HisobotController::class, 'kechikishAnaliz'])->middleware('litsenziya.limit:hisobot_advanced')->name('kechikish_analiz');
         Route::get('/konstruktor',         [HisobotController::class, 'konstruktor'])->middleware('litsenziya.limit:hisobot_advanced')->name('konstruktor');
         Route::post('/konstruktor',        [HisobotController::class, 'konstruktorHisobot'])->middleware('litsenziya.limit:hisobot_advanced')->name('konstruktor.hisobot');
         Route::get('/excel/{tur}',         [HisobotController::class, 'excelExport'])->middleware('litsenziya.limit:hisobot_advanced')->name('excel');
         Route::post('/konstruktor/excel',  [HisobotController::class, 'konstruktorExcel'])->middleware('litsenziya.limit:hisobot_advanced')->name('konstruktor.excel');
+        Route::post('/konstruktor/csv',    [HisobotController::class, 'konstruktorCsv'])->middleware('litsenziya.limit:hisobot_advanced')->name('konstruktor.csv');
+        Route::get('/konstruktor/shablonlar', [HisobotController::class, 'shablonlarRoyxati'])->middleware('litsenziya.limit:hisobot_advanced')->name('konstruktor.shablonlar');
+        Route::post('/konstruktor/shablon', [HisobotController::class, 'shablonSaqlash'])->middleware('litsenziya.limit:hisobot_advanced')->name('konstruktor.shablon.saqlash');
+        Route::delete('/konstruktor/shablon/{shablon}', [HisobotController::class, 'shablonOchirish'])->middleware('litsenziya.limit:hisobot_advanced')->name('konstruktor.shablon.ochirish');
+        Route::post('/konstruktor/moliyaviy', [HisobotController::class, 'moliyaviyHisobot'])->middleware('litsenziya.limit:hisobot_advanced')->name('konstruktor.moliyaviy');
         Route::get('/transferlar',            [HisobotController::class, 'transferHisobot'])->name('transfer');
     });
 
@@ -207,18 +216,21 @@ Route::middleware('auth')->group(function () {
     // ─── Kirim ────────────────────────────────────────────────────
     Route::prefix('kirim')->name('kirim.')->middleware('rol.check:admin,menejer')->group(function () {
         Route::get('/',         [KirimController::class, 'index'])->name('index');
+        Route::get('/excel',    [KirimController::class, 'excelExport'])->name('excel');
         Route::get('/yangi',    [KirimController::class, 'create'])->name('create');
-        Route::post('/',        [KirimController::class, 'store'])->name('store');
-        Route::get('/{kirim}',  [KirimController::class, 'show'])->name('show');
-        Route::delete('/{kirim}', [KirimController::class, 'destroy'])->name('destroy');
+        Route::get('/{kirim}/hujjat/{tur}', [KirimController::class, 'hujjat'])->name('hujjat');
+        Route::get('/{kirim}/hujjat-html/{tur}', [KirimController::class, 'hujjatHtml'])->name('hujjat.html');
     });
 
     // ─── Chiqim ───────────────────────────────────────────────────
     Route::prefix('chiqim')->name('chiqim.')->middleware('rol.check:admin,menejer')->group(function () {
         Route::get('/',          [ChiqimController::class, 'index'])->name('index');
+        Route::get('/excel',     [ChiqimController::class, 'excelExport'])->name('excel');
         Route::get('/yangi',     [ChiqimController::class, 'create'])->name('create');
         Route::post('/',         [ChiqimController::class, 'store'])->name('store');
         Route::get('/{chiqim}',  [ChiqimController::class, 'show'])->name('show');
+        Route::get('/{chiqim}/hujjat/{tur}', [ChiqimController::class, 'hujjat'])->name('hujjat');
+        Route::get('/{chiqim}/hujjat-html/{tur}', [ChiqimController::class, 'hujjatHtml'])->name('hujjat.html');
     });
 
     // ─── POS (Naqd savdo) ─────────────────────────────────────────
@@ -228,6 +240,39 @@ Route::middleware('auth')->group(function () {
         Route::post('/saqlash',      [PosController::class, 'store'])->name('store');
         Route::get('/tarix',         [PosController::class, 'tarix'])->name('tarix');
         Route::get('/chek/{sotuv}',  [PosController::class, 'chekKorish'])->name('chek');
+        Route::get('/dashboard',     [PosController::class, 'dashboard'])->name('dashboard');
+        Route::get('/hisobotlar',    [PosController::class, 'hisobotlar'])->name('hisobotlar');
+
+        Route::prefix('smena')->name('smena.')->group(function () {
+            Route::get('/ochish',                 [PosSmenaController::class, 'ochishForma'])->name('ochish-forma');
+            Route::post('/ochish',                [PosSmenaController::class, 'ochish'])->name('ochish');
+            Route::get('/{smena}/yopish',         [PosSmenaController::class, 'yopishForma'])->name('yopish-forma');
+            Route::post('/{smena}/yopish',        [PosSmenaController::class, 'yopish'])->name('yopish');
+            Route::post('/{smena}/topshirish',    [PosSmenaController::class, 'topshirish'])->name('topshirish');
+            Route::post('/{smena}/tasdiqlash',    [PosSmenaController::class, 'topshirishTasdiqlash'])->name('tasdiqlash')
+                ->middleware('rol.check:admin,menejer');
+            Route::post('/{smena}/rad',           [PosSmenaController::class, 'topshirishRad'])->name('rad')
+                ->middleware('rol.check:admin,menejer');
+            Route::get('/',                       [PosSmenaController::class, 'royxat'])->name('royxat');
+            Route::get('/{smena}',                [PosSmenaController::class, 'korish'])->name('korish');
+        });
+
+        Route::prefix('qaytim')->name('qaytim.')->group(function () {
+            Route::get('/{sotuv}/boshlash',  [PosQaytimController::class, 'boshlash'])->name('boshlash');
+            Route::post('/{sotuv}/saqlash',  [PosQaytimController::class, 'saqlash'])->name('saqlash');
+            Route::get('/',                  [PosQaytimController::class, 'royxat'])->name('royxat');
+            Route::get('/{qaytim}',          [PosQaytimController::class, 'korish'])->name('korish');
+        });
+    });
+
+    // ─── POS Fullscreen terminal (PIN-kirish kassir rejimi) ───────
+    Route::prefix('terminal')->name('terminal.')->group(function () {
+        Route::get('/pin',       [PosTerminalController::class, 'pinForma'])->name('pin-forma');
+        Route::post('/pin',      [PosTerminalController::class, 'pinTekshir'])->name('pin-tekshir');
+        Route::get('/',          [PosTerminalController::class, 'index'])->name('index');
+        Route::post('/qulflash', [PosTerminalController::class, 'qulflash'])->name('qulflash');
+        Route::post('/yechish',  [PosTerminalController::class, 'yechish'])->name('yechish');
+        Route::get('/chiqish',   [PosTerminalController::class, 'chiqish'])->name('chiqish');
     });
 
     // ─── Ombor (eski, endi katalog ishlatiladi) ───────────────────
@@ -236,6 +281,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/tovar/{tovar}', [OmborController::class, 'tovar'])->name('tovar');
         Route::get('/etiketka',          [BarcodeLabelController::class, 'index'])->name('etiketka');
         Route::get('/etiketka/tovarlar', [BarcodeLabelController::class, 'tovarlar'])->name('etiketka.tovarlar');
+        Route::get('/etiketka/shablonlar', [BarcodeLabelController::class, 'shablonlar'])->name('etiketka.shablonlar');
+        Route::post('/etiketka/shablon', [BarcodeLabelController::class, 'shablonSaqlash'])->name('etiketka.shablon.saqlash');
+        Route::delete('/etiketka/shablon/{shablon}', [BarcodeLabelController::class, 'shablonOchirish'])->name('etiketka.shablon.ochirish');
         Route::get('/kirim',  fn() => redirect()->route('kirim.index'))->name('kirim');
         Route::get('/chiqim', fn() => redirect()->route('chiqim.index'))->name('chiqim');
     });
@@ -316,6 +364,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/foydalanuvchilar/{foydalanuvchi}', [AdminController::class, 'foydalanuvchiUpdate'])->name('foydalanuvchilar.update');
         Route::post('/foydalanuvchilar/{foydalanuvchi}/holat', [AdminController::class, 'foydalanuvchiHolat'])->name('foydalanuvchilar.holat');
         Route::post('/foydalanuvchilar/{foydalanuvchi}/parol', [AdminController::class, 'foydalanuvchiParolReset'])->name('foydalanuvchilar.parol');
+        Route::post('/foydalanuvchilar/{foydalanuvchi}/pin', [AdminController::class, 'foydalanuvchiPinOrnat'])->name('foydalanuvchilar.pin');
         Route::get('/audit',             [AuditController::class, 'index'])->name('audit');
         Route::get('/deploy',            [BackupController::class, 'deploy'])->name('deploy');
         Route::get('/deploy/db-zip',     [BackupController::class, 'dbZip'])->name('deploy.db');

@@ -85,9 +85,14 @@
                         <span class="badge bg-{{ $s->holat==='tugallangan'?'success':'danger' }}">{{ $s->holat }}</span>
                     </td>
                     <td>
-                        <a href="{{ route('pos.chek',$s) }}" class="btn btn-sm btn-outline-primary py-0">
+                        <a href="{{ route('pos.chek',$s) }}" class="btn btn-sm btn-outline-primary py-0" title="Chek">
                             <i class="bi bi-receipt"></i>
                         </a>
+                        @if($s->holat === 'tugallangan')
+                        <a href="{{ route('pos.qaytim.boshlash',$s) }}" class="btn btn-sm btn-outline-danger py-0" title="Qaytim">
+                            <i class="bi bi-arrow-return-left"></i>
+                        </a>
+                        @endif
                     </td>
                 </tr>
                 @empty

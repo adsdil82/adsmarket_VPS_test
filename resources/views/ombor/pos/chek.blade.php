@@ -75,6 +75,11 @@
     <button onclick="window.print()" class="btn btn-primary flex-grow-1">
         <i class="bi bi-printer me-1"></i>Chop etish
     </button>
+    @if($sotuv->holat === 'tugallangan')
+    <a href="{{ route('pos.qaytim.boshlash',$sotuv) }}" class="btn btn-danger">
+        <i class="bi bi-arrow-return-left me-1"></i>Qaytim
+    </a>
+    @endif
     <a href="{{ route('pos.index') }}" class="btn btn-success">
         <i class="bi bi-cart me-1"></i>Kassaga
     </a>

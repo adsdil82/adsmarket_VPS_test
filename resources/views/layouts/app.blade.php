@@ -385,7 +385,8 @@
         if (request()->routeIs('mijozlar.*'))                                                          $aktiv_grup = 'mijozlar';
         elseif (request()->routeIs('kreditlar.*'))                                                     $aktiv_grup = 'shartnomalar';
         elseif (request()->routeIs('hisobotlar.*'))                                                    $aktiv_grup = 'hisobotlar';
-        elseif (request()->routeIs('pos.*','katalog.*','tovar-guruhlar.*','kirim.*','chiqim.*','ombor.*')) $aktiv_grup = 'tovarlar';
+        elseif (request()->routeIs('pos.*','terminal.*','malumotnamalar.kassalar.*','transfer.kassa.*'))  $aktiv_grup = 'pos';
+        elseif (request()->routeIs('katalog.*','tovar-guruhlar.*','kirim.*','chiqim.*','ombor.*'))    $aktiv_grup = 'tovarlar';
         elseif (request()->routeIs('harajatlar.*'))                                                    $aktiv_grup = 'harajatlar';
         elseif (request()->routeIs('pul-oqimlari.*'))                                                 $aktiv_grup = 'pul-oqimlari';
         elseif (request()->routeIs('xabarnoma.*'))                                                    $aktiv_grup = 'xabarnoma';
@@ -521,6 +522,13 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="{{ route('hisobotlar.bonus_tovarlar') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('hisobotlar.bonus_tovarlar') ? 'active' : '' }}">
+                        <i class="bi bi-gift me-2 text-warning"></i>
+                        <span class="nav-label">Bonusga berilgan tovarlar</span>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="{{ route('hisobotlar.kechikish_analiz') }}"
                        class="nav-link text-white py-1 {{ request()->routeIs('hisobotlar.kechikish_analiz') ? 'active' : '' }}">
                         <i class="bi bi-clock-history me-2 text-danger"></i>
@@ -551,6 +559,84 @@
             </ul>
             @endif
 
+            {{-- ── POS ──────────────────────────────────────────── --}}
+            @if(Auth::user()->ruxsat('tovarlar') || Auth::user()->ruxsat('malumotnomalar') || Auth::user()->ruxsat('transferlar'))
+            <li class="grup-header">
+                <button class="grup-toggle" data-grup="pos">
+                    <span class="g-label"><i class="bi bi-cash-register me-1"></i> POS</span>
+                    <i class="g-icon bi {{ $aktiv_grup==='pos' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
+                </button>
+            </li>
+            <ul class="grup-items {{ $aktiv_grup!=='pos' ? 'closed' : '' }}" id="grup-pos">
+                <li class="nav-item">
+                    <a href="{{ route('pos.dashboard') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pos.dashboard') ? 'active' : '' }}">
+                        <i class="bi bi-grid-1x2 me-2 text-info"></i>
+                        <span class="nav-label">POS Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('pos.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pos.index') ? 'active' : '' }}"
+                       onclick="return (typeof litsenziyaPosTekshir==='function') ? litsenziyaPosTekshir() : true">
+                        <i class="bi bi-cash-register me-2 text-warning"></i>
+                        <span class="nav-label">{{ __('ui.menu_kassa') }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('terminal.pin-forma') }}" target="_blank"
+                       class="nav-link text-white py-1 {{ request()->routeIs('terminal.*') ? 'active' : '' }}">
+                        <i class="bi bi-fullscreen me-2 text-primary"></i>
+                        <span class="nav-label">Fullscreen kassa</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('pos.tarix') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pos.tarix') ? 'active' : '' }}">
+                        <i class="bi bi-clock-history me-2"></i>
+                        <span class="nav-label">Sotuv tarixi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('pos.hisobotlar') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pos.hisobotlar') ? 'active' : '' }}">
+                        <i class="bi bi-bar-chart-line me-2 text-success"></i>
+                        <span class="nav-label">POS hisobotlar</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('pos.smena.royxat') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pos.smena.*') ? 'active' : '' }}">
+                        <i class="bi bi-clock-history me-2 text-info"></i>
+                        <span class="nav-label">Kassir smenalari</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('pos.qaytim.royxat') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pos.qaytim.*') ? 'active' : '' }}">
+                        <i class="bi bi-arrow-return-left me-2 text-danger"></i>
+                        <span class="nav-label">Qaytim / Vozvrat</span>
+                    </a>
+                </li>
+                @if(Auth::user()->isAdmin())
+                <li class="nav-item"><a href="{{ route('malumotnamalar.kassalar.index') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.kassalar.*') ? 'active' : '' }}">
+                    <i class="bi bi-wallet2 me-2"></i>
+                    <span class="nav-label">Kassalar</span>
+                </a></li>
+                @endif
+                @if(Auth::user()->ruxsat('transferlar'))
+                <li class="nav-item">
+                    <a href="{{ route('transfer.kassa.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('transfer.kassa.*') ? 'active' : '' }}">
+                        <i class="bi bi-cash-coin me-2 text-primary"></i>
+                        <span class="nav-label">Kassa transferi</span>
+                    </a>
+                </li>
+                @endif
+            </ul>
+            @endif
+
             {{-- ── TOVARLAR ────────────────────────────────────── --}}
             @if(Auth::user()->ruxsat('tovarlar'))
             <li class="grup-header">
@@ -560,14 +646,6 @@
                 </button>
             </li>
             <ul class="grup-items {{ $aktiv_grup!=='tovarlar' ? 'closed' : '' }}" id="grup-tovarlar">
-                <li class="nav-item">
-                    <a href="{{ route('pos.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('pos.index') ? 'active' : '' }}"
-                       onclick="return (typeof litsenziyaPosTekshir==='function') ? litsenziyaPosTekshir() : true">
-                        <i class="bi bi-cash-register me-2 text-warning"></i>
-                        <span class="nav-label">{{ __('ui.menu_kassa') }}</span>
-                    </a>
-                </li>
                 @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki())
                 <li class="nav-item">
                     <a href="{{ route('katalog.index') }}"
@@ -732,9 +810,6 @@
             <li class="nav-item"><a href="{{ route('admin.rollar') }}"
                 class="nav-link text-white py-1 {{ request()->routeIs('admin.rollar') ? 'active' : '' }}">
                 Rollar</a></li>
-            <li class="nav-item"><a href="{{ route('malumotnamalar.kassalar.index') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.kassalar.*') ? 'active' : '' }}">
-                Kassalar</a></li>
             <li class="nav-item"><a href="{{ route('malumotnamalar.tashkilot-rekvizit.index') }}"
                 class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.tashkilot-rekvizit.*') ? 'active' : '' }}">
                 Tashkilot rekvizitlari</a></li>
@@ -910,13 +985,6 @@
                        class="nav-link text-white py-1 {{ request()->routeIs('transfer.tovar.*') ? 'active' : '' }}">
                         <i class="bi bi-box-seam me-2 text-success"></i>
                         <span class="nav-label">Tovar transferi</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('transfer.kassa.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('transfer.kassa.*') ? 'active' : '' }}">
-                        <i class="bi bi-cash-coin me-2 text-primary"></i>
-                        <span class="nav-label">Kassa transferi</span>
                     </a>
                 </li>
                 <li class="nav-item">

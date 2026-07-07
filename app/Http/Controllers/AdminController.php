@@ -399,4 +399,18 @@ class AdminController extends Controller
         $foydalanuvchi->update(['password' => $request->yangi_parol]);
         return back()->with('muvaffaqiyat', "Parol yangilandi.");
     }
+
+    /** POS terminal uchun kassir PIN kodini o'rnatish/almashtirish (4-6 raqam). */
+    public function foydalanuvchiPinOrnat(Request $request, Foydalanuvchi $foydalanuvchi)
+    {
+        $request->validate([
+            'yangi_pin' => 'required|digits_between:4,6|confirmed',
+        ]);
+        $foydalanuvchi->update([
+            'pin_kod'               => $request->yangi_pin,
+            'pin_xato_soni'         => 0,
+            'pin_bloklangan_gacha'  => null,
+        ]);
+        return back()->with('muvaffaqiyat', "PIN kod o'rnatildi.");
+    }
 }

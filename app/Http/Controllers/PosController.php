@@ -3,7 +3,9 @@ namespace App\Http\Controllers;
 
 use App\Models\ChiqimTafsilot;
 use App\Models\Filial;
+use App\Models\KassaTransfer;
 use App\Models\OmbordanChiqim;
+use App\Models\PosSmena;
 use App\Models\PosSotuv;
 use App\Models\PosTafsilot;
 use App\Models\TovarGuruh;
@@ -23,13 +25,21 @@ class PosController extends Controller
     {
         $user     = Auth::user();
         $filialId = $user->filial_id ?? Filial::first()->id;
+
+        // Smena majburiy — ochiq smena bo'lmasa, savdo ekrani o'rniga smena
+        // ochish formasiga yo'naltiramiz.
+        $smena = PosSmenaController::joriy($filialId);
+        if (!$smena) {
+            return redirect()->route('pos.smena.ochish-forma');
+        }
+
         $guruhlar = TovarGuruh::faol()->withCount(['tovarlar' => fn($q) => $q->where('holat','faol')->where('qoldiq','>',0)])->orderBy('nomi')->get();
 
         // Bugungi statistika
         $bugun_sotuv  = PosSotuv::where('filial_id', $filialId)->whereDate('sana', today())->where('holat','tugallangan')->sum('jami_tolov');
         $bugun_checklar = PosSotuv::where('filial_id', $filialId)->whereDate('sana', today())->where('holat','tugallangan')->count();
 
-        return view('ombor.pos.index', compact('guruhlar', 'filialId', 'bugun_sotuv', 'bugun_checklar'));
+        return view('ombor.pos.index', compact('guruhlar', 'filialId', 'bugun_sotuv', 'bugun_checklar', 'smena'));
     }
 
     /** Ajax: tovarlarni qidirish/yuklash — FAQAT shu filialning o'z ombor qoldig'i bo'yicha. */
@@ -80,6 +90,12 @@ class PosController extends Controller
             'tovarlar.*.narx'     => 'required|numeric|min:0',
         ]);
 
+        // Smena majburiy — ochiq smenasiz sotuv qilinmaydi.
+        $smena = PosSmenaController::joriy((int) $request->filial_id);
+        if (!$smena) {
+            return response()->json(['xato' => "Ochiq smena topilmadi. Avval smenani oching."], 422);
+        }
+
         // Qoldiq tekshiruvi — endi SHU FILIALNING o'z ombori bo'yicha (global
         // emas), boshqa filialning qoldig'i bu yerda sotilishiga yo'l qo'yilmaydi.
         $ombor = $this->stockService->asosiyOmbor($request->filial_id);
@@ -94,13 +110,14 @@ class PosController extends Controller
             }
         }
 
-        $sotuv = DB::transaction(function () use ($request, $ombor) {
+        $sotuv = DB::transaction(function () use ($request, $ombor, $smena) {
             $umumiy = collect($request->tovarlar)->sum(fn($q) => $q['miqdor'] * $q['narx']);
             $chegirma = (float)($request->chegirma ?? 0);
             $jami = $umumiy - $chegirma;
 
             $sotuv = PosSotuv::create([
                 'filial_id'      => $request->filial_id,
+                'smena_id'       => $smena->id,
                 'xodim_id'       => Auth::id(),
                 'sana'           => today(),
                 'check_raqam'    => PosSotuv::yangiCheckRaqam($request->filial_id),
@@ -214,5 +231,144 @@ class PosController extends Controller
     {
         $sotuv->load(['tafsilot.tovar', 'xodim', 'filial']);
         return view('ombor.pos.chek', compact('sotuv'));
+    }
+
+    /** POS Dashboard — bugungi statistika, kartochkalar va jadvallar. */
+    public function dashboard(Request $request)
+    {
+        $user      = Auth::user();
+        $filialId  = $user->isAdmin() ? ($request->filial_id ?: null) : $user->filial_id;
+        $filiallar = $user->isAdmin() ? Filial::faol()->get() : collect();
+
+        $bugunBase = fn() => PosSotuv::when($filialId, fn($q) => $q->where('filial_id', $filialId))
+            ->whereDate('pos_sotuv.sana', today())->where('pos_sotuv.holat', 'tugallangan');
+
+        $bugunSotuv  = (clone $bugunBase())->sum('jami_tolov');
+        $naqdTushum  = (clone $bugunBase())->sum('naqd_summa');
+        $kartaTushum = (clone $bugunBase())->sum('plastik_summa');
+        $chekSoni    = (clone $bugunBase())->count();
+
+        $qarzgaSotuv = DB::table('reg_kredit')
+            ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
+            ->whereDate('boshlanish_sana', today())->sum('jami_summa');
+
+        $qaytimSumma = \App\Models\PosQaytim::when($filialId, fn($q) => $q->where('filial_id', $filialId))
+            ->whereDate('sana', today())->where('holat', 'tugallangan')->sum('jami_summa');
+        $sofTushum   = $bugunSotuv - $qaytimSumma;
+
+        $oxirgiQaytimlar = \App\Models\PosQaytim::with(['sotuv', 'xodim'])
+            ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
+            ->latest('created_at')->limit(10)->get();
+
+        $oxirgiSotuvlar = PosSotuv::with(['xodim', 'filial'])
+            ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
+            ->latest('created_at')->limit(10)->get();
+
+        $kassirlarKesimi = (clone $bugunBase())
+            ->join('foydalanuvchilar', 'foydalanuvchilar.id', '=', 'pos_sotuv.xodim_id')
+            ->selectRaw('foydalanuvchilar.ism_familiya, COUNT(*) as soni, SUM(jami_tolov) as summa')
+            ->groupBy('foydalanuvchilar.id', 'foydalanuvchilar.ism_familiya')
+            ->orderByDesc('summa')->get();
+
+        $tolovTurlariKesimi = (clone $bugunBase())
+            ->selectRaw('tolov_turi, COUNT(*) as soni, SUM(jami_tolov) as summa')
+            ->groupBy('tolov_turi')->get();
+
+        $engKopSotilgan = DB::table('pos_tafsilot as pt')
+            ->join('pos_sotuv as ps', 'ps.id', '=', 'pt.sotuv_id')
+            ->join('tovar_katalog as t', 't.id', '=', 'pt.tovar_id')
+            ->when($filialId, fn($q) => $q->where('ps.filial_id', $filialId))
+            ->whereDate('ps.sana', today())->where('ps.holat', 'tugallangan')
+            ->selectRaw('t.nomi, SUM(pt.miqdor) as soni, SUM(pt.jami_summa) as summa')
+            ->groupBy('t.id', 't.nomi')->orderByDesc('soni')->limit(10)->get();
+
+        $kamQoldiq = TovarKatalog::faol()
+            ->whereColumn('qoldiq', '<=', 'min_qoldiq')->where('min_qoldiq', '>', 0)
+            ->orderBy('qoldiq')->limit(10)->get(['id', 'nomi', 'qoldiq', 'min_qoldiq', 'birlik']);
+
+        $songgiTopshirishlar = KassaTransfer::with(['fromFilial', 'toFilial', 'xodim'])
+            ->when($filialId, fn($q) => $q->where('from_filial_id', $filialId))
+            ->latest('created_at')->limit(10)->get();
+
+        return view('ombor.pos.dashboard', compact(
+            'filiallar', 'filialId', 'bugunSotuv', 'naqdTushum', 'kartaTushum', 'chekSoni',
+            'qarzgaSotuv', 'qaytimSumma', 'sofTushum', 'oxirgiSotuvlar', 'oxirgiQaytimlar', 'kassirlarKesimi',
+            'tolovTurlariKesimi', 'engKopSotilgan', 'kamQoldiq', 'songgiTopshirishlar'
+        ));
+    }
+
+    /** POS hisobotlar — davr/filial/kassir/to'lov turi bo'yicha filtrlanadigan bank stilidagi jadval. */
+    public function hisobotlar(Request $request)
+    {
+        $user      = Auth::user();
+        $filialId  = $user->isAdmin() ? ($request->filial_id ?: null) : $user->filial_id;
+        $filiallar = $user->isAdmin() ? Filial::faol()->get() : collect();
+        $danSana   = $request->dan_sana   ?? now()->startOfMonth()->toDateString();
+        $gachaSana = $request->gacha_sana ?? now()->toDateString();
+
+        $kassirlar = DB::table('foydalanuvchilar')
+            ->whereIn('rol', ['admin', 'menejer', 'kassir'])
+            ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
+            ->orderBy('ism_familiya')->get(['id', 'ism_familiya']);
+
+        $qator = $this->posHisobotSorovi($filialId, $danSana, $gachaSana, $request);
+
+        if ($request->get('format') === 'excel') {
+            return $this->posHisobotExcel($qator, $danSana, $gachaSana);
+        }
+
+        $jami = (object) [
+            'soni'        => $qator->sum('soni'),
+            'jami_summa'  => $qator->sum('jami_summa'),
+            'naqd'        => $qator->sum('naqd'),
+            'plastik'     => $qator->sum('plastik'),
+            'chegirma'    => $qator->sum('chegirma'),
+        ];
+
+        return view('ombor.pos.hisobotlar', compact('qator', 'jami', 'filiallar', 'filialId', 'kassirlar', 'danSana', 'gachaSana'));
+    }
+
+    /** Kunlik POS savdo hisoboti — sana bo'yicha guruhlangan qatorlar. */
+    private function posHisobotSorovi(?int $filialId, string $dan, string $gacha, Request $request)
+    {
+        return PosSotuv::query()
+            ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
+            ->when($request->kassir_id, fn($q) => $q->where('xodim_id', $request->kassir_id))
+            ->when($request->tolov_turi, fn($q) => $q->where('tolov_turi', $request->tolov_turi))
+            ->whereBetween('sana', [$dan, $gacha])
+            ->where('holat', 'tugallangan')
+            ->selectRaw("sana, COUNT(*) as soni, SUM(jami_tolov) as jami_summa,
+                SUM(naqd_summa) as naqd, SUM(plastik_summa) as plastik, SUM(chegirma) as chegirma")
+            ->groupBy('sana')->orderByDesc('sana')->get();
+    }
+
+    private function posHisobotExcel($qator, string $dan, string $gacha)
+    {
+        $headers = ['Sana', 'Cheklar soni', 'Jami summa', 'Naqd', 'Karta/terminal', 'Chegirma'];
+        $rows = $qator->map(fn($r) => [
+            $r->sana, $r->soni, (float) $r->jami_summa, (float) $r->naqd, (float) $r->plastik, (float) $r->chegirma,
+        ])->toArray();
+
+        $html  = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">';
+        $html .= '<head><meta charset="UTF-8"><style>body{font-family:Arial;font-size:10pt}';
+        $html .= 'th{background:#1d4ed8;color:#fff;font-weight:bold;border:1px solid #777;padding:5px 8px}';
+        $html .= 'td{border:1px solid #ccc;padding:3px 8px}.r{text-align:right;mso-number-format:"#,##0"}</style></head><body>';
+        $html .= '<h3>POS savdo hisoboti — ' . $dan . ' / ' . $gacha . '</h3><table><thead><tr>';
+        foreach ($headers as $h) $html .= '<th>' . htmlspecialchars($h) . '</th>';
+        $html .= '</tr></thead><tbody>';
+        foreach ($rows as $row) {
+            $html .= '<tr>';
+            foreach ($row as $i => $cell) {
+                $html .= $i === 0 ? '<td>' . htmlspecialchars((string) $cell) . '</td>' : '<td class="r">' . number_format((float) $cell, 0, '.', ' ') . '</td>';
+            }
+            $html .= '</tr>';
+        }
+        $html .= '</tbody></table></body></html>';
+
+        $fn = 'pos_hisobot_' . $dan . '_' . $gacha . '.xls';
+        return response($html, 200, [
+            'Content-Type'        => 'application/vnd.ms-excel; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $fn . '"',
+        ]);
     }
 }

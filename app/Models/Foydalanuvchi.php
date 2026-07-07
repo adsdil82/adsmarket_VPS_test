@@ -20,6 +20,9 @@ class Foydalanuvchi extends Authenticatable implements Auditable
         'ism_familiya',
         'email',
         'password',
+        'pin_kod',
+        'pin_xato_soni',
+        'pin_bloklangan_gacha',
         'rol',
         'holat',
         'til',
@@ -27,11 +30,14 @@ class Foydalanuvchi extends Authenticatable implements Auditable
 
     protected $hidden = [
         'password',
+        'pin_kod',
         'remember_token',
     ];
 
     protected $casts = [
-        'password' => 'hashed',
+        'password'              => 'hashed',
+        'pin_kod'                => 'hashed',
+        'pin_bloklangan_gacha'   => 'datetime',
     ];
 
     // ─── Aloqalar ────────────────────────────────────────────────
@@ -116,6 +122,18 @@ class Foydalanuvchi extends Authenticatable implements Auditable
         );
 
         return (bool) ($qator->ruxsat ?? false);
+    }
+
+    // ─── POS PIN ────────────────────────────────────────────────
+
+    public function pinTogri(string $pin): bool
+    {
+        return $this->pin_kod && \Illuminate\Support\Facades\Hash::check($pin, $this->pin_kod);
+    }
+
+    public function pinBloklanganmi(): bool
+    {
+        return $this->pin_bloklangan_gacha && $this->pin_bloklangan_gacha->isFuture();
     }
 
     // ─── Scope'lar ────────────────────────────────────────────────

@@ -82,6 +82,15 @@
                                     onclick="parolModalOch({{ $u->id }}, '{{ addslashes($u->ism_familiya) }}')">
                                 <i class="bi bi-key"></i>
                             </button>
+                            {{-- POS PIN o'rnatish --}}
+                            @if(in_array($u->rol, ['admin','menejer','kassir']))
+                            <button class="btn btn-xs btn-outline-info py-0 px-1"
+                                    style="font-size:.72rem"
+                                    title="POS PIN kod o'rnatish"
+                                    onclick="pinModalOch({{ $u->id }}, '{{ addslashes($u->ism_familiya) }}')">
+                                <i class="bi bi-grid-3x3"></i>
+                            </button>
+                            @endif
                         </div>
                     </td>
                 </tr>
@@ -262,6 +271,40 @@
     </div>
   </div>
 </div>
+
+{{-- === POS PIN Modal === --}}
+<div class="modal fade" id="pinModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-info text-white">
+        <h6 class="modal-title fw-bold mb-0"><i class="bi bi-grid-3x3 me-2"></i>POS PIN kod o'rnatish</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" id="pin-form">
+        @csrf
+        <div class="modal-body">
+          <p class="small text-muted mb-2" id="pin-user-nomi"></p>
+          <div class="mb-2">
+            <label class="form-label fw-medium small">Yangi PIN (4-6 raqam) <span class="text-danger">*</span></label>
+            <input type="text" name="yangi_pin" id="pin-inp" class="form-control form-control-sm"
+                   required minlength="4" maxlength="6" pattern="\d{4,6}" inputmode="numeric" placeholder="masalan: 1234">
+          </div>
+          <div>
+            <label class="form-label fw-medium small">Tasdiqlash <span class="text-danger">*</span></label>
+            <input type="text" name="yangi_pin_confirmation" class="form-control form-control-sm"
+                   required minlength="4" maxlength="6" pattern="\d{4,6}" inputmode="numeric" placeholder="Qaytadan">
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Bekor</button>
+          <button type="submit" class="btn btn-sm btn-info fw-bold text-white">
+            <i class="bi bi-check2 me-1"></i>Saqlash
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -282,6 +325,13 @@ function parolModalOch(userId, ism) {
     document.getElementById('pr-pwd').value = '';
     if (!window._parolModal) window._parolModal = new bootstrap.Modal(document.getElementById('parolModal'));
     window._parolModal.show();
+}
+function pinModalOch(userId, ism) {
+    document.getElementById('pin-user-nomi').textContent = 'Foydalanuvchi: ' + ism;
+    document.getElementById('pin-form').action = '/admin/foydalanuvchilar/' + userId + '/pin';
+    document.getElementById('pin-inp').value = '';
+    if (!window._pinModal) window._pinModal = new bootstrap.Modal(document.getElementById('pinModal'));
+    window._pinModal.show();
 }
 function togglePwd(inputId, iconId) {
     var inp = document.getElementById(inputId);
