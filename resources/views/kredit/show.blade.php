@@ -129,6 +129,12 @@
     // ko'proq (masalan 12 ta) bo'sh qator bilan saqlangan (sana=NULL,
     // summa=0) — bular ko'rsatilmasligi kerak, faqat haqiqiy oylar.
     $grafikQatorlari = $kredit->grafik->filter(fn($g) => $g->tolov_sana !== null);
+
+    // Bonus tovarlar — mijozga qo'shib beriladigan, faqat ombordan kamayadigan, lekin
+    // shartnoma/hisob-fakturada ko'rsatilmaydigan tovarlar. "Tovarlar" tabida faqat
+    // haqiqiy (kredit) tovarlar ko'rinadi, bonuslar alohida tabda.
+    $haqiqiyTovarlar = $kredit->tovarlar->where('turi', 'kredit');
+    $bonusTovarlar   = $kredit->tovarlar->where('turi', 'bonus');
 @endphp
 
 {{-- ── Tablar ───────────────────────────────────────────────────── --}}
@@ -142,9 +148,17 @@
     <li class="nav-item">
         <a class="nav-link" data-bs-toggle="tab" href="#tab-tovarlar">
             <i class="bi bi-box-seam me-1"></i> Tovarlar
-            <span class="badge bg-secondary ms-1">{{ $kredit->tovarlar->count() }}</span>
+            <span class="badge bg-secondary ms-1">{{ $haqiqiyTovarlar->count() }}</span>
         </a>
     </li>
+    @if($bonusTovarlar->count() > 0)
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tab-bonus-tovarlar">
+            <i class="bi bi-gift me-1"></i> Bonus tovarlar
+            <span class="badge bg-warning text-dark ms-1">{{ $bonusTovarlar->count() }}</span>
+        </a>
+    </li>
+    @endif
     <li class="nav-item">
         <a class="nav-link" data-bs-toggle="tab" href="#tab-tulovlar">
             <i class="bi bi-receipt me-1"></i> To'lovlar
@@ -330,7 +344,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($kredit->tovarlar as $i => $tovar)
+                    @foreach($haqiqiyTovarlar as $i => $tovar)
                     <tr>
                         <td class="text-muted small">{{ $i + 1 }}</td>
                         <td class="fw-medium">{{ $tovar->nomi }}</td>
@@ -345,7 +359,7 @@
                     <tr>
                         <td colspan="4" class="text-end fw-bold">Jami:</td>
                         <td class="text-end fw-bold text-primary">
-                            {{ number_format($kredit->tovarlar->sum('jami_narx'), 0, '.', ' ') }}
+                            {{ number_format($haqiqiyTovarlar->sum('jami_narx'), 0, '.', ' ') }}
                         </td>
                         <td></td>
                     </tr>
@@ -353,6 +367,51 @@
             </table>
         </div>
     </div>
+
+    {{-- ── Bonus tovarlar ──────────────────────────────────────────── --}}
+    @if($bonusTovarlar->count() > 0)
+    <div class="tab-pane fade" id="tab-bonus-tovarlar">
+        <div class="alert alert-warning py-2 small mb-2">
+            <i class="bi bi-info-circle me-1"></i>
+            Bonus tovarlar mijozga qo'shib beriladi, ombordan kamayadi, lekin shartnoma va hisob-fakturada ko'rsatilmaydi.
+        </div>
+        <div class="bft-wrap bft-wrap-lg">
+            <table class="bft-table bft-doc-table">
+                <thead>
+                    <tr>
+                        <th style="width:36px">#</th>
+                        <th>Tovar nomi</th>
+                        <th class="text-center" style="width:70px">Soni</th>
+                        <th class="text-end" style="width:130px">Narx</th>
+                        <th class="text-end" style="width:130px">Jami</th>
+                        <th style="width:120px">Barkod</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($bonusTovarlar as $i => $tovar)
+                    <tr>
+                        <td class="text-muted small">{{ $i + 1 }}</td>
+                        <td class="fw-medium">{{ $tovar->nomi }}</td>
+                        <td class="text-center">{{ $tovar->soni }}</td>
+                        <td class="text-end">{{ number_format($tovar->narx, 0, '.', ' ') }}</td>
+                        <td class="text-end fw-bold">{{ number_format($tovar->jami_narx, 0, '.', ' ') }}</td>
+                        <td class="text-muted small">{{ $tovar->barkod ?? '—' }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" class="text-end fw-bold">Jami (shartnomaga kiritilmaydi):</td>
+                        <td class="text-end fw-bold text-warning">
+                            {{ number_format($bonusTovarlar->sum('jami_narx'), 0, '.', ' ') }}
+                        </td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    @endif
 
     {{-- ── To'lovlar ───────────────────────────────────────────────── --}}
     <div class="tab-pane fade" id="tab-tulovlar">

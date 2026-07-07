@@ -158,13 +158,24 @@ class RegKreditController extends Controller
                 'grafik as tolangan_oy_soni' => fn($q) => $q->where('holat', 'tolangan'),
                 'grafik as muddati_kelgan_oy_soni' => fn($q) => $q->whereNotNull('tolov_sana')->where('tolov_sana', '<=', today()),
             ])
-            ->addSelect(['max_kechikish_kun' => \App\Models\Grafik::selectRaw('MAX(DATEDIFF(CURDATE(), tolov_sana))')
+            // Shartnoma muddati to'liq tugagan (holat=muddati_otgan) bo'lsa, kechikish kunlari
+            // grafikdagi eng katta kechikish bilan "muddat tugaganidan beri o'tgan kun"ning
+            // kattarog'i sifatida hisoblanadi — grafik qatorlari allaqachon "tolangan" bo'lib
+            // ko'rinsa ham (masalan foiz/qoldiq tufayli), shartnoma haligacha kechikkan hisoblanadi.
+            ->addSelect(['max_kechikish_kun' => \App\Models\Grafik::selectRaw(
+                    "CASE WHEN reg_kredit.holat = 'muddati_otgan' THEN GREATEST(COALESCE(MAX(DATEDIFF(CURDATE(), tolov_sana)),0), DATEDIFF(CURDATE(), COALESCE(reg_kredit.tugash_sana, CURDATE()))) ELSE COALESCE(MAX(DATEDIFF(CURDATE(), tolov_sana)),0) END"
+                )
                 ->whereColumn('reg_kredit_id', 'reg_kredit.id')
                 ->whereIn('holat', ['tolanmagan', 'qisman', 'muddati_otgan'])
                 ->whereNotNull('tolov_sana')
                 ->where('tolov_sana', '<', now()->toDateString()),
             ])
-            ->addSelect(['kechikkan_summa' => \App\Models\Grafik::selectRaw('COALESCE(SUM(tolov_summa - tolangan_summa),0)')
+            // Shartnomaning o'zi "muddati o'tgan" holatida bo'lsa — butun qoldiq qarz kechikkan
+            // hisoblanadi (muddat tugagan, hammasi to'lanishi kerak edi). Aks holda faqat
+            // grafik bo'yicha aynan muddati o'tgan oylarning to'lanmagan qismi hisoblanadi.
+            ->addSelect(['kechikkan_summa' => \App\Models\Grafik::selectRaw(
+                    "CASE WHEN reg_kredit.holat = 'muddati_otgan' THEN reg_kredit.qoldiq_qarz ELSE COALESCE(SUM(tolov_summa - tolangan_summa),0) END"
+                )
                 ->whereColumn('reg_kredit_id', 'reg_kredit.id')
                 ->whereIn('holat', ['tolanmagan', 'qisman', 'muddati_otgan'])
                 ->whereNotNull('tolov_sana')

@@ -221,6 +221,7 @@ class ImportService
                 'eski_id'       => $q->id_op ?? null,
                 'reg_kredit_id' => $kreditId,
                 'nomi'          => $q->tovar_nomi ?? 'Nomalum tovar',
+                'turi'          => mb_strtolower(trim($q->turi ?? '')) === 'bonus' ? 'bonus' : 'kredit',
                 'soni'          => $soni,
                 'narx'          => $narx,
                 'jami_narx'     => $soni * $narx,

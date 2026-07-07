@@ -29,6 +29,14 @@
     background:#0f172a; color:#fbbf24; font-weight:800; font-size:.78rem;
     text-transform:uppercase; letter-spacing:.05em; padding:8px 9px; position:sticky; left:0;
 }
+.passiv-super-header td {
+    background:#7c2d12; color:#fed7aa; font-weight:800; font-size:.82rem;
+    text-transform:uppercase; letter-spacing:.06em; padding:9px 9px; position:sticky; left:0;
+}
+.passiv-jami-row td {
+    background:linear-gradient(90deg,#fed7aa,#fdba74) !important; font-weight:800;
+    border-top:2px solid #ea580c; border-bottom:2px solid #ea580c; color:#7c2d12;
+}
 .jami-row td {
     background:linear-gradient(90deg,#bfdbfe,#dbeafe) !important; font-weight:800;
     border-top:2px solid #60a5fa; border-bottom:2px solid #60a5fa; color:#1e3a8a;
@@ -120,6 +128,9 @@
     </thead>
     <tbody>
         @foreach($bolimlar as $bolim)
+        @if($bolim->tur === 'majburiyat')
+        <tr class="passiv-super-header"><td colspan="13"><i class="bi bi-layers me-1"></i>Passivlar (Majburiyatlar + Kapital)</td></tr>
+        @endif
         <tr class="bolim-header"><td colspan="13">{{ $bolim->nomi }}</td></tr>
 
         @foreach($bolim->qatorlar as $qator)
@@ -153,6 +164,15 @@
             <td class="num" data-raw="{{ $jamiQiymat ?? '' }}">{{ $jamiQiymat === null ? '·' : number_format($jamiQiymat,2,'.',' ') }}</td>
             @endforeach
         </tr>
+        @if($bolim->tur === 'kapital')
+        <tr class="passiv-jami-row">
+            <td class="tl">Jami Passivlar (Majburiyat + Kapital)</td>
+            @foreach(range(1,12) as $oy)
+            @php $jamiPassiv = $jami_passiv_oylik[$oy] ?? null; @endphp
+            <td class="num" data-raw="{{ $jamiPassiv ?? '' }}">{{ $jamiPassiv === null ? '·' : number_format($jamiPassiv,2,'.',' ') }}</td>
+            @endforeach
+        </tr>
+        @endif
         @endforeach
 
         {{-- Balans tekshiruvi qatori --}}
@@ -361,6 +381,17 @@ function jamiVaBalansYangilash(data) {
             td.textContent = qiymat === null ? '·' : formatSum(qiymat);
         });
     });
+
+    var passivTr = document.querySelector('tr.passiv-jami-row');
+    if (passivTr && data.jami_passiv_oylik) {
+        var pTds = passivTr.querySelectorAll('td.num');
+        pTds.forEach(function(td, idx) {
+            var oy = idx + 1;
+            var qiymat = data.jami_passiv_oylik[oy];
+            td.dataset.raw = qiymat === null ? '' : qiymat;
+            td.textContent = qiymat === null ? '·' : formatSum(qiymat);
+        });
+    }
 
     var balansTr = document.querySelector('tr.balans-row');
     if (balansTr) {

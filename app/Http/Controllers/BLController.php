@@ -114,10 +114,11 @@ class BLController extends Controller
         $natija = $this->service->hisobotOylik((int) $request->yil, $request->filial_id ? (int) $request->filial_id : null);
 
         return response()->json([
-            'ok'                => true,
-            'bolim_jami_oylik'  => $natija['bolim_jami_oylik'],
-            'balans_farqi_oylik'=> $natija['balans_farqi_oylik'],
-            'oxirgi_oy'         => $natija['oxirgi_oy'],
+            'ok'                 => true,
+            'bolim_jami_oylik'   => $natija['bolim_jami_oylik'],
+            'jami_passiv_oylik'  => $natija['jami_passiv_oylik'],
+            'balans_farqi_oylik' => $natija['balans_farqi_oylik'],
+            'oxirgi_oy'          => $natija['oxirgi_oy'],
         ]);
     }
 }

@@ -6,7 +6,7 @@
 <tr><td>Xaridor</td><td><strong>{{ $kredit->mijoz?->familiya }} {{ $kredit->mijoz?->ism }}</strong></td></tr>
 <tr><td>Shartnoma</td><td>№ {{ $kredit->shartnoma_raqam }}</td></tr></table>
 <table><thead><tr><th>#</th><th>Nomi</th><th>O.B.</th><th>Miqdori</th><th>Narxi</th><th>Jami</th></tr></thead>
-<tbody>@foreach($kredit->tovarlar as $i => $t)
+<tbody>@foreach($kredit->tovarlar->where('turi', 'kredit') as $i => $t)
 <tr><td align='center'>{{ $i+1 }}</td><td>{{ $t->nomi }}</td><td align='center'>dona</td>
 <td align='center'>{{ $t->soni }}</td><td align='right'>{{ number_format($t->narx,0,'.',' ') }}</td>
 <td align='right'>{{ number_format($t->jami_narx,0,'.',' ') }}</td></tr>

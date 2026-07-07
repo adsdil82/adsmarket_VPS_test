@@ -101,7 +101,7 @@
       <tr><th>№</th><th>Маҳсулот номи</th><th>Ўлчов бир.</th><th>Миқдори</th><th>Нархи</th><th>Суммаси</th></tr>
     </thead>
     <tbody>
-      @foreach($kredit->tovarlar as $i => $t)
+      @foreach($kredit->tovarlar->where('turi', 'kredit') as $i => $t)
       <tr>
         <td align="center">{{ $i + 1 }}</td>
         <td>{{ $t->nomi }}</td>

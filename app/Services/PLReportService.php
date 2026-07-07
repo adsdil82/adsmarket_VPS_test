@@ -120,6 +120,19 @@ class PLReportService
                 foreach ($rows as $oy => $summa) $oylik[(int) $oy] = (float) abs($summa);
                 break;
 
+            case 'avtomat_bonus_tovar':
+                // Mijozga qo'shib beriladigan (ombordan kamayadigan, lekin shartnoma/hisob-fakturada
+                // ko'rsatilmaydigan) bonus tovarlar — bu haqiqiy xarajat, shartnoma yaratilgan oy bo'yicha.
+                $rows = DB::table('tovarlar as t')
+                    ->join('reg_kredit as rk', 'rk.id', '=', 't.reg_kredit_id')
+                    ->where('t.turi', 'bonus')
+                    ->selectRaw('MONTH(rk.boshlanish_sana) as oy, SUM(t.jami_narx) as summa')
+                    ->whereYear('rk.boshlanish_sana', $yil)
+                    ->when($filialId, fn($q) => $q->where('rk.filial_id', $filialId))
+                    ->groupBy('oy')->pluck('summa', 'oy');
+                foreach ($rows as $oy => $summa) $oylik[(int) $oy] = (float) $summa;
+                break;
+
             case 'qolda':
                 $rows = PLQiymat::where('qator_id', $qator->id)
                     ->where('yil', $yil)

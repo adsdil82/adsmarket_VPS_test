@@ -192,7 +192,7 @@ class TaminotchiController extends Controller
 
     public function kirimCreate(Taminotchi $taminotchi)
     {
-        $tovarlar = TovarKatalog::where('holat','faol')->orderBy('nomi')->get(['id','nomi','sotish_narx','birlik','guruh_id']);
+        $tovarlar = TovarKatalog::where('holat','faol')->orderBy('nomi')->get(['id','nomi','sotish_narx','nasiya_narx','tan_narx','birlik','guruh_id']);
         $guruhlar = \App\Models\TovarGuruh::faol()->orderBy('nomi')->get(['id','nomi']);
         return view('taminotchi.kirim_create', compact('taminotchi','tovarlar','guruhlar'));
     }
@@ -274,6 +274,18 @@ class TaminotchiController extends Controller
             }
         }
 
+        // Mavjud tovar bo'lsa ham — tan narx (kirim narxi) har doim yangilanadi
+        // (so'nggi xarid narxi), va agar POS/Nasiya narx forma orqali kiritilgan
+        // bo'lsa (qayta kirim qilishda narxni tuzatish uchun), ular ham
+        // yangilanadi. Bu yangi tovar yaratilgan holatga ham zarar keltirmaydi
+        // (yuqorida bir xil qiymatlar bilan qayta yozadi, xolos).
+        if ($tovarId) {
+            $yangilanadigan = ['tan_narx' => $q['narx']];
+            if (!empty($q['pos_narx']))    $yangilanadigan['sotish_narx'] = $q['pos_narx'];
+            if (!empty($q['nasiya_narx'])) $yangilanadigan['nasiya_narx'] = $q['nasiya_narx'];
+            TovarKatalog::whereKey($tovarId)->update($yangilanadigan);
+        }
+
         TaminotKirimQator::create([
             'kirim_id'  => $kirim->id,
             'tovar_id'  => $tovarId,
@@ -303,7 +315,7 @@ class TaminotchiController extends Controller
         if ($kirim->taminotchi_id !== $taminotchi->id) abort(404);
 
         $kirim->load('qatorlar');
-        $tovarlar = TovarKatalog::where('holat','faol')->orderBy('nomi')->get(['id','nomi','sotish_narx','birlik','guruh_id']);
+        $tovarlar = TovarKatalog::where('holat','faol')->orderBy('nomi')->get(['id','nomi','sotish_narx','nasiya_narx','tan_narx','birlik','guruh_id']);
         $guruhlar = \App\Models\TovarGuruh::faol()->orderBy('nomi')->get(['id','nomi']);
 
         return view('taminotchi.kirim_edit', compact('taminotchi','kirim','tovarlar','guruhlar'));
@@ -781,64 +793,89 @@ class TaminotchiController extends Controller
         $filiallar = Auth::user()->isAdmin() ? Filial::faol()->get() : collect();
         $danSana   = $request->dan_sana   ?? now()->startOfMonth()->toDateString();
         $gachaSana = $request->gacha_sana ?? now()->toDateString();
+        $usdKurs   = DB::table('valyutalar')->where('kod','USD')->value('kurs') ?: 1;
 
         $statistika = DB::table('taminotchilar as t')
             ->when($filialId, fn($q) => $q->where(fn($s) =>
                 $s->where('t.filial_id',$filialId)->orWhereNull('t.filial_id')
             ))
             ->when($request->filial_id, fn($q) => $q->where('t.filial_id',$request->filial_id))
-            ->selectRaw("
-                t.id, t.nomi, t.telefon, t.holat,
-                COALESCE(SUM(DISTINCT k.jami_summa),0) as jami_kirim,
-                COALESCE(SUM(DISTINCT tv.summa_uzs),0)    as jami_tolov,
-                COALESCE(SUM(DISTINCT k.jami_summa),0) - COALESCE(SUM(DISTINCT tv.summa_uzs),0) as qoldiq,
-                COUNT(DISTINCT k.id) as kirim_soni,
-                COUNT(DISTINCT tv.id) as tulov_soni
-            ")
-            ->leftJoin('taminot_kirimlar as k', fn($j) =>
-                $j->on('k.taminotchi_id','=','t.id')
-                  ->whereBetween('k.kirim_sana', [$danSana, $gachaSana])
-            )
-            ->leftJoin('taminotchi_tulovlar as tv', fn($j) =>
-                $j->on('tv.taminotchi_id','=','t.id')
-                  ->whereBetween('tv.tolov_sana', [$danSana, $gachaSana])
-            )
-            ->groupBy('t.id','t.nomi','t.telefon','t.holat')
-            ->orderByDesc('qoldiq')
-            ->get();
+            ->when($request->holat, fn($q) => $q->where('t.holat',$request->holat))
+            ->select(['t.id','t.nomi','t.kontakt_shaxs','t.telefon','t.holat','t.asosiy_valyuta'])
+            ->addSelect(['boshi_kirim' => DB::table('taminot_kirimlar')
+                ->selectRaw('COALESCE(SUM(jami_summa),0)')
+                ->whereColumn('taminotchi_id','t.id')
+                ->where('kirim_sana','<',$danSana)])
+            ->addSelect(['boshi_tolov' => DB::table('taminotchi_tulovlar')
+                ->selectRaw('COALESCE(SUM(summa_uzs),0)')
+                ->whereColumn('taminotchi_id','t.id')
+                ->where('tolov_sana','<',$danSana)])
+            ->addSelect(['davr_kirim' => DB::table('taminot_kirimlar')
+                ->selectRaw('COALESCE(SUM(jami_summa),0)')
+                ->whereColumn('taminotchi_id','t.id')
+                ->whereBetween('kirim_sana',[$danSana,$gachaSana])])
+            ->addSelect(['davr_tolov' => DB::table('taminotchi_tulovlar')
+                ->selectRaw('COALESCE(SUM(summa_uzs),0)')
+                ->whereColumn('taminotchi_id','t.id')
+                ->whereBetween('tolov_sana',[$danSana,$gachaSana])])
+            ->addSelect(['kirim_soni' => DB::table('taminot_kirimlar')
+                ->selectRaw('COUNT(*)')
+                ->whereColumn('taminotchi_id','t.id')
+                ->where('qoldiq','>',0)])
+            ->get()
+            ->map(function ($r) {
+                $r->boshi_qoldiq = (float) $r->boshi_kirim - (float) $r->boshi_tolov;
+                $r->oxiri_qoldiq = $r->boshi_qoldiq + (float) $r->davr_kirim - (float) $r->davr_tolov;
+                return $r;
+            });
+
+        // Saralash (jadval sarlavhalaridagi sortlash havolalari uchun)
+        $sortableCols = ['nomi','holat','boshi_qoldiq','davr_kirim','davr_tolov','oxiri_qoldiq'];
+        if ($request->sort && in_array($request->sort, $sortableCols)) {
+            $statistika = $request->dir === 'asc'
+                ? $statistika->sortBy($request->sort)->values()
+                : $statistika->sortByDesc($request->sort)->values();
+        } else {
+            $statistika = $statistika->sortByDesc('oxiri_qoldiq')->values();
+        }
 
         $jami = [
-            'kirim'  => $statistika->sum('jami_kirim'),
-            'tolov'  => $statistika->sum('jami_tolov'),
-            'qoldiq' => $statistika->sum('qoldiq'),
-            'qarazdor' => $statistika->where('qoldiq','>',0)->count(), // biz qarazdormiz
-            'hakdor'   => $statistika->where('qoldiq','<',0)->count(), // ular bizga qarazdor
+            'boshi'    => $statistika->sum('boshi_qoldiq'),
+            'kirim'    => $statistika->sum('davr_kirim'),
+            'tolov'    => $statistika->sum('davr_tolov'),
+            'oxiri'    => $statistika->sum('oxiri_qoldiq'),
+            'qarazdor' => $statistika->where('oxiri_qoldiq','>',0)->count(), // biz qarazdormiz
+            'hakdor'   => $statistika->where('oxiri_qoldiq','<',0)->count(), // ular bizga qarazdor
+            'teng'     => $statistika->where('oxiri_qoldiq','=',0)->count(),
+            'ochiq'    => $statistika->sum('kirim_soni'),
+            'jami_soni'=> $statistika->count(),
         ];
 
         if ($request->format === 'excel') {
-            return $this->excelHisobot($statistika, $danSana, $gachaSana);
+            return $this->excelHisobot($statistika, $danSana, $gachaSana, $usdKurs);
         }
 
         return view('taminotchi.hisobot', compact(
-            'statistika','jami','filiallar','filialId','danSana','gachaSana'
+            'statistika','jami','filiallar','filialId','danSana','gachaSana','usdKurs'
         ));
     }
 
-    private function excelHisobot($statistika, $dan, $gacha)
+    private function excelHisobot($statistika, $dan, $gacha, $usdKurs = 1)
     {
         $html  = '<html xmlns:o="urn:schemas-microsoft-com:office:office">';
         $html .= '<head><meta charset="UTF-8"></head><body>';
         $html .= "<h3>Ta'minotchilar hisoboti: $dan — $gacha</h3>";
         $html .= '<table border="1"><thead><tr>';
-        foreach (['#','Nomi','Telefon','Kirim','To\'lov','Qoldiq','Holat'] as $h)
+        foreach (['#','Nomi','Telefon','Valyuta','Davr boshi','Davr kirim','Davr to\'lov','Davr oxiri','Holat'] as $h)
             $html .= "<th>$h</th>";
         $html .= '</tr></thead><tbody>';
         foreach ($statistika as $i => $r) {
-            $html .= "<tr><td>" . ($i+1) . "</td><td>{$r->nomi}</td><td>{$r->telefon}</td>";
-            $html .= "<td style='text-align:right'>" . number_format($r->jami_kirim,0,'.',' ') . "</td>";
-            $html .= "<td style='text-align:right'>" . number_format($r->jami_tolov,0,'.',' ') . "</td>";
-            $html .= "<td style='text-align:right'>" . number_format($r->qoldiq,0,'.',' ') . "</td>";
-            $html .= "<td>" . ($r->qoldiq > 0 ? 'Qarazdor' : ($r->qoldiq < 0 ? 'Hakdor' : 'Teng')) . "</td>";
+            $html .= "<tr><td>" . ($i+1) . "</td><td>{$r->nomi}</td><td>{$r->telefon}</td><td>{$r->asosiy_valyuta}</td>";
+            $html .= "<td style='text-align:right'>" . number_format($r->boshi_qoldiq,0,'.',' ') . "</td>";
+            $html .= "<td style='text-align:right'>" . number_format($r->davr_kirim,0,'.',' ') . "</td>";
+            $html .= "<td style='text-align:right'>" . number_format($r->davr_tolov,0,'.',' ') . "</td>";
+            $html .= "<td style='text-align:right'>" . number_format($r->oxiri_qoldiq,0,'.',' ') . "</td>";
+            $html .= "<td>" . ($r->oxiri_qoldiq > 0 ? 'Qarazdor' : ($r->oxiri_qoldiq < 0 ? 'Hakdor' : 'Teng')) . "</td>";
             $html .= "</tr>";
         }
         $html .= '</tbody></table></body></html>';

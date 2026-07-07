@@ -5,87 +5,134 @@
 <li class="breadcrumb-item active">Yangi chiqim</li>
 @endsection
 
+@push('styles')
+<style>
+.bft-header-card {
+    background:linear-gradient(90deg,#7f1d1d,#b91c1c); color:#fff; border-radius:8px;
+    padding:10px 14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;
+}
+.bft-section-title {
+    font-weight:700; color:#fff; background:linear-gradient(90deg,#7f1d1d,#b91c1c);
+    padding:6px 12px; border-radius:6px 6px 0 0; margin-bottom:0; font-size:.85rem;
+    display:flex; justify-content:space-between; align-items:center;
+}
+.bft-wrap { border:1px solid #fca5a5; border-radius:0 0 6px 6px; overflow:hidden; background:#fff; }
+.bft-table { width:100%; margin-bottom:0 !important; font-size:.86rem; }
+.bft-table td { padding:9px 12px; vertical-align:middle; border-bottom:1px solid #fee2e2; }
+.bft-table tbody tr:last-child td { border-bottom:none; }
+.bft-table tbody tr:nth-child(even) { background:#fef8f8; }
+.bft-label { font-weight:700; color:#334155; white-space:nowrap; width:1%; background:#fef2f2; }
+.bft-wide { width:100%; }
+
+.bank-table { border-collapse:collapse; font-size:.82rem; width:100%; }
+.bank-table, .bank-table th, .bank-table td { border:1px solid #fca5a5; }
+.bank-table thead th {
+    background:linear-gradient(180deg,#dc2626,#7f1d1d); color:#fff; font-weight:800;
+    font-size:.66rem; letter-spacing:.02em; text-transform:uppercase; padding:7px 8px;
+    white-space:nowrap; text-align:right;
+}
+.bank-table thead th.tl { text-align:left; }
+.bank-table tbody tr:nth-child(odd)  td { background:#ffffff; }
+.bank-table tbody tr:nth-child(even) td { background:#fef8f8; }
+.bank-table tbody td { padding:6px 8px; vertical-align:middle; }
+.num { font-family:'Roboto Mono','Courier New',monospace; text-align:right; }
+.bank-wrap { overflow:auto; border:1px solid #fca5a5; border-radius:0 0 6px 6px; }
+
+.jami-stat-card {
+    border:1px solid #fca5a5; border-radius:6px; background:#fff; padding:16px; text-align:center; height:100%;
+}
+</style>
+@endpush
+
 @section('content')
 <form method="POST" action="{{ route('chiqim.store') }}">
 @csrf
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="fw-bold mb-0"><i class="bi bi-box-arrow-up me-2 text-danger"></i>Yangi tovar chiqim</h5>
-    <button type="submit" class="btn btn-danger">
-        <i class="bi bi-save me-1"></i>Saqlash va ombordan chiqarish
+{{-- ── Sarlavha ─────────────────────────────────────────────────── --}}
+<div class="bft-header-card mb-3">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <i class="bi bi-box-arrow-up fs-5"></i>
+        <span class="fw-bold">Yangi tovar chiqim</span>
+    </div>
+    <button type="submit" class="btn btn-sm btn-light py-1 fw-bold">
+        <i class="bi bi-check-circle me-1 text-danger"></i>Saqlash va ombordan chiqarish
     </button>
 </div>
 
 <div class="row g-3 mb-3">
+    {{-- ── Asosiy ma'lumotlar ────────────────────────────────────── --}}
     <div class="col-lg-8">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header"><h6 class="mb-0">Asosiy ma'lumotlar</h6></div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label fw-medium">Filial <span class="text-danger">*</span></label>
-                        <select name="filial_id" class="form-select" required>
-                            @foreach($filiallar as $f)
-                                <option value="{{ $f->id }}" {{ Auth::user()->filial_id==$f->id?'selected':'' }}>{{ $f->nomi }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-medium">Sana <span class="text-danger">*</span></label>
-                        <input type="date" name="sana" class="form-control" value="{{ date('Y-m-d') }}" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-medium">Sabab <span class="text-danger">*</span></label>
-                        <select name="sabab" class="form-select" required>
-                            @foreach($sabablar as $k => $nom)
-                                <option value="{{ $k }}">{{ $nom }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label fw-medium">Izoh</label>
-                        <textarea name="izoh" class="form-control" rows="2"></textarea>
-                    </div>
-                </div>
-            </div>
+        <div class="bft-section-title mb-0"><span><i class="bi bi-card-list me-1"></i>Asosiy ma'lumotlar</span></div>
+        <div class="bft-wrap">
+            <table class="bft-table">
+                <tbody>
+                    <tr>
+                        <td class="bft-label">Filial <span class="text-danger">*</span></td>
+                        <td class="bft-wide">
+                            <select name="filial_id" class="form-select form-select-sm" required>
+                                @foreach($filiallar as $f)
+                                    <option value="{{ $f->id }}" {{ Auth::user()->filial_id==$f->id?'selected':'' }}>{{ $f->nomi }}</option>
+                                @endforeach
+                            </select>
+                        </td>
+                        <td class="bft-label">Sana <span class="text-danger">*</span></td>
+                        <td class="bft-wide">
+                            <input type="date" name="sana" class="form-control form-control-sm" value="{{ date('Y-m-d') }}" required>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="bft-label">Sabab <span class="text-danger">*</span></td>
+                        <td colspan="3">
+                            <select name="sabab" class="form-select form-select-sm" required>
+                                @foreach($sabablar as $k => $nom)
+                                    <option value="{{ $k }}">{{ $nom }}</option>
+                                @endforeach
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="bft-label">Izoh</td>
+                        <td colspan="3">
+                            <textarea name="izoh" class="form-control form-control-sm" rows="2"></textarea>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
     <div class="col-lg-4">
-        <div class="card border-0 shadow-sm bg-danger bg-opacity-10 h-100">
-            <div class="card-body d-flex flex-column justify-content-center text-center">
-                <div class="text-muted mb-1">Jami summa</div>
-                <div class="display-6 fw-bold text-danger" id="jami-summa">0</div>
-                <div class="text-muted small">so'm</div>
-                <hr>
-                <div class="text-muted small" id="qator-soni">0 ta pozitsiya</div>
-            </div>
+        <div class="jami-stat-card">
+            <div class="text-muted small text-uppercase fw-bold">Jami summa</div>
+            <div class="display-6 fw-bold text-danger" id="jami-summa">0</div>
+            <div class="text-muted small">so'm</div>
+            <hr>
+            <div class="text-muted small" id="qator-soni">0 ta pozitsiya</div>
         </div>
     </div>
 </div>
 
-<div class="card border-0 shadow-sm mb-3">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">Tovarlar ro'yxati</h6>
-        <button type="button" class="btn btn-sm btn-danger" onclick="qatorQosh()">
-            <i class="bi bi-plus-lg me-1"></i>Qator qo'shish
-        </button>
-    </div>
-    <div class="table-responsive">
-        <table class="table mb-0 align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th style="width:40px">#</th>
-                    <th>Tovar</th>
-                    <th style="width:150px">Qoldiq</th>
-                    <th style="width:120px">Miqdor</th>
-                    <th style="width:150px">Narx (so'm)</th>
-                    <th style="width:150px" class="text-end">Jami</th>
-                    <th style="width:40px"></th>
-                </tr>
-            </thead>
-            <tbody id="chiqim-tbody"></tbody>
-        </table>
-    </div>
+{{-- ── Tovarlar ro'yxati ────────────────────────────────────────── --}}
+<div class="bft-section-title mb-0">
+    <span><i class="bi bi-box-seam me-1"></i>Tovarlar ro'yxati</span>
+    <button type="button" class="btn btn-sm btn-light py-0 fw-bold" onclick="qatorQosh()">
+        <i class="bi bi-plus-lg me-1"></i>Qator qo'shish
+    </button>
+</div>
+<div class="bank-wrap mb-3">
+    <table class="bank-table">
+        <thead>
+            <tr>
+                <th style="width:36px">#</th>
+                <th class="tl">Tovar</th>
+                <th style="width:120px">Qoldiq</th>
+                <th style="width:130px">Miqdor</th>
+                <th style="width:140px">Narx (so'm)</th>
+                <th style="width:140px">Jami</th>
+                <th style="width:40px"></th>
+            </tr>
+        </thead>
+        <tbody id="chiqim-tbody"></tbody>
+    </table>
 </div>
 
 <div class="d-flex justify-content-between mb-4">
@@ -123,7 +170,7 @@ function qatorQosh() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
         <td class="text-muted small">${qN}</td>
-        <td>
+        <td class="tl">
             <select name="tovarlar[${n}][tovar_id]" class="form-select form-select-sm" required
                     onchange="tovarTanlandi(this,${n})">
                 <option value="">— Tovar tanlang —</option>
@@ -144,8 +191,8 @@ function qatorQosh() {
                    value="0" min="0" step="100" required
                    onchange="jamiHisob(${n})">
         </td>
-        <td class="text-end fw-bold text-danger" id="jami-${n}">0</td>
-        <td>
+        <td class="num fw-bold text-danger" id="jami-${n}">0</td>
+        <td class="text-center">
             <button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="this.closest('tr').remove(); jamiYangilash()">
                 <i class="bi bi-trash"></i>
             </button>
