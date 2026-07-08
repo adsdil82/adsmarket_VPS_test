@@ -10,6 +10,7 @@ class TovarKatalog extends Model
 
     public function guruh()    { return $this->belongsTo(TovarGuruh::class, 'guruh_id'); }
     public function omborQoldiqlar() { return $this->hasMany(OmborQoldiq::class, 'tovar_id'); }
+    public function barkodlar() { return $this->hasMany(TovarBarkod::class, 'tovar_id'); }
     public function scopeFaol($q) { return $q->where('holat', 'faol'); }
 
     /** Qoldiq kamligi belgisi */

@@ -42,6 +42,21 @@
                     </div>
                     @error('barkod')<div class="text-danger small">{{ $message }}</div>@enderror
                 </div>
+                <div class="col-12">
+                    <label class="form-label fw-medium">Qo'shimcha shtrix-kodlar</label>
+                    <div id="qoshimcha-barkodlar-list">
+                        @foreach(old('qoshimcha_barkodlar', []) as $qb)
+                        <div class="input-group mb-2">
+                            <input type="text" name="qoshimcha_barkodlar[]" class="form-control" value="{{ $qb }}">
+                            <button type="button" class="btn btn-outline-danger" onclick="this.closest('.input-group').remove()"><i class="bi bi-trash"></i></button>
+                        </div>
+                        @endforeach
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="qoshimchaBarkodQosh()">
+                        <i class="bi bi-plus-lg me-1"></i>Yana bitta barkod
+                    </button>
+                    @error('qoshimcha_barkodlar.*')<div class="text-danger small">{{ $message }}</div>@enderror
+                </div>
                 <div class="col-md-4">
                     <label class="form-label fw-medium">O'lchov birligi <span class="text-danger">*</span></label>
                     <select name="birlik" class="form-select">
@@ -98,4 +113,16 @@
 </div>
 </div>
 </div>
+
+@push('scripts')
+<script>
+function qoshimchaBarkodQosh() {
+    const div = document.createElement('div');
+    div.className = 'input-group mb-2';
+    div.innerHTML = `<input type="text" name="qoshimcha_barkodlar[]" class="form-control">
+        <button type="button" class="btn btn-outline-danger" onclick="this.closest('.input-group').remove()"><i class="bi bi-trash"></i></button>`;
+    document.getElementById('qoshimcha-barkodlar-list').appendChild(div);
+}
+</script>
+@endpush
 @endsection

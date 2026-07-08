@@ -294,7 +294,7 @@ async function barkodSkan() {
     const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
     const data = await res.json();
 
-    const aniqMos = data.find(t => t.barkod === q);
+    const aniqMos = data.find(t => (t.barkodlar_royxati || [t.barkod]).includes(q));
     if (aniqMos) {
         if (aniqMos.qoldiq > 0) {
             savatQosh(aniqMos.id, aniqMos.nomi, aniqMos.sotish_narx, aniqMos.birlik, aniqMos.qoldiq);

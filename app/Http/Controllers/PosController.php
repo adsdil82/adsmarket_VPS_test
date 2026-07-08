@@ -56,20 +56,24 @@ class PosController extends Controller
             ->when($request->guruh_id, fn($q) => $q->where('guruh_id', $request->guruh_id))
             ->when($request->qidiruv,  fn($q) => $q->where(function($q2) use ($request) {
                 $q2->where('nomi', 'like', "%{$request->qidiruv}%")
-                   ->orWhere('barkod', $request->qidiruv);
+                   ->orWhere('barkod', $request->qidiruv)
+                   ->orWhereHas('barkodlar', fn($qb) => $qb->where('barkod', $request->qidiruv));
             }))
-            ->with('guruh:id,nomi')
+            ->with(['guruh:id,nomi', 'barkodlar:tovar_id,barkod'])
             ->orderBy('nomi')
             ->limit(50)
             ->get(['id','nomi','barkod','sotish_narx','qoldiq','birlik','guruh_id']);
 
         // Ko'rsatiladigan qoldiqni ham SHU OMBOR bo'yicha almashtiramiz
         // (tovar_katalog.qoldiq — kompaniya bo'yicha jami, chalg'itmasligi uchun).
-        if ($ombor) {
-            $tovarlar->each(function ($t) use ($ombor) {
+        // Barcha barkodlar (asosiy + qo'shimcha) — frontend skanerlashda TENGLIK
+        // tekshiruvini shu ro'yxatga qarab qiladi (multi-barkod).
+        $tovarlar->each(function ($t) use ($ombor) {
+            if ($ombor) {
                 $t->qoldiq = $this->stockService->qoldiq($ombor->id, $t->id);
-            });
-        }
+            }
+            $t->barkodlar_royxati = $t->barkodlar->pluck('barkod')->push($t->barkod)->filter()->values();
+        });
 
         return response()->json($tovarlar);
     }

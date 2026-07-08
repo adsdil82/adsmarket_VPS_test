@@ -1,9 +1,11 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Models\TovarBarkod;
 use App\Models\TovarGuruh;
 use App\Models\TovarKatalog;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class TovarKatalogController extends Controller
 {
@@ -46,23 +48,32 @@ class TovarKatalogController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'guruh_id'     => 'nullable|exists:tovar_guruhlar,id',
-            'nomi'         => 'required|string|max:200',
-            'barkod'       => 'nullable|string|max:50|unique:tovar_katalog,barkod',
-            'birlik'       => 'required|string|max:20',
-            'tan_narx'     => 'required|numeric|min:0',
-            'sotish_narx'  => 'required|numeric|min:0',
-            'nasiya_narx'  => 'required|numeric|min:0',
-            'min_qoldiq'   => 'nullable|numeric|min:0',
-            'holat'        => 'in:faol,nofaol',
-            'izoh'         => 'nullable|string',
+            'guruh_id'                => 'nullable|exists:tovar_guruhlar,id',
+            'nomi'                    => 'required|string|max:200',
+            'barkod'                  => 'nullable|string|max:50|unique:tovar_katalog,barkod',
+            'birlik'                  => 'required|string|max:20',
+            'tan_narx'                => 'required|numeric|min:0',
+            'sotish_narx'             => 'required|numeric|min:0',
+            'nasiya_narx'             => 'required|numeric|min:0',
+            'min_qoldiq'              => 'nullable|numeric|min:0',
+            'holat'                   => 'in:faol,nofaol',
+            'izoh'                    => 'nullable|string',
+            'qoshimcha_barkodlar'     => 'nullable|array',
+            'qoshimcha_barkodlar.*'   => 'nullable|string|max:50|distinct|unique:tovar_barkodlar,barkod|unique:tovar_katalog,barkod',
         ]);
 
         // Shtrix-kod kiritilmagan bo'lsa — avtomatik EAN-13 generatsiya qilinadi
         // (yangi tovarni darhol chop etish/sotish mumkin bo'lishi uchun).
         $data['barkod'] = $data['barkod'] ?: $this->barcodeService->generate();
 
-        TovarKatalog::create($data);
+        $qoshimchaBarkodlar = array_filter($data['qoshimcha_barkodlar'] ?? []);
+        unset($data['qoshimcha_barkodlar']);
+
+        $tovar = TovarKatalog::create($data);
+        foreach ($qoshimchaBarkodlar as $barkod) {
+            TovarBarkod::create(['tovar_id' => $tovar->id, 'barkod' => $barkod]);
+        }
+
         return redirect()->route('katalog.index')->with('muvaffaqiyat', "Tovar «{$data['nomi']}» qo'shildi.");
     }
 
@@ -75,18 +86,34 @@ class TovarKatalogController extends Controller
     public function update(Request $request, TovarKatalog $katalog)
     {
         $data = $request->validate([
-            'guruh_id'     => 'nullable|exists:tovar_guruhlar,id',
-            'nomi'         => 'required|string|max:200',
-            'barkod'       => "nullable|string|max:50|unique:tovar_katalog,barkod,{$katalog->id}",
-            'birlik'       => 'required|string|max:20',
-            'tan_narx'     => 'required|numeric|min:0',
-            'sotish_narx'  => 'required|numeric|min:0',
-            'nasiya_narx'  => 'required|numeric|min:0',
-            'min_qoldiq'   => 'nullable|numeric|min:0',
-            'holat'        => 'in:faol,nofaol',
-            'izoh'         => 'nullable|string',
+            'guruh_id'                => 'nullable|exists:tovar_guruhlar,id',
+            'nomi'                    => 'required|string|max:200',
+            'barkod'                  => "nullable|string|max:50|unique:tovar_katalog,barkod,{$katalog->id}",
+            'birlik'                  => 'required|string|max:20',
+            'tan_narx'                => 'required|numeric|min:0',
+            'sotish_narx'             => 'required|numeric|min:0',
+            'nasiya_narx'             => 'required|numeric|min:0',
+            'min_qoldiq'              => 'nullable|numeric|min:0',
+            'holat'                   => 'in:faol,nofaol',
+            'izoh'                    => 'nullable|string',
+            'qoshimcha_barkodlar'     => 'nullable|array',
+            'qoshimcha_barkodlar.*'   => ['nullable', 'string', 'max:50', 'distinct',
+                Rule::unique('tovar_barkodlar', 'barkod')->where(fn($q) => $q->where('tovar_id', '!=', $katalog->id)),
+                Rule::unique('tovar_katalog', 'barkod')->ignore($katalog->id),
+            ],
         ]);
+
+        $qoshimchaBarkodlar = array_filter($data['qoshimcha_barkodlar'] ?? []);
+        unset($data['qoshimcha_barkodlar']);
+
         $katalog->update($data);
+
+        // To'liq ro'yxat qayta yuboriladi — mavjudlarini tozalab qayta yozamiz.
+        $katalog->barkodlar()->delete();
+        foreach ($qoshimchaBarkodlar as $barkod) {
+            TovarBarkod::create(['tovar_id' => $katalog->id, 'barkod' => $barkod]);
+        }
+
         return redirect()->route('katalog.index')->with('muvaffaqiyat', 'Tovar yangilandi.');
     }
 
