@@ -83,7 +83,7 @@
                                 <i class="bi bi-key"></i>
                             </button>
                             {{-- POS PIN o'rnatish --}}
-                            @if(in_array($u->rol, ['admin','menejer','kassir']))
+                            @if(in_array($u->rol, ['admin','menejer','kassir','sotuvchi']))
                             <button class="btn btn-xs btn-outline-info py-0 px-1"
                                     style="font-size:.72rem"
                                     title="POS PIN kod o'rnatish"

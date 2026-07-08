@@ -27,7 +27,7 @@ class PosTerminalController extends Controller
 
         $kassirlar = Foydalanuvchi::faol()
             ->where(fn($q) => $q->where('filial_id', $filialId)->orWhere('rol', 'admin'))
-            ->whereIn('rol', ['admin', 'menejer', 'kassir'])
+            ->whereIn('rol', ['admin', 'menejer', 'kassir', 'sotuvchi'])
             ->orderBy('ism_familiya')
             ->get(['id', 'ism_familiya']);
 
@@ -85,12 +85,13 @@ class PosTerminalController extends Controller
             ->orderBy('nomi')->get();
 
         $autoLockDaqiqa = self::AUTO_LOCK_DAQIQA;
+        $kassir = Foydalanuvchi::find($xodimId);
 
         if (session('pos_terminal.qulflangan')) {
             session(['pos_terminal.qulflangan' => false]);
         }
 
-        return view('terminal.sotish', compact('smena', 'guruhlar', 'autoLockDaqiqa'));
+        return view('terminal.sotish', compact('smena', 'guruhlar', 'autoLockDaqiqa', 'kassir'));
     }
 
     /** Ekranni qulflash. */
@@ -120,7 +121,7 @@ class PosTerminalController extends Controller
 
         $nomzodlar = Foydalanuvchi::faol()
             ->where(fn($q) => $q->where('filial_id', $filialId)->orWhere('rol', 'admin'))
-            ->whereIn('rol', ['admin', 'menejer', 'kassir'])
+            ->whereIn('rol', ['admin', 'menejer', 'kassir', 'sotuvchi'])
             ->whereNotNull('pin_kod')
             ->get();
 

@@ -307,7 +307,7 @@ class PosController extends Controller
         $gachaSana = $request->gacha_sana ?? now()->toDateString();
 
         $kassirlar = DB::table('foydalanuvchilar')
-            ->whereIn('rol', ['admin', 'menejer', 'kassir'])
+            ->whereIn('rol', ['admin', 'menejer', 'kassir', 'sotuvchi'])
             ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
             ->orderBy('ism_familiya')->get(['id', 'ism_familiya']);
 

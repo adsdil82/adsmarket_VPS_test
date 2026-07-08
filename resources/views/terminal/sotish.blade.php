@@ -86,7 +86,7 @@ html, body { overflow: hidden; height:100%; margin:0; background:#eef2f7; }
 <div id="smena-bar">
     <span><i class="bi bi-cash-register me-1"></i><strong>{{ $smena->filial->nomi ?? '' }}</strong>
         &nbsp;|&nbsp; Smena: <strong>{{ $smena->smena_raqami }}</strong>
-        &nbsp;|&nbsp; Kassir: <strong id="kassir-nomi-label">{{ $smena->xodim->ism_familiya ?? '—' }}</strong>
+        &nbsp;|&nbsp; Kassir: <strong id="kassir-nomi-label">{{ $kassir->ism_familiya ?? '—' }}</strong>
         &nbsp;|&nbsp; <span id="soat"></span>
     </span>
     <span class="d-flex gap-2">
@@ -226,7 +226,7 @@ html, body { overflow: hidden; height:100%; margin:0; background:#eef2f7; }
 <div id="lock-overlay">
     <div class="lock-box">
         <i class="bi bi-lock-fill fs-1 text-warning d-block mb-2"></i>
-        <div class="fw-bold fs-5" id="lock-kassir-nomi">{{ $smena->xodim->ism_familiya ?? '' }}</div>
+        <div class="fw-bold fs-5" id="lock-kassir-nomi">{{ $kassir->ism_familiya ?? '' }}</div>
         <div class="text-muted small mb-2">PIN kodni kiriting</div>
         <div class="pin-dots" id="lock-pin-dots"></div>
         <div id="pin-xato"></div>
@@ -251,7 +251,7 @@ html, body { overflow: hidden; height:100%; margin:0; background:#eef2f7; }
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 const FILIAL_ID = {{ $smena->filial_id }};
-const JORIY_XODIM_ID = {{ $smena->xodim_id }};
+const JORIY_XODIM_ID = {{ $kassir->id ?? 'null' }};
 let savat = {};
 let chekModal;
 let jamiBaza = 0;
