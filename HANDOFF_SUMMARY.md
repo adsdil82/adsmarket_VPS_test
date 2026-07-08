@@ -2,8 +2,9 @@
 
 > Server: `/var/www/adsmarket` (SSH: `nasiyapro`, config `/d/ClaudeProjekt/.ssh/config`)
 > Local nusxa: `D:\ClaudeProjekt\adsmarket_sql\`
-> Git: server repoda mavjud (`git status` — o'zgarishlar hali commit qilinmagan)
-> Sana: 2026-07-07
+> Git: server repoda mavjud. Bosqich 1-4(qism1) — commit `bcef5d2`. Bosqich 4
+> PIN-terminal UI-test tuzatishlari — commit `97bf290`. Multi-barkod — commit `d05b53c`.
+> Sana: 2026-07-08 (birinchi yaratilgan: 2026-07-07)
 
 ## 1. Umumiy kontekst
 
@@ -16,8 +17,11 @@ bosqichdan keyin keyingisiga aniq buyruq berdi:
 - ✅ **Bosqich 1** — POS guruh (sidebar), POS Dashboard, POS hisobotlar
 - ✅ **Bosqich 2** — Kassir smenasi (ochish/yopish/topshirish)
 - ✅ **Bosqich 3** — Qaytim/Vozvrat moduli
-- ✅ **Bosqich 4 (qism 1)** — Fullscreen PIN-kirish rejimi — **TUGALLANDI va TEST QILINDI**
-- ⬜ **Bosqich 4 (qolgan qismlari)** — multi-barkod, chek/printer sozlamalari — **BOSHLANMAGAN**
+- ✅ **Bosqich 4 (qism 1)** — Fullscreen PIN-kirish rejimi — backend TUGALLANDI,
+  **real brauzerda ham to'liq test qilindi (keyingi sessiyada), 2 ta xato topilib tuzatildi**
+- ✅ **Bosqich 4 (qism 2)** — Multi-barkod — **TUGALLANDI va TEST QILINDI**
+- ⬜ **Bosqich 4 (qolgan qismi)** — chek/printer sozlamalari, POS umumiy sozlamalar
+  sahifasi — **BOSHLANMAGAN**
 
 **Muhim tamoyil butun sessiya davomida**: *"Mavjud ishlayotgan funksiyalarni buzma."*
 Shu sababli ko'p joyda **refactor emas, duplikatsiya** yo'li tanlandi (masalan,
@@ -103,7 +107,7 @@ qaytarishni oldini olish** shu metodga tayanadi.
 `yunalish=chiqim` yozuvi, ortiqcha qaytarish bloklanishi — barchasi tasdiqlangan,
 test ma'lumotlari tozalangan.
 
-## 5. Bosqich 4 (qism 1) — Fullscreen PIN-kirish rejimi (TUGALLANGAN, JORIY SESSIYADA)
+## 5. Bosqich 4 (qism 1) — Fullscreen PIN-kirish rejimi (TUGALLANGAN)
 
 ### 5.1 Yangi migratsiyalar
 - **`060_foydalanuvchi_pin.php`** — `foydalanuvchilar`ga qo'shadi:
@@ -198,11 +202,93 @@ emas. Bu **qasddan qilingan tanlov** (mavjud, test qilingan POS asosini
 buzmaslik uchun), lekin **haqiqiy production xavfsizlik talabi** bo'lsa,
 kelajakda qayta ko'rib chiqish kerak.
 
+### 5.9 Real brauzerda test qilingandan keyin topilgan va tuzatilgan 2 ta xato (commit `97bf290`)
+
+Avvalgi sessiyada bu funksiya faqat **tinker/curl** darajasida tekshirilgan edi
+(section 7 pastda). Keyingi sessiyada Chrome orqali to'liq PIN-kirish →
+lock/unlock → kassir-almashtirish oqimi bosqichma-bosqich sinovdan o'tkazildi
+va shu jarayonda ikkita jiddiy xato topildi:
+
+1. **`sotuvchi` roli PIN tizimidan butunlay chetlab qo'yilgan edi.** Tizimda
+   ikkita alohida rol bor — `kassir` ("Kassir", hech kim ishlatmaydi) va
+   `sotuvchi` ("Sotuvchi", **haqiqiy POS operatorlari shu rolda**). Uchta joyda
+   ro'yxat qat'iy `['admin','menejer','kassir']` bilan cheklangan edi:
+   - `resources/views/admin/foydalanuvchilar.blade.php` (86-qator) — "POS PIN
+     kod o'rnatish" tugmasi `sotuvchi` qatorlarida umuman ko'rinmas edi.
+   - `app/Http/Controllers/PosTerminalController.php` (2 joy — `pinForma()` va
+     `yechish()` dagi nomzodlar so'rovi) — haqiqiy kassirlar terminal
+     nomzodlar ro'yxatida topilmas edi.
+   - `app/Http/Controllers/PosController.php` (`hisobotlar()` dagi "kassirlar"
+     filtr-dropdown) — POS hisobotlarda ham `sotuvchi` ko'rinmas edi.
+   **Tuzatish**: har uch joyga `'sotuvchi'` qo'shildi (additiv, `kassir`ga
+   tegilmadi).
+2. **Terminal sarlavhasi/qulflash ekrani noto'g'ri odamni ko'rsatardi.**
+   `resources/views/terminal/sotish.blade.php` (89- va 229-qatorlar, JS
+   `JORIY_XODIM_ID`) `$smena->xodim->ism_familiya` (ya'ni **smenani ochgan
+   xodim**) dan foydalangan, PIN orqali joriy kirgan kassirdan emas. Agar
+   smenani boshqa odam ochib, keyin PIN orqali boshqa kassir terminaldan
+   foydalansa — sarlavha noto'g'ri ism ko'rsatar edi (audit maqsadiga zid).
+   **Tuzatish**: `PosTerminalController::index()` endi
+   `$kassir = Foydalanuvchi::find($xodimId)` ni view'ga uzatadi, view esa
+   `$kassir->ism_familiya`dan foydalanadi.
+
+Test qilingan (brauzerda, real UI orqali): PIN o'rnatish (admin panel),
+kassir tanlash + PIN klaviatura (noto'g'ri/to'g'ri), terminal ochilishi va
+sarlavhadagi kassir nomi to'g'riligi, qulflash/yechish (noto'g'ri/to'g'ri PIN),
+boshqa kassir PIN bilan yechilganda avtomatik almashish + savat tozalanishi +
+`location.reload()`, audit-log (`pos_terminal_loglar`) barcha hodisalarni
+to'g'ri yozgani. Test PIN'lar va audit-log yozuvlari tozalangan; "Tizim Admin"
+hisobidagi oldindan mavjud PIN test paytida **4321**ga almashtirildi (asl
+qiymati hash bo'lgani uchun tiklab bo'lmadi).
+
 ---
 
-## 6. O'zgargan/yaratilgan fayllar ro'yxati (server repo, `git status` asosida)
+## 6. Bosqich 4 (qism 2) — Multi-barkod (TUGALLANGAN, commit `d05b53c`)
 
-### Yangi (untracked) — bevosita POS bilan bog'liq:
+Bitta tovar uchun bir nechta shtrix-kod. Asosiy `tovar_katalog.barkod` ustuni
+**o'zgarishsiz qoldi** (orqaga moslik), yangi jadval faqat qo'shimcha
+barkodlarni saqlaydi.
+
+**Yangi**:
+- `database/migrations/062_tovar_barkodlar.php` — `tovar_barkodlar` (id,
+  tovar_id FK → `tovar_katalog` cascade-delete, barkod unique, timestamps).
+- `app/Models/TovarBarkod.php` — model, `belongsTo(TovarKatalog::class)`.
+- `TovarKatalog::barkodlar()` — yangi `hasMany` relation.
+
+**O'zgartirilgan**:
+- `PosController::tovarlar()` — qidiruv endi `orWhereHas('barkodlar', ...)`
+  orqali qo'shimcha barkodlarni ham qamrab oladi; har bir natijaga
+  `barkodlar_royxati` (asosiy + qo'shimcha, birlashtirilgan) massivi qo'shildi.
+- `resources/views/ombor/pos/index.blade.php` va
+  `resources/views/terminal/sotish.blade.php` (**ikkalasi ham** — qasddan
+  duplikatsiya, TODO_NEXT'da ogohlantirilganidek) — `barkodSkan()` JS'idagi
+  `data.find(t => t.barkod === q)` endi
+  `data.find(t => (t.barkodlar_royxati || [t.barkod]).includes(q))`ga
+  almashtirildi.
+- `app/Http/Controllers/TovarKatalogController.php` (`store()`/`update()`) —
+  `qoshimcha_barkodlar[]` massivini validatsiya qilib saqlaydi/yangilaydi
+  (`update()`da eskilarini o'chirib qayta yozadi — forma har doim to'liq
+  ro'yxatni qayta yuboradi).
+- `resources/views/ombor/katalog/create.blade.php` va `edit.blade.php` —
+  "Qo'shimcha shtrix-kodlar" bo'limi, JS orqali dinamik qo'shish/o'chirish
+  (`qoshimchaBarkodQosh()`, har bir qatorda o'chirish tugmasi).
+
+**Test qilingan (brauzerda)**: mahsulotga (`LG Vc 76 a`, id=135) qo'shimcha
+barkod qo'shildi va saqlandi → oddiy POS ekranida shu barkod bilan
+skanerlanganda mahsulot to'g'ri savatga tushdi → xuddi shu barkod fullscreen
+terminalda ham ishladi → **regressiya yo'q**: asosiy (eski) barkod ikkala
+ekranda ham muammosiz davom etmoqda. Test barkodi bazadan tozalangan.
+
+---
+
+## 7. O'zgargan/yaratilgan fayllar ro'yxati
+
+> Bosqich 1-4(qism1) — commit `bcef5d2`da. PIN-terminal UI-test tuzatishlari —
+> commit `97bf290`da. Multi-barkod — commit `d05b53c`da. Quyidagi ro'yxat
+> **tarixiy** (bu fayllar avval untracked/modified holatda edi, hozir hammasi
+> commit qilingan).
+
+### Yangi (endi commit qilingan) — bevosita POS bilan bog'liq:
 ```
 app/Http/Controllers/PosQaytimController.php
 app/Http/Controllers/PosSmenaController.php
@@ -221,6 +307,8 @@ resources/views/ombor/pos/hisobotlar.blade.php
 resources/views/ombor/pos/qaytim/         (papka)
 resources/views/ombor/pos/smena/          (papka)
 resources/views/terminal/                 (papka: pin.blade.php, sotish.blade.php)
+app/Models/TovarBarkod.php
+database/migrations/062_tovar_barkodlar.php
 ```
 
 ### O'zgartirilgan (modified) — bevosita POS bilan bog'liq:
@@ -233,9 +321,14 @@ app/Models/PosTafsilot.php                   (+ qaytarilganMiqdor)
 resources/views/admin/foydalanuvchilar.blade.php  (+ PIN modal)
 resources/views/layouts/app.blade.php        (+ POS guruh, Fullscreen kassa link)
 resources/views/ombor/pos/chek.blade.php     (+ Qaytim tugmasi)
-resources/views/ombor/pos/index.blade.php    (+ smena-bar)
+resources/views/ombor/pos/index.blade.php    (+ smena-bar, + multi-barkod skanerlash)
 resources/views/ombor/pos/tarix.blade.php    (+ Qaytim tugmasi)
 routes/web.php                               (+ pos.smena.*, pos.qaytim.*, terminal.*, admin PIN route)
+app/Models/TovarKatalog.php                  (+ barkodlar() relation)
+app/Http/Controllers/TovarKatalogController.php (+ qo'shimcha barkodlar saqlash)
+resources/views/ombor/katalog/create.blade.php  (+ qo'shimcha barkodlar UI)
+resources/views/ombor/katalog/edit.blade.php    (+ qo'shimcha barkodlar UI)
+resources/views/terminal/sotish.blade.php    (+ to'g'ri kassir nomi, + multi-barkod skanerlash)
 ```
 
 ### Boshqa (bu sessiyaga bevosita aloqasi yo'q, oldingi sessiyalardan qolgan
@@ -252,48 +345,44 @@ Kirim/Chiqim hujjatlar refactor (ombor/kirim/, ombor/chiqim/ papkalar,
   hujjatlar/ subpapkalar, ImportService)
 lang/uz/validation.php — yangi validatsiya xabarlari
 ```
-> Bu fayllar HAM commit qilinmagan holatda turibdi. Agar ular boshqa
-> (tugallangan) ishlar bo'lsa, POS commit'idan **alohida** commit qilish
-> tavsiya etiladi — aralashtirmaslik uchun. Batafsil TODO_NEXT.md'da.
+> Bu fayllar hali ham commit qilinmagan holatda turibdi (POS ishlaridan
+> mustaqil). Agar ular tugallangan bo'lsa, POS commit'laridan **alohida**
+> commit qilish tavsiya etiladi.
 
 ---
 
-## 7. Test qilingan narsalar (bu sessiyada, Bosqich 4)
+## 8. Test qilingan narsalar
 
-Barchasi **tinker** orqali (`php artisan tinker /tmp/test_*.php`) + **curl**
-route-darajasida (`302` kutilgan, `500` yo'q, `laravel.log`da yangi xato yo'q):
-
+**Bosqich 4 qism 1 (PIN-terminal), birinchi sessiya** — faqat tinker/curl:
 1. `Foydalanuvchi::pinTogri()` / `pinBloklanganmi()` — to'g'ri/noto'g'ri PIN,
    hash tekshiruvi.
 2. Bloklash logikasi: `pin_xato_soni++` → 5-chida `pin_bloklangan_gacha` o'rnatiladi
    → `pinBloklanganmi()=true`.
-3. **To'liq terminal oqimi**: `pinForma()` → noto'g'ri PIN (422) → to'g'ri PIN (200,
-   sessiya o'rnatiladi) → `index()` (ochiq smena bilan ishlaydi) → `qulflash()` →
-   `yechish()` noto'g'ri PIN (422) → `yechish()` to'g'ri PIN (200,
-   `boshqa_kassir:false`) → `chiqish()` (sessiya tozalanadi).
+3. To'liq terminal oqimi tinker/curl orqali (route darajasida `302`, `500` yo'q).
 4. `AdminController::foydalanuvchiPinOrnat()` — PIN o'rnatish, keyin
    `pinTogri()` bilan tasdiqlash.
-5. Route darajasida: `/terminal/pin`, `/terminal`, `/admin/foydalanuvchilar`,
-   `/pos/dashboard` — barchasi `302` (login redirect), 500 yo'q.
 
-**Barcha test ma'lumotlari** (PIN qiymatlari, `pos_terminal_loglar` yozuvlari)
-tozalangan — production ma'lumotlarga ta'sir qilmagan.
+**Bosqich 4 qism 1, ikkinchi sessiya — real brauzerda** (bo'lim 5.9'da
+batafsil): PIN o'rnatish, kassir tanlash + klaviatura, terminal ochilishi +
+to'g'ri kassir nomi, qulflash/yechish, boshqa-kassir almashish, audit-log —
+barchasi Chrome orqali tasdiqlangan, 2 ta xato tuzatilgan.
 
-> ❌ **Test QILINMAGAN**: real brauzerda PIN klaviaturasi bosish, qulflash
-> overlay UI/UX, avtomatik-qulflash timer real vaqt oqimida, "boshqa kassir"
-> holatida frontend `location.reload()` xatti-harakati, mobil/planshet
-> ekranida fullscreen ko'rinish. Bular faqat **backend/logic darajasida**
-> tasdiqlangan.
+**Bosqich 4 qism 2 (multi-barkod), real brauzerda** (bo'lim 6'da batafsil):
+qo'shimcha barkod qo'shish, ikkala ekranda (oddiy POS + fullscreen terminal)
+skanerlash, asosiy barkod regressiyasiz ishlashi.
+
+**Barcha test ma'lumotlari** (PIN qiymatlari, `pos_terminal_loglar` yozuvlari,
+test barkodlar) har safar tozalangan — production ma'lumotlarga ta'sir
+qilmagan.
 
 ---
 
-## 8. Keyingi bosqichlar (foydalanuvchi so'ragan, hali BOSHLANMAGAN)
+## 9. Keyingi bosqichlar (foydalanuvchi so'ragan, hali BOSHLANMAGAN)
 
-1. **Multi-barkod** — bitta tovar uchun bir nechta shtrix-kod
-   (`product_barcodes` jadvali specda ko'rsatilgan, hali yaratilmagan).
-2. **Chek/printer sozlamalari** — `pos_printer_settings`, `pos_receipt_templates`
+1. **Chek/printer sozlamalari** — `pos_printer_settings`, `pos_receipt_templates`
    jadvallari, POS sozlamalar sahifasi — hali boshlanmagan.
-3. **POS sozlamalari** umumiy sahifasi (`pos_settings` jadvali) — auto-lock
+2. **POS sozlamalari** umumiy sahifasi (`pos_settings` jadvali) — auto-lock
    daqiqasi hozircha kodda hardcoded (`AUTO_LOCK_DAQIQA=10`), sozlamalar
    sahifasi orqali boshqarilishi kerak edi spec bo'yicha.
-4. Fullscreen terminalda haqiqiy browser-darajasida test (yuqoridagi 7-band).
+3. Mobil/planshet ekranida fullscreen terminal ko'rinishi hali maxsus test
+   qilinmagan (desktop brauzerda to'liq tasdiqlangan).
