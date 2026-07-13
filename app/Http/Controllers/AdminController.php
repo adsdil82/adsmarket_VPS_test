@@ -32,6 +32,9 @@ class AdminController extends Controller
         'qurilmalar'     => ['nomi' => 'Qurilmalar',        'icon' => 'phone'],
         'xabarnoma'      => ['nomi' => 'Xabarnoma',         'icon' => 'chat-dots'],
         'transferlar'    => ['nomi' => 'Transferlar',       'icon' => 'arrow-left-right'],
+        'autopay'        => ['nomi' => 'AutoPay',           'icon' => 'credit-card-fill'],
+        'hibrit_pochta'  => ['nomi' => 'HibritPochta',      'icon' => 'envelope-paper-fill'],
+        'xodimlar_ish_haqi' => ['nomi' => 'Xodimlar ish haqi', 'icon' => 'person-badge'],
         'boshqaruv'      => ['nomi' => 'Boshqaruv',         'icon' => 'gear'],
     ];
 
@@ -78,9 +81,10 @@ class AdminController extends Controller
     /** Sozlamalar sahifasi */
     public function sozlamalar()
     {
-        $soz    = Sozlama::barchasi();
+        $soz     = Sozlama::barchasi();
         $temalar = self::$temalar;
-        return view('admin.sozlamalar', compact('soz', 'temalar'));
+        $hpCertExists = file_exists(storage_path('app/certs/hp_cert.pfx'));
+        return view('admin.sozlamalar', compact('soz', 'temalar', 'hpCertExists'));
     }
 
     /** Sozlamalarni saqlash */
@@ -104,6 +108,10 @@ class AdminController extends Controller
             'tema_accent2'       => 'nullable|string|max:9',
             'grup_font_rang'     => 'nullable|in:qora,sariq,qizil,oq',
             'orqaga_sana_taqiqlansin' => 'nullable|in:0,1',
+            'chek_footer_matni'    => 'nullable|string|max:300',
+            'chek_qogoz_kengligi'  => 'nullable|in:58,80',
+            'chek_avtomatik_chop'  => 'nullable|in:0,1',
+            'pos_auto_lock_daqiqa' => 'nullable|integer|min:1|max:120',
         ]);
 
         $malumot = $request->only([
@@ -112,12 +120,14 @@ class AdminController extends Controller
             'kompaniya_hisob', 'kompaniya_bank', 'kompaniya_direktor', 'tema',
             'tema_sidebar1', 'tema_sidebar2', 'tema_accent1', 'tema_accent2', 'grup_font_rang',
             // Hybrid Pochta
-            'hybrid_pochta_login', 'hybrid_pochta_password', 'hybrid_pochta_yoqilgan',
-            'hybrid_pochta_region_id', 'hybrid_pochta_area_id',
+            'hybrid_pochta_login', 'hybrid_pochta_password', 'hybrid_pochta_yoqilgan', 'hybrid_pochta_cert_parol',
             // Operatsion kun nazorati
             'orqaga_sana_taqiqlansin',
+            // POS / Chek va Printer
+            'chek_footer_matni', 'chek_qogoz_kengligi', 'pos_auto_lock_daqiqa',
         ]);
-        $malumot['tema_maxsus'] = $request->boolean('tema_maxsus') ? '1' : '0';
+        $malumot['tema_maxsus']       = $request->boolean('tema_maxsus') ? '1' : '0';
+        $malumot['chek_avtomatik_chop'] = $request->boolean('chek_avtomatik_chop') ? '1' : '0';
 
         Sozlama::saqlash($malumot);
 

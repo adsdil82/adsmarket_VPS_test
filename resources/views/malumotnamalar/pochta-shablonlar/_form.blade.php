@@ -10,11 +10,11 @@
         <label class="form-label small mb-1">Xat matni <span class="text-danger">*</span></label>
         <textarea name="matn" id="{{ $prefix }}matn"
             class="form-control form-control-sm" rows="8"
-            placeholder="Xat matnini kiriting. O'zgaruvchilar: {{mijoz_fio}}, {{shartnoma_raqam}}, {{kechikish_kun}}, {{jami_qarz}}, {{yuborish_sana}}, {{tashkilot_nomi}}"
+            placeholder="Xat matnini kiriting. O'zgaruvchilar: @{{mijoz_fio}}, @{{shartnoma_raqam}}, @{{kechikish_kun}}, @{{jami_qarz}}, @{{yuborish_sana}}, @{{tashkilot_nomi}}"
             required>{{ old('matn', $sh?->matn) }}</textarea>
         <div class="form-text">
             O'zgaruvchilar ikki jingalak qavs ichida yoziladi:
-            <code>{{mijoz_fio}}</code>, <code>{{shartnoma_raqam}}</code> va hokazo.
+            <code>@{{mijoz_fio}}</code>, <code>@{{shartnoma_raqam}}</code> va hokazo.
         </div>
     </div>
     <div class="col-md-4">

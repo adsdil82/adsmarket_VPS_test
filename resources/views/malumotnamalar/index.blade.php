@@ -15,6 +15,7 @@ $guruhlar = [
             ['nomi'=>'Filiallar',       'route'=>'malumotnamalar.filiallar.index',  'icon'=>'bi-building',     'sana'=>$stats['filiallar']     ?? 0],
             ['nomi'=>'Foydalanuvchilar','route'=>'admin.foydalanuvchilar',           'icon'=>'bi-people',       'sana'=>$stats['foydalanuvchilar'] ?? 0],
             ['nomi'=>'Kassalar',        'route'=>'malumotnamalar.kassalar.index',    'icon'=>'bi-cash-stack',   'sana'=>$stats['kassalar']      ?? 0],
+            ['nomi'=>'POS to\'lov usullari', 'route'=>'malumotnamalar.pos-tolov-usullari.index', 'icon'=>'bi-credit-card-2-front', 'sana'=>$stats['pos_tolov_usullari'] ?? 0],
         ],
     ],
     [

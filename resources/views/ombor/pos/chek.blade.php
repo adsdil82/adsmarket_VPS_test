@@ -6,11 +6,19 @@
 @endsection
 
 @section('content')
+@php
+    $soz = \App\Models\Sozlama::barchasi();
+    $chekKengligiMm = ($soz['chek_qogoz_kengligi'] ?? '80') === '58' ? '58mm' : '80mm';
+@endphp
+<style>
+    @media print {
+        #chek-qogoz { width: {{ $chekKengligiMm }} !important; }
+    }
+</style>
 <div class="row justify-content-center">
 <div class="col-sm-6 col-md-4">
 
-<div class="card border-0 shadow-sm mb-3" style="font-family: monospace;">
-    @php $soz = \App\Models\Sozlama::barchasi(); @endphp
+<div id="chek-qogoz" class="card border-0 shadow-sm mb-3" style="font-family: monospace;">
     <div class="card-body text-center">
         <h5 class="fw-bold">{{ $soz['brand_nomi'] ?? 'NasiyaPro' }}</h5>
         @if($soz['kompaniya_nomi'] ?? '')
@@ -66,7 +74,7 @@
             @endif
         </div>
         <hr>
-        <div class="small text-muted">Rahmat! Qayta kelishingizni kutamiz.</div>
+        <div class="small text-muted">{{ $soz['chek_footer_matni'] ?? 'Rahmat! Qayta kelishingizni kutamiz.' }}</div>
         <div class="small text-muted">{{ $sotuv->filial?->nomi }}</div>
     </div>
 </div>
@@ -90,4 +98,10 @@
 
 </div>
 </div>
+
+@if(($soz['chek_avtomatik_chop'] ?? '0') === '1')
+@push('scripts')
+<script>window.addEventListener('load', () => window.print());</script>
+@endpush
+@endif
 @endsection

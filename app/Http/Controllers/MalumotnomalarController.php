@@ -12,6 +12,7 @@ class MalumotnomalarController extends Controller
             'filiallar'              => DB::table('filiallar')->count(),
             'foydalanuvchilar'       => DB::table('foydalanuvchilar')->count(),
             'kassalar'               => DB::table('kassalar')->count(),
+            'pos_tolov_usullari'     => DB::table('pos_tolov_usullari')->count(),
             'tovar_guruhlar'         => DB::table('tovar_guruhlar')->count(),
             'tovar_katalog'          => DB::table('tovar_katalog')->count(),
             'birliklar'              => DB::table('birliklar')->count(),

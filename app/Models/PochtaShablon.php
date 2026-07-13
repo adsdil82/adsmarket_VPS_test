@@ -37,6 +37,7 @@ class PochtaShablon extends Model
         return [
             'mijoz_fio'       => 'Mijoz to\'liq ismi (F.I.O)',
             'shartnoma_raqam' => 'Shartnoma raqami',
+            'eski_raqam'      => 'Eski (qog\'ozdagi) shartnoma raqami — "raqam/yil" ko\'rinishida, faqat eski migratsiyadan o\'tgan shartnomalarda mavjud',
             'kechikish_kun'   => 'Kechikish kunlari soni',
             'jami_qarz'       => 'Jami qoldiq qarz (so\'m)',
             'yuborish_sana'   => 'Xat yuborilgan sana',

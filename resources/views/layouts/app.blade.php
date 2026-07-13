@@ -383,11 +383,12 @@
         @php
         $aktiv_grup = 'none';
         if (request()->routeIs('mijozlar.*'))                                                          $aktiv_grup = 'mijozlar';
-        elseif (request()->routeIs('kreditlar.*'))                                                     $aktiv_grup = 'shartnomalar';
+        elseif (request()->routeIs('kreditlar.*','autopay.*','hibrit_pochta.*','xabarnoma.sms.*'))       $aktiv_grup = 'shartnomalar';
         elseif (request()->routeIs('hisobotlar.*'))                                                    $aktiv_grup = 'hisobotlar';
-        elseif (request()->routeIs('pos.*','terminal.*','malumotnamalar.kassalar.*','transfer.kassa.*'))  $aktiv_grup = 'pos';
+        elseif (request()->routeIs('pos.*','terminal.*','malumotnamalar.kassalar.*','malumotnamalar.pos-tolov-usullari.*','transfer.kassa.*'))  $aktiv_grup = 'pos';
         elseif (request()->routeIs('katalog.*','tovar-guruhlar.*','kirim.*','chiqim.*','ombor.*'))    $aktiv_grup = 'tovarlar';
         elseif (request()->routeIs('harajatlar.*'))                                                    $aktiv_grup = 'harajatlar';
+        elseif (request()->routeIs('ish_haqi.*'))                                                      $aktiv_grup = 'ish-haqi';
         elseif (request()->routeIs('pul-oqimlari.*'))                                                 $aktiv_grup = 'pul-oqimlari';
         elseif (request()->routeIs('xabarnoma.*'))                                                    $aktiv_grup = 'xabarnoma';
         elseif (request()->routeIs('transfer.*'))                                                      $aktiv_grup = 'transfer';
@@ -481,6 +482,33 @@
                         <span class="nav-label">PASSIV</span>
                     </a>
                 </li>
+                @if(Auth::user()->ruxsat('autopay'))
+                <li class="nav-item">
+                    <a href="{{ route('autopay.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('autopay.*') ? 'active' : '' }}">
+                        <i class="bi bi-credit-card-fill me-2"></i>
+                        <span class="nav-label">AutoPay</span>
+                    </a>
+                </li>
+                @endif
+                @if(Auth::user()->ruxsat('hibrit_pochta'))
+                <li class="nav-item">
+                    <a href="{{ route('hibrit_pochta.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('hibrit_pochta.*') ? 'active' : '' }}">
+                        <i class="bi bi-envelope-paper-fill me-2"></i>
+                        <span class="nav-label">HibritPochta</span>
+                    </a>
+                </li>
+                @endif
+                @if(Auth::user()->ruxsat('xabarnoma'))
+                <li class="nav-item">
+                    <a href="{{ route('xabarnoma.sms.kutilayotgan') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('xabarnoma.sms.*') ? 'active' : '' }}">
+                        <i class="bi bi-chat-dots-fill me-2 text-warning"></i>
+                        <span class="nav-label">SMS</span>
+                    </a>
+                </li>
+                @endif
             </ul>
             @endif
 
@@ -625,6 +653,13 @@
                     <span class="nav-label">Kassalar</span>
                 </a></li>
                 @endif
+                @if(Auth::user()->isAdmin() || Auth::user()->rol === 'menejer')
+                <li class="nav-item"><a href="{{ route('malumotnamalar.pos-tolov-usullari.index') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.pos-tolov-usullari.*') ? 'active' : '' }}">
+                    <i class="bi bi-credit-card-2-front me-2"></i>
+                    <span class="nav-label">POS to'lov usullari</span>
+                </a></li>
+                @endif
                 @if(Auth::user()->ruxsat('transferlar'))
                 <li class="nav-item">
                     <a href="{{ route('transfer.kassa.index') }}"
@@ -741,6 +776,25 @@
                        class="nav-link text-white py-1 {{ request()->routeIs('harajatlar.index') ? 'active' : '' }}">
                         <i class="bi bi-wallet2 me-2 text-danger"></i>
                         <span class="nav-label">Harajatlar</span>
+                    </a>
+                </li>
+            </ul>
+            @endif
+
+            {{-- XODIMLAR ISH HAQI --}}
+            @if(Auth::user()->ruxsat('xodimlar_ish_haqi'))
+            <li class="grup-header">
+                <button class="grup-toggle" data-grup="ish-haqi">
+                    <span class="g-label">&#128100; ISH HAQI</span>
+                    <i class="g-icon bi {{ $aktiv_grup==='ish-haqi' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
+                </button>
+            </li>
+            <ul class="grup-items {{ $aktiv_grup!=='ish-haqi' ? 'closed' : '' }}" id="grup-ish-haqi">
+                <li class="nav-item">
+                    <a href="{{ route('ish_haqi.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('ish_haqi.*') ? 'active' : '' }}">
+                        <i class="bi bi-person-badge me-2" style="color:#f472b6"></i>
+                        <span class="nav-label">Xodimlar ish haqi</span>
                     </a>
                 </li>
             </ul>
@@ -920,13 +974,6 @@
             </li>
             <ul class="grup-items {{ $aktiv_grup!=='xabarnoma' ? 'closed' : '' }}" id="grup-xabarnoma">
                 <li class="nav-item">
-                    <a href="{{ route('xabarnoma.sms.guruhli') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('xabarnoma.sms.*') ? 'active' : '' }}">
-                        <i class="bi bi-chat-dots me-2 text-warning"></i>
-                        <span class="nav-label">SMS</span>
-                    </a>
-                </li>
-                <li class="nav-item">
                     <a href="{{ route('xabarnoma.telegram.index') }}"
                        class="nav-link text-white py-1 {{ request()->routeIs('xabarnoma.telegram.*') ? 'active' : '' }}">
                         <i class="bi bi-telegram me-2 text-info"></i>
@@ -945,20 +992,6 @@
                        class="nav-link text-white py-1 {{ request()->routeIs('xabarnoma.shablonlar.*') ? 'active' : '' }}">
                         <i class="bi bi-file-text me-2" style="color:#a5b4fc"></i>
                         <span class="nav-label">Shablonlar</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('xabarnoma.sms.tarix') }}"
-                       class="nav-link text-white py-1">
-                        <i class="bi bi-clock-history me-2 text-secondary"></i>
-                        <span class="nav-label">Yuborish tarixi</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('xabarnoma.hybrid_mail.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('xabarnoma.hybrid_mail.*') ? 'active' : '' }}">
-                        <i class="bi bi-envelope-paper me-2" style="color:#8b5cf6"></i>
-                        <span class="nav-label">Gibrid Pochta</span>
                     </a>
                 </li>
             </ul>

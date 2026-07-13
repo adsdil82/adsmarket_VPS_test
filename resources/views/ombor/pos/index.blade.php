@@ -164,9 +164,17 @@ html, body { overflow: hidden; }
 
         {{-- Chegirma --}}
         <div class="jami-qator align-items-center">
-            <span class="text-muted">Chegirma (so'm):</span>
-            <input type="number" id="chegirma" class="form-control form-control-sm text-end"
-                   style="width:120px" value="0" min="0" step="1000" oninput="jamiHisob()">
+            <span class="text-muted">Chegirma:</span>
+            <div class="d-flex gap-1 align-items-center">
+                <input type="number" id="chegirma" class="form-control form-control-sm text-end"
+                       style="width:90px" value="0" min="0" step="100" oninput="jamiHisob()">
+                <div class="btn-group btn-group-sm" role="group">
+                    <input type="radio" class="btn-check" name="chegirma-tur" id="chegirma-som" value="som" checked onchange="jamiHisob()">
+                    <label class="btn btn-outline-secondary btn-sm" for="chegirma-som">so'm</label>
+                    <input type="radio" class="btn-check" name="chegirma-tur" id="chegirma-foiz" value="foiz" onchange="jamiHisob()">
+                    <label class="btn btn-outline-secondary btn-sm" for="chegirma-foiz">%</label>
+                </div>
+            </div>
         </div>
 
         <div class="jami-qator katta"><span>To'lov:</span><span id="sum-jami">0</span></div>
@@ -175,40 +183,41 @@ html, body { overflow: hidden; }
 
         {{-- To'lov turi --}}
         <div id="tolov-blok">
+            <div class="d-flex flex-wrap gap-2 mb-2">
+                <input type="radio" class="btn-check" name="tolov" id="t-naqd" value="naqd" checked onchange="tolovTuri()">
+                <label class="btn btn-outline-success btn-sm" for="t-naqd"><i class="bi bi-cash me-1"></i>Naqd</label>
+
+                <input type="radio" class="btn-check" name="tolov" id="t-plastik" value="plastik" onchange="tolovTuri()">
+                <label class="btn btn-outline-primary btn-sm" for="t-plastik"><i class="bi bi-credit-card me-1"></i>Plastik</label>
+
+                @foreach($tolovUsullari ?? [] as $usul)
+                <input type="radio" class="btn-check" name="tolov" id="t-usul-{{ $usul->id }}" value="plastik"
+                       data-usuli-id="{{ $usul->id }}" onchange="tolovTuri()">
+                <label class="btn btn-outline-primary btn-sm" for="t-usul-{{ $usul->id }}">{{ $usul->nomi }}</label>
+                @endforeach
+
+                <input type="radio" class="btn-check" name="tolov" id="t-aralash" value="aralash" onchange="tolovTuri()">
+                <label class="btn btn-outline-warning btn-sm" for="t-aralash"><i class="bi bi-cash-coin me-1"></i>Aralash</label>
+            </div>
+
             <div class="row g-2 mb-2">
                 <div class="col-6">
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="tolov" id="t-naqd" value="naqd" checked onchange="tolovTuri()">
-                        <label class="form-check-label fw-medium" for="t-naqd"><i class="bi bi-cash me-1 text-success"></i>Naqd</label>
-                    </div>
+                    <label class="form-label small fw-medium mb-1">Naqd qabul qilindi:</label>
+                    <input type="number" id="naqd-inp" class="form-control" placeholder="0" step="1000" oninput="naqdOzgardi()">
                 </div>
                 <div class="col-6">
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="tolov" id="t-plastik" value="plastik" onchange="tolovTuri()">
-                        <label class="form-check-label fw-medium" for="t-plastik"><i class="bi bi-credit-card me-1 text-primary"></i>Plastik</label>
-                    </div>
+                    <label class="form-label small fw-medium mb-1">Plastik summa:</label>
+                    <input type="number" id="plastik-inp" class="form-control" placeholder="0" step="1000" oninput="plastikOzgardi()" disabled>
                 </div>
-                <div class="col-6">
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="tolov" id="t-aralash" value="aralash" onchange="tolovTuri()">
-                        <label class="form-check-label fw-medium" for="t-aralash"><i class="bi bi-cash-coin me-1 text-warning"></i>Aralash</label>
-                    </div>
-                </div>
+            </div>
+            <div class="mb-2">
+                <label class="form-label small fw-medium mb-1">Qayta pul:</label>
+                <input type="text" id="qayta-pul" class="form-control fw-bold text-warning" readonly value="0 so'm">
             </div>
 
-            <div id="naqd-blok" class="mb-2">
-                <label class="form-label small fw-medium mb-1">Naqd qabul qilindi:</label>
-                <input type="number" id="naqd-inp" class="form-control" placeholder="0" step="1000" oninput="naqdOzgardi()">
-                <div class="mt-1 d-flex justify-content-between small">
-                    <span class="text-muted">Qayta pul:</span>
-                    <span class="fw-bold text-warning" id="qayta-pul">0 so'm</span>
-                </div>
+            <div class="mb-2">
+                <input type="text" id="tolov-izoh" class="form-control form-control-sm" placeholder="To'lov izohi (ixtiyoriy)">
             </div>
-            <div id="plastik-blok" class="mb-2 d-none">
-                <label class="form-label small fw-medium mb-1">Plastik summa:</label>
-                <input type="number" id="plastik-inp" class="form-control" placeholder="0" step="1000" oninput="plastikOzgardi()">
-            </div>
-
             <div class="mb-2">
                 <input type="text" id="mijoz-ism" class="form-control form-control-sm" placeholder="Mijoz ismi (ixtiyoriy)">
             </div>
@@ -253,6 +262,7 @@ const FILIAL_ID = {{ $filialId }};
 let savat = {}; // {tovar_id: {nomi, narx, miqdor, birlik, qoldiq}}
 let chekModal;
 let jamiBaza = 0;
+let chegirmaHisoblangan = 0;
 let qolFieldQolgan = null; // aralashda oxirgi tahrirlangan maydon: 'naqd' yoki 'plastik'
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -423,12 +433,20 @@ function savatRender() {
     jamiHisob();
 }
 
+/** Chegirma inputidagi qiymatni (so'm yoki %) yakuniy so'm summasiga aylantiradi. */
+function chegirmaSommaHisobla(umumiy) {
+    const kiritilgan = parseFloat(document.getElementById('chegirma').value) || 0;
+    const tur = document.querySelector('[name=chegirma-tur]:checked').value;
+    return tur === 'foiz' ? Math.round(umumiy * kiritilgan / 100) : kiritilgan;
+}
+
 function jamiHisob() {
     const ids = Object.keys(savat);
     const umumiy = ids.reduce((s, id) => s + savat[id].narx * savat[id].miqdor, 0);
-    const chegirma = parseFloat(document.getElementById('chegirma').value) || 0;
+    const chegirma = chegirmaSommaHisobla(umumiy);
     const jami = Math.max(0, umumiy - chegirma);
     jamiBaza = jami;
+    chegirmaHisoblangan = chegirma;
 
     document.getElementById('sum-umumiy').textContent = umumiy.toLocaleString('uz-UZ') + ' so\'m';
     document.getElementById('sum-jami').textContent   = jami.toLocaleString('uz-UZ') + ' so\'m';
@@ -451,8 +469,10 @@ function tolovAvtoToldir() {
 
     if (tur === 'naqd') {
         naqdInp.value = jamiBaza || '';
+        plastikInp.value = '';
     } else if (tur === 'plastik') {
         plastikInp.value = jamiBaza || '';
+        naqdInp.value = '';
     } else if (tur === 'aralash') {
         // Aralashda oxirgi tahrirlangan maydonga qarab ikkinchisini to'ldiramiz
         if (qolFieldQolgan === 'plastik') {
@@ -494,7 +514,7 @@ function qaytaPulHisob() {
     const naqd = parseFloat(document.getElementById('naqd-inp').value) || 0;
     // Plastik/aralashda ortiqcha pul qaytarilmaydi (karta/aralash to'lov aniq summada bo'ladi) — faqat sof naqd uchun ko'rsatamiz
     const qayta = tur === 'naqd' ? Math.max(0, naqd - jamiBaza) : 0;
-    document.getElementById('qayta-pul').textContent = qayta.toLocaleString('uz-UZ') + ' so\'m';
+    document.getElementById('qayta-pul').value = qayta.toLocaleString('uz-UZ') + ' so\'m';
 }
 
 /** Kiritilgan summalar jamidan kamligini tekshiradi va yetishmayotgan summani ko'rsatadi. */
@@ -526,8 +546,11 @@ function yetishmovchiTekshir() {
 
 function tolovTuri() {
     const tur = document.querySelector('[name=tolov]:checked').value;
-    document.getElementById('naqd-blok').classList.toggle('d-none', tur === 'plastik');
-    document.getElementById('plastik-blok').classList.toggle('d-none', tur !== 'aralash' && tur !== 'plastik');
+    // Bloklarni yashirmaymiz (sakrash bo'lmasligi uchun) — faqat tegishli
+    // bo'lmagan maydonlarni bloklab, xiralashtiramiz.
+    document.getElementById('naqd-inp').disabled = (tur === 'plastik');
+    document.getElementById('plastik-inp').disabled = (tur === 'naqd');
+    document.getElementById('qayta-pul').disabled = (tur !== 'naqd');
     qolFieldQolgan = null;
     tolovAvtoToldir();
 }
@@ -545,18 +568,21 @@ async function sotuvBajar() {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saqlanmoqda...';
 
-    const tur      = document.querySelector('[name=tolov]:checked').value;
-    const chegirma = parseFloat(document.getElementById('chegirma').value) || 0;
+    const tolovInp = document.querySelector('[name=tolov]:checked');
+    const tur      = tolovInp.value;
+    const tolovUsuliId = tolovInp.dataset.usuliId ? parseInt(tolovInp.dataset.usuliId) : null;
     const naqdSumma    = parseFloat(document.getElementById('naqd-inp').value) || 0;
     const plastikSumma = parseFloat(document.getElementById('plastik-inp').value) || 0;
 
     const payload = {
         filial_id:      FILIAL_ID,
         tolov_turi:     tur,
-        chegirma:       chegirma,
+        tolov_usuli_id: tolovUsuliId,
+        chegirma:       chegirmaHisoblangan,
         naqd_summa:     tur==='plastik' ? 0 : naqdSumma,
         plastik_summa:  tur==='naqd' ? 0 : plastikSumma,
         mijoz_ism:      document.getElementById('mijoz-ism').value,
+        tolov_izoh:     document.getElementById('tolov-izoh').value,
         tovarlar: ids.map(id => ({
             tovar_id: parseInt(id),
             miqdor:   savat[id].miqdor,

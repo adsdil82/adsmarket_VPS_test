@@ -7,6 +7,7 @@ use App\Models\NotificationBatch;
 use App\Models\NotificationLog;
 use App\Models\NotificationSetting;
 use App\Models\NotificationTemplate;
+use App\Models\RegKredit;
 use App\Services\Notification\NotificationRecipientService;
 use App\Services\Notification\SmsService;
 use Illuminate\Http\Request;
@@ -24,7 +25,16 @@ class SmsController extends Controller
     {
         $shablonlar = NotificationTemplate::faol()->channel('sms')->orderBy('name')->get();
         $filiallar  = Auth::user()->isAdmin() ? Filial::faol()->get(['id','nomi','kod']) : collect();
-        return view('xabarnoma.sms.yakka', compact('shablonlar', 'filiallar'));
+        $tab        = 'yakka';
+        $loglar     = collect();
+        $batchlar   = collect();
+        $kreditlar  = collect();
+        $statistika = [];
+        $qidiruv    = '';
+        $holat      = '';
+        $filtr      = '';
+        $filialId   = null;
+        return view('xabarnoma.sms.index', compact('shablonlar', 'filiallar', 'tab', 'loglar', 'batchlar', 'kreditlar', 'statistika', 'qidiruv', 'holat', 'filtr', 'filialId'));
     }
 
     // ── Yakka SMS yuborish ──────────────────────────────────
@@ -61,7 +71,117 @@ class SmsController extends Controller
     {
         $shablonlar = NotificationTemplate::faol()->channel('sms')->orderBy('name')->get();
         $filiallar  = Filial::faol()->get(['id','nomi','kod']);
-        return view('xabarnoma.sms.guruhli', compact('shablonlar', 'filiallar'));
+        $tab        = 'guruhli';
+        $loglar     = collect();
+        $batchlar   = collect();
+        $kreditlar  = collect();
+        $statistika = [];
+        $qidiruv    = '';
+        $holat      = '';
+        $filtr      = '';
+        $filialId   = null;
+        return view('xabarnoma.sms.index', compact('shablonlar', 'filiallar', 'tab', 'loglar', 'batchlar', 'kreditlar', 'statistika', 'qidiruv', 'holat', 'filtr', 'filialId'));
+    }
+
+    /**
+     * ── Kutilayotgan (AutoPay uslubida) ──────────────────────
+     * Kechikkan/ertaga to'laydigan/barcha qarzdor mijozlarni haqiqiy
+     * jadval + checkbox bilan ko'rsatadi. Belgilangan qatorlarga shablon
+     * tanlab, bir yo'la SMS yuborish mumkin (kutilayotganYubor()).
+     */
+    public function kutilayotgan(Request $request)
+    {
+        $user     = Auth::user();
+        $filialId = $user->isAdmin() ? ($request->filial_id ?: null) : $user->filial_id;
+        $filtr    = in_array($request->get('filtr'), ['kechikkan', 'ertaga', 'hammasi'], true) ? $request->get('filtr') : 'kechikkan';
+        $qidiruv  = trim((string) $request->get('qidiruv'));
+
+        $query = RegKredit::with(['mijoz', 'filial'])
+            ->whereIn('holat', ['faol', 'muddati_otgan'])
+            ->where('qoldiq_qarz', '>', 0)
+            ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
+            ->when($qidiruv, fn($q) => $q->where(function ($qq) use ($qidiruv) {
+                $qq->where('shartnoma_raqam', 'like', "%{$qidiruv}%")
+                   ->orWhereHas('mijoz', fn($m) => $m->where('ism', 'like', "%{$qidiruv}%")
+                                                      ->orWhere('familiya', 'like', "%{$qidiruv}%"));
+            }));
+
+        if ($filtr === 'kechikkan') {
+            $query->whereHas('grafik', fn($q) => $q->whereIn('holat', ['muddati_otgan', 'qisman'])
+                ->whereNotNull('tolov_sana')->where('tolov_sana', '<', today()));
+        } elseif ($filtr === 'ertaga') {
+            $ertaga = now()->addDay()->toDateString();
+            $query->whereHas('grafik', fn($q) => $q->whereIn('holat', ['tolanmagan', 'qisman'])
+                ->whereDate('tolov_sana', $ertaga));
+        }
+        // 'hammasi' — qo'shimcha sana filtri yo'q, barcha qarzdor faol/muddati o'tgan shartnomalar
+
+        $kreditlar = $query->orderByDesc('qoldiq_qarz')->paginate(30)->withQueryString();
+
+        $shablonlar = NotificationTemplate::faol()->channel('sms')->orderBy('name')->get();
+        $filiallar  = $user->isAdmin() ? Filial::faol()->get(['id','nomi','kod']) : collect();
+
+        $tab        = 'kutilayotgan';
+        $loglar     = collect();
+        $batchlar   = collect();
+        $statistika = [];
+        $holat      = '';
+
+        return view('xabarnoma.sms.index', compact(
+            'shablonlar', 'filiallar', 'tab', 'loglar', 'batchlar', 'kreditlar',
+            'statistika', 'qidiruv', 'holat', 'filtr', 'filialId'
+        ));
+    }
+
+    /**
+     * Kutilayotgan tabida checkbox bilan belgilangan shartnomalarga (aniq
+     * tanlangan kredit_ids bo'yicha) shablon orqali SMS yuborish. Yuborish
+     * mexanizmi xuddi guruhliSend() bilan bir xil (SmsService::sendBatch) —
+     * faqat recipient manbai boshqacha (filtrga emas, checkbox tanloviga asoslangan).
+     */
+    public function kutilayotganYubor(Request $request)
+    {
+        $request->validate([
+            'kredit_ids'   => 'required|array|min:1',
+            'kredit_ids.*' => 'integer',
+            'template_id'  => 'required|exists:notification_templates,id',
+        ]);
+
+        $template = NotificationTemplate::findOrFail($request->template_id);
+        $result   = $this->recipientService->getRecipientsByKreditIds($request->kredit_ids);
+
+        if ($result['total'] === 0) {
+            return back()->with('xato', 'Yuboriladigan mijoz topilmadi (telefon raqami yo\'q yoki noto\'g\'ri).');
+        }
+
+        $batch = NotificationBatch::create([
+            'channel'          => 'sms',
+            'type'             => 'kutilayotgan',
+            'title'            => $template->name . ' — ' . now()->format('d.m.Y H:i'),
+            'filters_json'     => ['kredit_ids' => $request->kredit_ids],
+            'total_recipients' => $result['total'],
+            'status'           => 'draft',
+            'created_by'       => Auth::id(),
+        ]);
+
+        $items = collect($result['recipients'])->map(fn($r) => array_merge($r, [
+            'message' => $template->render([
+                'client_name'     => $r['customer_name'],
+                'contract_number' => $r['contract_number'] ?? '',
+                'branch_name'     => $r['branch_name']     ?? '',
+                'overdue_days'    => $r['overdue_days']    ?? 0,
+                'overdue_amount'  => number_format($r['overdue_amount'] ?? 0, 0, '.', ' '),
+                'total_debt'      => number_format($r['total_debt']     ?? 0, 0, '.', ' '),
+                'monthly_payment' => number_format($r['monthly_payment']?? 0, 0, '.', ' '),
+                'company_name'    => config('app.name','NasiyaPro'),
+            ]),
+        ]))->toArray();
+
+        $this->smsService->sendBatch($batch, $items, $template);
+        $batch->refresh();
+
+        return redirect()->route('xabarnoma.sms.tarix')
+            ->with('muvaffaqiyat', "Yuborildi: {$batch->total_sent} ta. Xato: {$batch->total_failed} ta.");
     }
 
     // ── Preview (AJAX) ──────────────────────────────────────
@@ -181,16 +301,38 @@ class SmsController extends Controller
     // ── Tarix ───────────────────────────────────────────────
     public function tarix(Request $request)
     {
-        $user    = Auth::user();
+        $qidiruv = trim((string) $request->get('qidiruv'));
+        $holat   = $request->get('status');
+
         $loglar  = NotificationLog::with(['customer','template'])
             ->where('channel', 'sms')
-            ->when($request->status, fn($q) => $q->where('status', $request->status))
+            ->when($holat, fn($q) => $q->where('status', $holat))
+            ->when($qidiruv, fn($q) => $q->where(function ($qq) use ($qidiruv) {
+                $qq->where('phone', 'like', "%{$qidiruv}%")
+                   ->orWhereHas('customer', fn($c) => $c->where('ism', 'like', "%{$qidiruv}%")
+                                                         ->orWhere('familiya', 'like', "%{$qidiruv}%"));
+            }))
             ->when($request->dan_sana, fn($q) => $q->whereDate('created_at', '>=', $request->dan_sana))
             ->when($request->gacha_sana, fn($q) => $q->whereDate('created_at', '<=', $request->gacha_sana))
-            ->latest()->paginate(25)->withQueryString();
+            ->latest()->paginate(30)->withQueryString();
 
         $batchlar = NotificationBatch::where('channel','sms')->latest()->take(10)->get();
-        return view('xabarnoma.sms.tarix', compact('loglar','batchlar'));
+
+        $statistika = [
+            'jami'      => NotificationLog::where('channel', 'sms')->count(),
+            'yuborildi' => NotificationLog::where('channel', 'sms')->where('status', 'sent')->count(),
+            'xato'      => NotificationLog::where('channel', 'sms')->where('status', 'failed')->count(),
+            'bugun'     => NotificationLog::where('channel', 'sms')->whereDate('created_at', today())->count(),
+        ];
+
+        $tab        = 'tarix';
+        $shablonlar = collect();
+        $filiallar  = collect();
+        $kreditlar  = collect();
+        $filtr      = '';
+        $filialId   = null;
+
+        return view('xabarnoma.sms.index', compact('loglar', 'batchlar', 'statistika', 'qidiruv', 'holat', 'tab', 'shablonlar', 'filiallar', 'kreditlar', 'filtr', 'filialId'));
     }
 
     // ── Sozlamalar ──────────────────────────────────────────

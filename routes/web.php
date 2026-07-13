@@ -34,7 +34,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SmsController;
 use App\Http\Controllers\TelegramController;
 use App\Http\Controllers\EmailNotificationController;
-use App\Http\Controllers\HybridMailController;
 use App\Http\Controllers\HisobRejasiController;
 use App\Http\Controllers\YangiTulovTuriController;
 use App\Http\Controllers\NotificationTemplateController;
@@ -47,6 +46,10 @@ use App\Http\Controllers\QurilmaProvayderController;
 use App\Http\Controllers\MalumotnomalarController;
 use App\Http\Controllers\FilialController;
 use App\Http\Controllers\KassaController;
+use App\Http\Controllers\PosTolovUsuliController;
+use App\Http\Controllers\AutoPayController;
+use App\Http\Controllers\HibritPochtaController;
+use App\Http\Controllers\IshHaqiController;
 use App\Http\Controllers\BirlikController;
 use App\Http\Controllers\HarajatTuriController;
 use App\Http\Controllers\PulKategoriyaController;
@@ -69,6 +72,12 @@ Route::middleware('guest')->group(function () {
          ->middleware('throttle:5,1')
          ->name('login.post');
 });
+
+// ─── AutoPay — tashqi (auth talab qilinmaydigan) so'rovlar ───────
+// AutoPay serverlari bizga to'g'ridan-to'g'ri murojaat qiladi — sessiya yo'q,
+// shuning uchun auth va CSRF talab qilinmaydi (o'rniga Bearer token tekshiriladi).
+Route::post('/autopay/webhook', [AutoPayController::class, 'webhook'])->name('autopay.webhook');
+Route::post('/autopay/verify',  [AutoPayController::class, 'verify'])->name('autopay.verify');
 
 Route::middleware('auth')->group(function () {
     // POST — form submit orqali chiqish (asosiy yo'l)
@@ -120,10 +129,11 @@ Route::middleware('auth')->group(function () {
             ->name('store');
         Route::get('/{kredit}',  [RegKreditController::class, 'show'])->name('show');
         // Hybrid Pochta xat yuborish (Phase 3)
-        Route::prefix('{kredit}/pochta')->name('pochta.')->middleware('rol.check:admin,menejer')->group(function () {
-            Route::post('/create',  [PochXatController::class, 'create'])->name('create');
-            Route::post('/send',    [PochXatController::class, 'send'])->name('send');
-            Route::get('/preview',  [PochXatController::class, 'preview'])->name('preview');
+        Route::prefix('{kredit}/pochta')->name('pochta.')->middleware('ruxsat.check:hibrit_pochta,qoshish')->group(function () {
+            Route::post('/create',       [PochXatController::class, 'create'])->name('create');
+            Route::post('/send',         [PochXatController::class, 'send'])->name('send');
+            Route::post('/send-server',  [PochXatController::class, 'sendServer'])->name('send_server');
+            Route::get('/preview',       [PochXatController::class, 'preview'])->name('preview');
         });
         // SMS yuborish (shartnoma sahifasidan, AJAX)
         Route::post('/{kredit}/sms-yubor', [RegKreditController::class, 'smsYubor'])
@@ -170,6 +180,60 @@ Route::middleware('auth')->group(function () {
         Route::get('/{kredit}/versiyalar',          [VersionController::class, 'index'])->name('versiyalar.index');
         Route::get('/{kredit}/versiyalar/{versiya}', [VersionController::class, 'show'])->name('versiyalar.show');
         Route::post('/{kredit}/versiyalar/{versiya}/qaytarish', [RegKreditController::class, 'versiyaniQaytar'])->name('versiyalar.qaytarish');
+    });
+
+    // ─── AutoPay — kechikkan shartnomalarni avtomatik yechish ──────
+    Route::prefix('autopay')->name('autopay.')->middleware('ruxsat.check:autopay')->group(function () {
+        Route::get('/',                       [AutoPayController::class, 'index'])->name('index');
+        Route::get('/kredit-qidir',           [AutoPayController::class, 'kreditQidir'])->name('kredit_qidir');
+        Route::get('/mijoz-qidir',            [AutoPayController::class, 'mijozQidir'])->name('mijoz_qidir');
+        Route::post('/{shartnoma}/biriktirish', [AutoPayController::class, 'biriktirish'])->name('biriktirish');
+        Route::post('/{kredit}/yuborish',     [AutoPayController::class, 'yuborish'])->name('yuborish');
+        Route::post('/yuborish-bulk',         [AutoPayController::class, 'yuborishBulk'])->name('yuborish_bulk');
+        Route::post('/{shartnoma}/toxtatish', [AutoPayController::class, 'toxtatish'])->name('toxtatish');
+        Route::post('/{shartnoma}/yoqish',    [AutoPayController::class, 'qaytaYoqish'])->name('yoqish');
+        Route::post('/{shartnoma}/ochirish',  [AutoPayController::class, 'ochirish'])->name('ochirish');
+        Route::post('/ochirish-bulk',         [AutoPayController::class, 'ochirishBulk'])->name('ochirish_bulk');
+        Route::post('/qarz-sinxron',          [AutoPayController::class, 'qarzlarniOmmaviySinxronlash'])->name('qarz_sinxron');
+        Route::post('/sinxronlash',           [AutoPayController::class, 'sinxronlash'])->name('sinxronlash');
+        Route::post('/sinxronlash-tranzaksiya', [AutoPayController::class, 'sinxronlashTranzaksiya'])->name('sinxronlash_tranzaksiya');
+        Route::post('/tozalash',              [AutoPayController::class, 'tozalash'])->name('tozalash');
+        Route::post('/{shartnoma}/tahrirlash', [AutoPayController::class, 'tahrirlash'])->name('tahrirlash');
+        Route::post('/tranzaksiya/{tranzaksiya}/bekor-qilish', [AutoPayController::class, 'tranzaksiyaBekorQil'])->name('tranzaksiya.bekor_qilish');
+        Route::post('/webhook-ulash',         [AutoPayController::class, 'webhookUlash'])->name('webhook_ulash');
+        Route::post('/verification-ulash',    [AutoPayController::class, 'verificationUlash'])->name('verification_ulash');
+        Route::post('/egov-saqlash',          [AutoPayController::class, 'egovSaqlashAction'])->name('egov_saqlash');
+        Route::post('/egov-yangilash',        [AutoPayController::class, 'egovYangilashAction'])->name('egov_yangilash');
+        Route::post('/karta-royxat',          [AutoPayController::class, 'kartaRoyxatgaOlish'])->name('karta_royxat');
+        Route::post('/karta-tasdiq',          [AutoPayController::class, 'kartaTasdiqlash'])->name('karta_tasdiq');
+        Route::post('/monitoring-karta-royxat', [AutoPayController::class, 'monitoringKartaRoyxatgaOlish'])->name('monitoring_karta_royxat');
+        Route::post('/monitoring-karta-tasdiq', [AutoPayController::class, 'monitoringKartaTasdiqlash'])->name('monitoring_karta_tasdiq');
+    });
+
+    // ─── HibritPochta — jismoniy pochta xatlarini yagona sahifada boshqarish ──
+    // (Kutilayotgan/Shablonlar/Loglar bir joyda; xat yuborish shu sahifadagi
+    // umumiy oyna orqali amalga oshadi — kredit sahifasida tugma yo'q.)
+    Route::prefix('hibrit-pochta')->name('hibrit_pochta.')->middleware('ruxsat.check:hibrit_pochta')->group(function () {
+        Route::get('/', [HibritPochtaController::class, 'index'])->name('index');
+        Route::post('/holat-sinxron', [HibritPochtaController::class, 'holatlarniSinxronlash'])->name('holat_sinxron');
+        Route::delete('/log/{log}', [HibritPochtaController::class, 'logOchirish'])->middleware('ruxsat.check:hibrit_pochta,ochirish')->name('log_ochirish');
+        Route::delete('/loglar-tozala', [HibritPochtaController::class, 'loglarniTozalash'])->middleware('ruxsat.check:hibrit_pochta,ochirish')->name('loglar_tozala');
+        Route::get('/regions', [HibritPochtaController::class, 'regions'])->name('regions');
+        Route::get('/areas',   [HibritPochtaController::class, 'areas'])->name('areas');
+        Route::get('/{kredit}/malumot', [HibritPochtaController::class, 'malumot'])->middleware('ruxsat.check:hibrit_pochta,qoshish')->name('malumot');
+    });
+
+    // ─── Xodimlar ish haqi — tabel, hisoblash, tarix, sozlamalar, dashboard ──
+    Route::prefix('ish-haqi')->name('ish_haqi.')->middleware('ruxsat.check:xodimlar_ish_haqi')->group(function () {
+        Route::get('/', [IshHaqiController::class, 'index'])->name('index');
+        Route::post('/davomat', [IshHaqiController::class, 'davomatSaqla'])->middleware('ruxsat.check:xodimlar_ish_haqi,qoshish')->name('davomat.saqla');
+        Route::post('/davomat/oy-yopish', [IshHaqiController::class, 'oyYopish'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('davomat.oy_yopish');
+        Route::post('/hisobla', [IshHaqiController::class, 'hisobla'])->middleware('ruxsat.check:xodimlar_ish_haqi,qoshish')->name('hisobla');
+        Route::post('/{hisob}/qoshimcha', [IshHaqiController::class, 'qoshimchaSaqla'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('qoshimcha.saqla');
+        Route::post('/{hisob}/tola', [IshHaqiController::class, 'tola'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('tola');
+        Route::post('/sozlama/{xodim}', [IshHaqiController::class, 'sozlamaSaqla'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('sozlama.saqla');
+        Route::post('/sozlama-global', [IshHaqiController::class, 'globalSozlamaSaqla'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('sozlama.global_saqla');
+        Route::post('/avans/{xodim}', [IshHaqiController::class, 'avansBer'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('avans.ber');
     });
 
     // ─── Hisobotlar ───────────────────────────────────────────────
@@ -380,13 +444,12 @@ Route::middleware('auth')->group(function () {
             Route::get('/areas',            [GibridPochtaController::class, 'areas'])->name('areas');
             Route::get('/loglar',           [GibridPochtaController::class, 'loglar'])->name('pochta-loglar.index');
             Route::get('/kvitansiya/{log}',      [GibridPochtaController::class, 'kvitansiya'])->name('kvitansiya');
-            Route::post('/qayta-yuborish/{log}', [GibridPochtaController::class, 'qaytaYuborish'])->name('qayta-yuborish');
         });
         // Xabarnoma sozlamalari (admin panel dan)
         Route::post('/notif/sms',      [SmsController::class, 'sozlamalarSaqla'])->name('notif.sms.saqlash');
         Route::post('/notif/telegram', [TelegramController::class, 'sozlamalarSaqla'])->name('notif.telegram.saqlash');
         Route::post('/notif/email',    [EmailNotificationController::class, 'sozlamalarSaqla'])->name('notif.email.saqlash');
-        Route::post('/notif/hybrid',   [HybridMailController::class, 'sozlamalarSaqla'])->name('notif.hybrid.saqlash');
+        Route::post('/notif/autopay',  [AutoPayController::class, 'sozlamalarSaqla'])->name('notif.autopay.saqlash');
     });
 
     // ─── Ta'minotchilar moduli ─────────────────────────────────────
@@ -436,7 +499,9 @@ Route::middleware('auth')->group(function () {
 
         // SMS
         Route::prefix('sms')->name('sms.')->middleware('rol.check:admin,menejer')->group(function () {
-            Route::get('/',            [SmsController::class, 'guruhli'])->name('index');
+            Route::get('/',                 [SmsController::class, 'kutilayotgan'])->name('index');
+            Route::get('/kutilayotgan',     [SmsController::class, 'kutilayotgan'])->name('kutilayotgan');
+            Route::post('/kutilayotgan',    [SmsController::class, 'kutilayotganYubor'])->name('kutilayotgan.yubor');
             Route::get('/guruhli',     [SmsController::class, 'guruhli'])->name('guruhli');
             Route::post('/guruhli',    [SmsController::class, 'guruhliSend'])->name('guruhli.send');
             Route::post('/preview',    [SmsController::class, 'preview'])->name('preview');
@@ -460,13 +525,6 @@ Route::middleware('auth')->group(function () {
             Route::get('/',            [EmailNotificationController::class, 'index'])->name('index');
             Route::post('/sozlamalar', [EmailNotificationController::class, 'sozlamalarSaqla'])->name('sozlamalar.saqlash');
             Route::post('/test',       [EmailNotificationController::class, 'testEmail'])->name('test');
-        });
-
-        // Gibrid Pochta
-        Route::prefix('hybrid-mail')->name('hybrid_mail.')->middleware('rol.check:admin,menejer')->group(function () {
-            Route::get('/',            [HybridMailController::class, 'index'])->name('index');
-            Route::post('/sozlamalar', [HybridMailController::class, 'sozlamalarSaqla'])->name('sozlamalar.saqlash');
-            Route::post('/test',       [HybridMailController::class, 'testSend'])->name('test');
         });
 
         // Shablonlar
@@ -601,6 +659,14 @@ Route::middleware('auth')->group(function () {
             Route::post('/',            [KassaController::class, 'store'])->name('store');
             Route::put('/{kassa}',      [KassaController::class, 'update'])->name('update');
             Route::delete('/{kassa}',   [KassaController::class, 'destroy'])->name('destroy');
+        });
+
+        // POS to'lov usullari
+        Route::prefix('pos-tolov-usullari')->name('pos-tolov-usullari.')->middleware('rol.check:admin,menejer')->group(function () {
+            Route::get('/',                     [PosTolovUsuliController::class, 'index'])->name('index');
+            Route::post('/',                    [PosTolovUsuliController::class, 'store'])->name('store');
+            Route::put('/{posTolovUsuli}',      [PosTolovUsuliController::class, 'update'])->name('update');
+            Route::delete('/{posTolovUsuli}',   [PosTolovUsuliController::class, 'destroy'])->name('destroy');
         });
 
         // Birliklar

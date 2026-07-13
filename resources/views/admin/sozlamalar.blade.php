@@ -25,19 +25,6 @@
     .finally(() => { btn.disabled = false; });
   });
 
-  function loadSpravochnik(url) {
-    const panel = document.getElementById('hpSpravochnik');
-    const pre   = document.getElementById('hpSpravochnikPre');
-    panel.classList.remove('d-none');
-    pre.textContent = 'Yuklanmoqda...';
-    fetch(url, { headers: { 'Accept': 'application/json' } })
-    .then(r => r.json())
-    .then(d => { pre.textContent = JSON.stringify(d, null, 2); })
-    .catch(e => { pre.textContent = 'Xato: ' + e; });
-  }
-
-  window.loadRegions = () => loadSpravochnik('{{ route("admin.gibrid-pochta.regions") }}');
-  window.loadAreas   = () => loadSpravochnik('{{ route("admin.gibrid-pochta.areas") }}');
 })();
 </script>
 
@@ -335,6 +322,52 @@
         </div>
     </div>
 
+    {{-- ── POS / CHEK VA PRINTER SOZLAMALARI ────────────────────────────── --}}
+    <div class="accordion-item border-0 shadow-sm mb-2">
+        <h2 class="accordion-header">
+            <button type="button" class="accordion-button collapsed fw-bold" data-bs-toggle="collapse" data-bs-target="#soz-pos-chek">
+                <i class="bi bi-receipt me-2 text-success"></i>POS / Chek va printer sozlamalari
+            </button>
+        </h2>
+        <div id="soz-pos-chek" class="accordion-collapse collapse">
+            <div class="accordion-body pb-2">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label small mb-1">Chek pastidagi matn</label>
+                        <input type="text" name="chek_footer_matni" class="form-control form-control-sm"
+                               value="{{ old('chek_footer_matni', \App\Models\Sozlama::ol('chek_footer_matni', 'Rahmat! Qayta kelishingizni kutamiz.')) }}"
+                               maxlength="300">
+                        <div class="form-text">Har bir chek pastida ko'rinadigan xayrlashuv matni.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small mb-1">Chek qog'ozi kengligi</label>
+                        <select name="chek_qogoz_kengligi" class="form-select form-select-sm">
+                            <option value="80" {{ \App\Models\Sozlama::ol('chek_qogoz_kengligi','80')==='80' ? 'selected' : '' }}>80mm (standart)</option>
+                            <option value="58" {{ \App\Models\Sozlama::ol('chek_qogoz_kengligi','80')==='58' ? 'selected' : '' }}>58mm (kichik termoprinter)</option>
+                        </select>
+                        <div class="form-text">Chek chop etilganda qog'oz kengligiga mos formatlanadi.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small mb-1">Avtomatik-qulflash vaqti (fullscreen terminal)</label>
+                        <input type="number" name="pos_auto_lock_daqiqa" class="form-control form-control-sm"
+                               value="{{ old('pos_auto_lock_daqiqa', \App\Models\Sozlama::ol('pos_auto_lock_daqiqa','10')) }}"
+                               min="1" max="120">
+                        <div class="form-text">Necha daqiqa harakatsizlikdan keyin kassa terminali avtomatik qulflanadi.</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="chek_avtomatik_chop" id="chek-avto-chop" value="1"
+                                   {{ \App\Models\Sozlama::ol('chek_avtomatik_chop','0')==='1' ? 'checked' : '' }}>
+                            <label class="form-check-label small" for="chek-avto-chop">
+                                To'lov qabul qilingandan keyin chekni avtomatik chop etish oynasini ochish
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- ── HYBRID POCHTA ──────────────────────────────────────────────────── --}}
     <div class="accordion-item border-0 shadow-sm mb-2">
         <h2 class="accordion-header">
@@ -368,21 +401,19 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small mb-1">
-                            Viloyat ID
-                            <a href="#" onclick="loadRegions()" class="ms-1 small text-primary">ro'yxatni ko'rish</a>
+                            Sertifikat paroli (Variant B — brauzersiz yuborish)
+                            @if($hpCertExists)
+                            <span class="badge bg-success ms-1" style="font-size:.65rem">Sertifikat fayli topildi</span>
+                            @else
+                            <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem">Sertifikat fayli yo'q</span>
+                            @endif
                         </label>
-                        <input type="number" name="hybrid_pochta_region_id" class="form-control form-control-sm"
-                            value="{{ \App\Models\Sozlama::ol('hybrid_pochta_region_id') }}"
-                            placeholder="GET /api/region dan ID">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label small mb-1">
-                            Tuman ID
-                            <a href="#" onclick="loadAreas()" class="ms-1 small text-primary">ro'yxatni ko'rish</a>
-                        </label>
-                        <input type="number" name="hybrid_pochta_area_id" class="form-control form-control-sm"
-                            value="{{ \App\Models\Sozlama::ol('hybrid_pochta_area_id') }}"
-                            placeholder="GET /api/area dan ID">
+                        <input type="password" name="hybrid_pochta_cert_parol" class="form-control form-control-sm"
+                            value="{{ \App\Models\Sozlama::ol('hybrid_pochta_cert_parol') }}"
+                            placeholder="E-IMZO sertifikat paroli" autocomplete="new-password">
+                        <div class="form-text">
+                            Sertifikat fayli <code>storage/app/certs/hp_cert.pfx</code> manziliga qo'lda joylanadi (serverga SSH/SCP orqali).
+                        </div>
                     </div>
                     <div class="col-12 d-flex align-items-center gap-2 mt-1">
                         <button type="button" id="hpTestBtn" class="btn btn-sm btn-outline-primary">
@@ -392,9 +423,6 @@
                             <i class="bi bi-journal-text me-1"></i>Log jurnali
                         </a>
                         <span id="hpTestResult" class="small"></span>
-                    </div>
-                    <div id="hpSpravochnik" class="col-12 d-none">
-                        <pre id="hpSpravochnikPre" class="bg-light border rounded p-2 small" style="max-height:200px;overflow:auto;"></pre>
                     </div>
                 </div>
             </div>
@@ -535,8 +563,13 @@
             <button class="accordion-button collapsed fw-bold" type="button"
                     data-bs-toggle="collapse" data-bs-target="#collapseSms">
                 <i class="bi bi-chat-dots me-2 text-warning"></i>SMS Sozlamalari
-                @php $smsTest = \App\Models\NotificationSetting::get('sms','test_mode','1'); @endphp
-                @if($smsTest === '1')
+                @php
+                    $smsEnabled = \App\Models\NotificationSetting::get('sms','enabled','1');
+                    $smsTest    = \App\Models\NotificationSetting::get('sms','test_mode','1');
+                @endphp
+                @if($smsEnabled !== '1')
+                <span class="badge bg-secondary ms-2 fw-normal" style="font-size:.65rem">o'chirilgan</span>
+                @elseif($smsTest === '1')
                 <span class="badge bg-info ms-2 fw-normal" style="font-size:.65rem">test rejim</span>
                 @else
                 <span class="badge bg-success ms-2 fw-normal" style="font-size:.65rem">faol</span>
@@ -673,6 +706,84 @@
                     <div class="d-flex gap-2 mt-3">
                         <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i>Saqlash</button>
                         <span id="adm-em-natija" class="small ms-2"></span>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {{-- AutoPay Sozlamalari --}}
+    <div class="accordion-item border-0 shadow-sm mb-2">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed fw-bold" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#collapseAutopay">
+                <i class="bi bi-credit-card-fill me-2 text-primary"></i>AutoPay — avtomatik yechish
+                @php $apYoqilgan = \App\Models\NotificationSetting::get('autopay','yoqilgan','0'); @endphp
+                @if($apYoqilgan === '1')
+                <span class="badge bg-success ms-2 fw-normal" style="font-size:.65rem">yoqilgan</span>
+                @else
+                <span class="badge bg-secondary ms-2 fw-normal" style="font-size:.65rem">o'chirilgan</span>
+                @endif
+            </button>
+        </h2>
+        <div id="collapseAutopay" class="accordion-collapse collapse" data-bs-parent="#notifAccordion">
+            <div class="accordion-body">
+                <p class="text-muted small mb-3">
+                    Muddati o'tgan shartnomalarni <a href="{{ route('autopay.index') }}">AutoPay</a> orqali
+                    kuzatib, mijoz kartasida mablag' paydo bo'lganda avtomatik yechish. Har bir shartnoma
+                    admin/menejer tomonidan qo'lda tasdiqlanib yuboriladi — bu yerda faqat ulanish
+                    (merchant_id, token) sozlanadi.
+                </p>
+                @php $apSoz = \App\Models\NotificationSetting::where('channel','autopay')->get()->keyBy('key'); @endphp
+                <form method="POST" action="{{ route('admin.notif.autopay.saqlash') }}">
+                    @csrf
+                    <div class="row g-3">
+                        <div class="col-sm-4">
+                            <label class="form-label small fw-medium">Merchant ID</label>
+                            <input type="text" name="merchant_id" class="form-control form-control-sm"
+                                   value="{{ $apSoz['merchant_id']->value ?? '' }}" autocomplete="off">
+                        </div>
+                        <div class="col-sm-5">
+                            <label class="form-label small fw-medium">API Token</label>
+                            <input type="password" name="token" class="form-control form-control-sm"
+                                   placeholder="{{ ($apSoz['token']->value ?? '') ? '••••••••' : '' }}"
+                                   autocomplete="new-password">
+                        </div>
+                        <div class="col-sm-3 d-flex align-items-end">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="yoqilgan" id="ap-yoqilgan" value="1"
+                                       {{ $apYoqilgan==='1' ? 'checked' : '' }}>
+                                <label class="form-check-label small" for="ap-yoqilgan">Yoqilgan</label>
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="my-3">
+                    <p class="text-muted small mb-2">
+                        <i class="bi bi-cash-coin me-1 text-warning"></i>
+                        <strong>Pullik xizmatlar</strong> (Scoring, Monitoring, Processing, E-GOV) — bular AutoPay'ning
+                        oylik hisobiga qo'shimcha xarajat qiladi. Har birini alohida yoqish/o'chirish mumkin.
+                    </p>
+                    @php
+                        $paidXizmatlar = [
+                            'scoring_yoqilgan'    => 'Scoring (kredit reytingi)',
+                            'monitoring_yoqilgan' => 'Monitoring (karta kuzatish)',
+                            'processing_yoqilgan' => 'Processing (karta qidirish)',
+                            'egov_yoqilgan'       => 'E-GOV (davlat xizmatlari)',
+                        ];
+                    @endphp
+                    <div class="row g-2">
+                        @foreach($paidXizmatlar as $kalit => $nomi)
+                        <div class="col-sm-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="{{ $kalit }}" id="ap-{{ $kalit }}" value="1"
+                                       {{ (\App\Models\NotificationSetting::get('autopay', $kalit, '0') === '1') ? 'checked' : '' }}>
+                                <label class="form-check-label small" for="ap-{{ $kalit }}">{{ $nomi }}</label>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i>Saqlash</button>
                     </div>
                 </form>
             </div>

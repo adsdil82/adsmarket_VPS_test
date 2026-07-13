@@ -56,7 +56,7 @@ class TulovService
             $tulov = Tulov::create([
                 'reg_kredit_id'    => $kredit->id,
                 'grafik_id'        => $birinchiQator?->id,
-                'xodim_id'         => Auth::id(),
+                'xodim_id'         => $malumot['xodim_id'] ?? Auth::id(),
                 'tulov_turi_id'    => $malumot['tulov_turi_id'],
                 'summa'            => $malumot['summa'],
                 'tolov_sana'       => $malumot['tolov_sana'],

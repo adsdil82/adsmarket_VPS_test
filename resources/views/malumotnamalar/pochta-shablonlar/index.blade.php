@@ -74,7 +74,7 @@
                     <td class="text-muted small">{{ $sh->sort_order }}</td>
                     <td>
                         <button class="btn btn-xs btn-outline-secondary"
-                            onclick="editShablon({{ $sh->id }}, @json($sh->nomi), @json($sh->matn), {{ $sh->qayta_yuborish_kun }}, '{{ $sh->holat }}', {{ $sh->sort_order }})">
+                            onclick='editShablon({{ $sh->id }}, @json($sh->nomi), @json($sh->matn), {{ $sh->qayta_yuborish_kun }}, "{{ $sh->holat }}", {{ $sh->sort_order }})'>
                             <i class="bi bi-pencil"></i>
                         </button>
                         <form method="POST" action="{{ route('malumotnamalar.pochta-shablonlar.destroy', $sh) }}"

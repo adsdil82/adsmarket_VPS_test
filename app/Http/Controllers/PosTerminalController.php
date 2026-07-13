@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Filial;
 use App\Models\Foydalanuvchi;
 use App\Models\PosTerminalLog;
+use App\Models\PosTolovUsuli;
+use App\Models\Sozlama;
 use App\Models\TovarGuruh;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,7 +15,6 @@ class PosTerminalController extends Controller
 {
     private const MAX_XATO = 5;
     private const BLOK_DAQIQA = 15;
-    private const AUTO_LOCK_DAQIQA = 10;
 
     /** PIN kirish ekrani — kassir tanlash + raqamli klaviatura. */
     public function pinForma()
@@ -84,14 +85,15 @@ class PosTerminalController extends Controller
             ->withCount(['tovarlar' => fn($q) => $q->where('holat', 'faol')->where('qoldiq', '>', 0)])
             ->orderBy('nomi')->get();
 
-        $autoLockDaqiqa = self::AUTO_LOCK_DAQIQA;
+        $autoLockDaqiqa = (int) Sozlama::ol('pos_auto_lock_daqiqa', '10');
         $kassir = Foydalanuvchi::find($xodimId);
+        $tolovUsullari = PosTolovUsuli::faol()->where('filial_id', $filialId)->orderBy('tartib')->orderBy('nomi')->get();
 
         if (session('pos_terminal.qulflangan')) {
             session(['pos_terminal.qulflangan' => false]);
         }
 
-        return view('terminal.sotish', compact('smena', 'guruhlar', 'autoLockDaqiqa', 'kassir'));
+        return view('terminal.sotish', compact('smena', 'guruhlar', 'autoLockDaqiqa', 'kassir', 'tolovUsullari'));
     }
 
     /** Ekranni qulflash. */

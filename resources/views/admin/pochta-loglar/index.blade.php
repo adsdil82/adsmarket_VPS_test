@@ -72,7 +72,7 @@
                     </button>
                 </div>
                 <div class="col-md-2">
-                    <a href="{{ route('admin.pochta-loglar.index') }}" class="btn btn-sm btn-outline-secondary w-100">
+                    <a href="{{ route('admin.gibrid-pochta.pochta-loglar.index') }}" class="btn btn-sm btn-outline-secondary w-100">
                         Tozalash
                     </a>
                 </div>
@@ -128,12 +128,6 @@
                             <i class="bi bi-file-pdf"></i>
                         </a>
                         @endif
-                        @if(in_array($log->holat, ['xato', 'yaratildi']) && $log->api_letter_id)
-                        <button class="btn btn-xs btn-outline-warning qayta-yuborish-btn"
-                            data-log-id="{{ $log->id }}" title="Qayta yuborish">
-                            <i class="bi bi-arrow-clockwise"></i>
-                        </button>
-                        @endif
                         </td>
                     </tr>
 
@@ -180,12 +174,6 @@
                                         <i class="bi bi-file-pdf me-1"></i>Kvitansiya PDF
                                     </a>
                                     @endif
-                                    @if(in_array($log->holat, ['xato', 'yaratildi']) && $log->api_letter_id)
-                                    <button type="button" class="btn btn-sm btn-warning qayta-yuborish-btn me-auto"
-                                        data-log-id="{{ $log->id }}" data-bs-dismiss="modal">
-                                        <i class="bi bi-arrow-clockwise me-1"></i>Qayta yuborish
-                                    </button>
-                                    @endif
                                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Yopish</button>
                                 </div>
                             </div>
@@ -208,46 +196,5 @@
         @endif
     </div>
 </div>
-
-@push('scripts')
-<script>
-(function() {
-  const csrf = document.querySelector('meta[name=csrf-token]')?.content ?? '';
-
-  document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.qayta-yuborish-btn');
-    if (!btn) return;
-
-    const logId = btn.dataset.logId;
-    if (!confirm('Server sertifikati bilan qayta yuborish amalga oshirilsinmi?\n\nFaqat server sertifikati (Variant B) sozlangan bo\'lsa ishlaydi.')) return;
-
-    btn.disabled = true;
-    const origHtml = btn.innerHTML;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-
-    fetch(`/admin/gibrid-pochta/qayta-yuborish/${logId}`, {
-      method: 'POST',
-      headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' }
-    })
-    .then(r => r.json())
-    .then(d => {
-      if (d.ok) {
-        alert('Muvaffaqiyat: ' + d.xabar);
-        window.location.reload();
-      } else {
-        alert('Xato: ' + (d.xato || 'Noma\'lum xato'));
-        btn.disabled = false;
-        btn.innerHTML = origHtml;
-      }
-    })
-    .catch(err => {
-      alert('Tarmoq xatosi: ' + err.message);
-      btn.disabled = false;
-      btn.innerHTML = origHtml;
-    });
-  });
-})();
-</script>
-@endpush
 
 @endsection

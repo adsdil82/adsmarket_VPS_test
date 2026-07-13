@@ -180,6 +180,12 @@ class RegKredit extends Model implements Auditable
         return $this->belongsTo(Filial::class, 'joriy_filial_id');
     }
 
+    /** AutoPay orqali avtomatik yechish uchun ro'yxatdan o'tkazilgan shartnoma (agar bo'lsa) */
+    public function autopayShartnoma(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Models\AutopayShartnoma::class, 'reg_kredit_id');
+    }
+
     public function tovarlar(): HasMany
     {
         return $this->hasMany(Tovar::class, 'reg_kredit_id');
@@ -206,6 +212,35 @@ class RegKredit extends Model implements Auditable
     {
         return $this->hasMany(ShartnomavVersioniya::class, 'reg_kredit_id')
                     ->orderByDesc('versiya_raqam');
+    }
+
+    public function pochtaLoglar(): HasMany
+    {
+        return $this->hasMany(\App\Models\PochtaLog::class, 'reg_kredit_id')
+                    ->orderByDesc('yuborildi_vaqt');
+    }
+
+    /** Shu kredit uchun oxirgi muvaffaqiyatli yuborilgan pochta xati (bor-yo'g'i bittasi — eager-load uchun xavfsiz). */
+    public function oxirgiYuborilganPochta(): HasOne
+    {
+        return $this->hasOne(\App\Models\PochtaLog::class, 'reg_kredit_id')
+                    ->where('holat', 'yuborildi')
+                    ->ofMany('yuborildi_vaqt', 'max');
+    }
+
+    /**
+     * Eski (migratsiyadan oldingi, qog'ozda imzolangan) shartnoma raqami — "eski_id/yil"
+     * formatida, masalan "101/2019". Faqat eski tizimdan ko'chirilgan shartnomalar uchun
+     * mavjud (eski_id to'ldirilgan bo'lsa); yangi (to'g'ridan-to'g'ri tizimda tuzilgan)
+     * shartnomalar uchun null qaytadi.
+     */
+    public function eskiRaqamKorinishi(): ?string
+    {
+        if (!$this->eski_id) {
+            return null;
+        }
+        $yil = $this->boshlanish_sana?->format('Y');
+        return $yil ? "{$this->eski_id}/{$yil}" : (string) $this->eski_id;
     }
 
     /**

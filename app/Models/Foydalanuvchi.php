@@ -60,6 +60,30 @@ class Foydalanuvchi extends Authenticatable implements Auditable
         return $this->hasMany(Tulov::class, 'xodim_id');
     }
 
+    /** Ish haqi sozlamalari (oklad, bonus foizi, oylik reja) */
+    public function ishHaqiSozlama(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(XodimIshHaqiSozlama::class, 'xodim_id');
+    }
+
+    /** Ish haqidan oldindan olingan avanslar */
+    public function ishHaqiAvanslari(): HasMany
+    {
+        return $this->hasMany(IshHaqiAvans::class, 'xodim_id');
+    }
+
+    /** Kunlik davomat (tabel) yozuvlari */
+    public function davomatlar(): HasMany
+    {
+        return $this->hasMany(XodimDavomat::class, 'xodim_id');
+    }
+
+    /** Oylik ish haqi hisob-kitoblari tarixi */
+    public function ishHaqiHisoblari(): HasMany
+    {
+        return $this->hasMany(IshHaqiHisob::class, 'xodim_id');
+    }
+
     // ─── Rol tekshiruvlari ────────────────────────────────────────
 
     /** Admin ekanligi */

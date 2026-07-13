@@ -10,14 +10,14 @@ class NotificationTemplateController extends Controller
     public function index()
     {
         $shablonlar = NotificationTemplate::latest()->paginate(20)->withQueryString();
-        $channels   = ['sms'=>'SMS','telegram'=>'Telegram','email'=>'Email','hybrid_mail'=>'Gibrid Pochta'];
+        $channels   = ['sms'=>'SMS','telegram'=>'Telegram','email'=>'Email'];
         $variables  = NotificationTemplate::variables();
         return view('xabarnoma.shablonlar.index', compact('shablonlar','channels','variables'));
     }
 
     public function create()
     {
-        $channels  = ['sms'=>'SMS','telegram'=>'Telegram','email'=>'Email','hybrid_mail'=>'Gibrid Pochta'];
+        $channels  = ['sms'=>'SMS','telegram'=>'Telegram','email'=>'Email'];
         $variables = NotificationTemplate::variables();
         return view('xabarnoma.shablonlar.create', compact('channels','variables'));
     }
@@ -25,7 +25,7 @@ class NotificationTemplateController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'channel'    => 'required|in:sms,telegram,email,hybrid_mail',
+            'channel'    => 'required|in:sms,telegram,email',
             'code'       => 'required|string|max:50|unique:notification_templates,code|alpha_dash',
             'name'       => 'required|string|max:200',
             'subject'    => 'nullable|string|max:300',
@@ -44,7 +44,7 @@ class NotificationTemplateController extends Controller
 
     public function edit(NotificationTemplate $shablon)
     {
-        $channels  = ['sms'=>'SMS','telegram'=>'Telegram','email'=>'Email','hybrid_mail'=>'Gibrid Pochta'];
+        $channels  = ['sms'=>'SMS','telegram'=>'Telegram','email'=>'Email'];
         $variables = NotificationTemplate::variables();
         return view('xabarnoma.shablonlar.edit', compact('shablon','channels','variables'));
     }

@@ -54,10 +54,22 @@ class PochXatController extends Controller
 
         try {
             $kredit->load('mijoz');
-            $pdfB64 = $this->svc->generatePdfBase64($kredit, $shablon);
+            $pdf = $this->svc->generatePdfBase64($kredit, $shablon);
+
+            // Hybrid Pochta 1 varaqdan ortiq xat uchun qo'shimcha to'lov oladi —
+            // shu sabab bir varaqqa sig'magan xatni umuman yaratmaymiz.
+            if ($pdf['sahifalar'] > 1) {
+                $log->update([
+                    'holat'      => 'xato',
+                    'xato_xabar' => "Xat matni 1 ta A4 varaqqa sig'madi ({$pdf['sahifalar']} varaq chiqdi) — qo'shimcha to'lovga sabab bo'lmasligi uchun yuborilmadi. Shablon matnini qisqartiring.",
+                ]);
+                return response()->json([
+                    'xato' => "Xat matni 1 ta A4 varaqqa sig'madi ({$pdf['sahifalar']} varaq chiqdi). Hybrid Pochta ko'p varaqli xat uchun qo'shimcha to'lov oladi — shablon matnini qisqartiring. Log #{$log->id}",
+                ], 422);
+            }
 
             $mailResp = $this->svc->createMail(
-                $request->receiver, $request->address, $regionId, $areaId, $pdfB64
+                $request->receiver, $request->address, $regionId, $areaId, $pdf['base64']
             );
 
             if (!$mailResp || empty($mailResp['Id'])) {
@@ -145,24 +157,71 @@ class PochXatController extends Controller
         }
     }
 
-    /** PDF ko'rish (inline browser) */
+    /**
+     * AJAX: Server sertifikati bilan yuborish (Variant B — brauzersiz, E-IMZO shart emas)
+     * Body: { letter_id, log_id }
+     */
+    public function sendServer(RegKredit $kredit, Request $request)
+    {
+        $this->ruxsat($kredit);
+
+        $request->validate([
+            'letter_id' => 'required|integer',
+            'log_id'    => 'required|integer',
+        ]);
+
+        $log = PochtaLog::findOrFail($request->log_id);
+
+        try {
+            $resp = $this->svc->sendMailVariantB((int) $request->letter_id);
+
+            if (!$resp) {
+                $log->update(['holat' => 'xato', 'xato_xabar' => 'Variant B: server sertifikati bilan yuborilmadi (sozlamalarda sertifikat/parolni tekshiring, log faylga qarang)']);
+                return response()->json(['xato' => "Server sertifikati bilan yuborishda xato. Sozlamalarda sertifikat va parolni tekshiring. Log #{$log->id}"], 500);
+            }
+
+            $log->update([
+                'holat'          => 'yuborildi',
+                'javob'          => array_merge($log->javob ?? [], ['send_resp' => $resp]),
+                'yuborildi_vaqt' => now(),
+            ]);
+
+            return response()->json([
+                'ok'        => true,
+                'letter_id' => $request->letter_id,
+                'log_id'    => $log->id,
+                'xabar'     => 'Xat muvaffaqiyatli yuborildi! (server sertifikat bilan)',
+            ]);
+
+        } catch (\Exception $e) {
+            $log->update(['holat' => 'xato', 'xato_xabar' => $e->getMessage()]);
+            return response()->json(['xato' => 'Server xatosi: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /** PDF ko'rish (brauzerda inline) */
     public function preview(RegKredit $kredit, Request $request)
     {
         $this->ruxsat($kredit);
         $kredit->load('mijoz');
-        $shablon = PochtaShablon::findOrFail($request->query('shablon_id'));
-        $pdfB64  = $this->svc->generatePdfBase64($kredit, $shablon);
+        $shablon  = PochtaShablon::findOrFail($request->query('shablon_id'));
+        $pdf      = $this->svc->generatePdfBase64($kredit, $shablon);
+        $pdfBytes = base64_decode($pdf['base64']);
+        $faylNomi = 'xat-' . $kredit->shartnoma_raqam . '.pdf';
 
-        return response(base64_decode($pdfB64), 200, [
+        return response($pdfBytes, 200, [
             'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="xat-preview.pdf"',
+            'Content-Disposition' => "inline; filename=\"{$faylNomi}\"",
+            'Content-Length'      => (string) strlen($pdfBytes),
+            'X-Sahifalar-Soni'    => (string) $pdf['sahifalar'],
         ]);
     }
 
+    /** Faqat "hibrit_pochta" resursi bo'yicha "qoshish" ruxsati bor foydalanuvchilar xat yubora oladi. */
     private function ruxsat(RegKredit $kredit): void
     {
-        if (!in_array(Auth::user()->rol, ['admin', 'menejer'])) {
-            abort(403);
+        if (!Auth::user()->ruxsat('hibrit_pochta', 'qoshish')) {
+            abort(403, "Pochta xati yuborish uchun sizda ruxsat yo'q.");
         }
     }
 }

@@ -96,6 +96,20 @@ class NotificationRecipientService
     }
 
     /**
+     * Kutilayotgan tabida checkbox bilan aniq tanlangan shartnoma (kredit) ID'lari
+     * bo'yicha — foydalanuvchi jadvalda belgilagan qatorlarga aynan mos keladi
+     * (customer_id orqali emas, chunki bitta mijozda bir nechta shartnoma bo'lishi mumkin).
+     */
+    public function getRecipientsByKreditIds(array $kreditIds): array
+    {
+        $query = RegKredit::with(['mijoz', 'filial'])
+            ->whereIn('id', $kreditIds)
+            ->get();
+
+        return $this->buildRecipients($query, 'kutilayotgan');
+    }
+
+    /**
      * Custom filter bo'yicha
      */
     public function getCustomRecipients(array $filters): array

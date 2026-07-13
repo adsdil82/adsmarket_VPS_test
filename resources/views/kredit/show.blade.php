@@ -114,12 +114,8 @@
         <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#xodimTayinModal" title="Xodimga qayta tayinlash"><i class="bi bi-person-gear"></i></button>
         <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#filialKochirModal" title="Filialga ko'chirish"><i class="bi bi-building-gear"></i></button>
         @endif
-        @if($hp_yoqilgan && in_array(Auth::user()->rol, ['admin','menejer']))
-        @php $kechikkan = $kredit->holat === 'muddati_otgan' || ($kredit->tugash_sana && $kredit->tugash_sana->lt(today())); @endphp
-        @if($kechikkan)
-        <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#pochtaXatModal"><i class="bi bi-envelope-paper"></i></button>
-        @endif
-        @endif
+        {{-- Pochta xati yuborish endi FAQAT HibritPochta sahifasi orqali (ruxsat.check:hibrit_pochta,qoshish
+             bilan himoyalangan) — bu yerdan olib tashlandi, "Pochta" tab'da esa faqat tarix ko'rinadi. --}}
     </div>
 @endunless
 </div>
@@ -945,10 +941,6 @@
     </div>
   </div>
 </div>
-@endif
-
-@if($hp_yoqilgan)
-@include('kredit._pochta_modal')
 @endif
 
 @push('scripts')

@@ -8,6 +8,7 @@ use App\Models\OmbordanChiqim;
 use App\Models\PosSmena;
 use App\Models\PosSotuv;
 use App\Models\PosTafsilot;
+use App\Models\PosTolovUsuli;
 use App\Models\TovarGuruh;
 use App\Models\TovarKatalog;
 use Illuminate\Http\Request;
@@ -39,7 +40,9 @@ class PosController extends Controller
         $bugun_sotuv  = PosSotuv::where('filial_id', $filialId)->whereDate('sana', today())->where('holat','tugallangan')->sum('jami_tolov');
         $bugun_checklar = PosSotuv::where('filial_id', $filialId)->whereDate('sana', today())->where('holat','tugallangan')->count();
 
-        return view('ombor.pos.index', compact('guruhlar', 'filialId', 'bugun_sotuv', 'bugun_checklar', 'smena'));
+        $tolovUsullari = PosTolovUsuli::faol()->where('filial_id', $filialId)->orderBy('tartib')->orderBy('nomi')->get();
+
+        return view('ombor.pos.index', compact('guruhlar', 'filialId', 'bugun_sotuv', 'bugun_checklar', 'smena', 'tolovUsullari'));
     }
 
     /** Ajax: tovarlarni qidirish/yuklash — FAQAT shu filialning o'z ombor qoldig'i bo'yicha. */
@@ -84,10 +87,12 @@ class PosController extends Controller
         $request->validate([
             'filial_id'   => 'required|exists:filiallar,id',
             'tolov_turi'  => 'required|in:naqd,plastik,aralash',
+            'tolov_usuli_id' => 'nullable|exists:pos_tolov_usullari,id',
             'naqd_summa'  => 'nullable|numeric|min:0',
             'plastik_summa'=> 'nullable|numeric|min:0',
             'chegirma'    => 'nullable|numeric|min:0',
             'mijoz_ism'   => 'nullable|string|max:200',
+            'tolov_izoh'  => 'nullable|string|max:500',
             'tovarlar'    => 'required|array|min:1',
             'tovarlar.*.tovar_id' => 'required|exists:tovar_katalog,id',
             'tovarlar.*.miqdor'   => 'required|numeric|min:0.001',
@@ -129,10 +134,12 @@ class PosController extends Controller
                 'chegirma'       => $chegirma,
                 'jami_tolov'     => $jami,
                 'tolov_turi'     => $request->tolov_turi,
+                'tolov_usuli_id' => $request->tolov_usuli_id,
                 'naqd_summa'     => $request->naqd_summa ?? 0,
                 'plastik_summa'  => $request->plastik_summa ?? 0,
                 'qayta_pul'      => max(0, ($request->naqd_summa ?? 0) - $jami),
                 'mijoz_ism'      => $request->mijoz_ism,
+                'tolov_izoh'     => $request->tolov_izoh,
                 'holat'          => 'tugallangan',
             ]);
 

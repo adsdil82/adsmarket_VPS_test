@@ -26,3 +26,10 @@ DEPLOY_QOLLANMA.txt
 /storage/framework/sessions/
 /storage/framework/views/
 /storage/logs/
+
+# Session-local backups and sensitive data (added 2026-07-13)
+/storage/app/certs/
+/storage/app/backup/
+/storage/app/existing_ids/
+/migration_tmp/
+*.bak_*

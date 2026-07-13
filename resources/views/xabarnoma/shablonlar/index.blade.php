@@ -22,7 +22,7 @@
                 <tr>
                     <td class="fw-medium">{{ $s->name }}</td>
                     <td>
-                        @php $rang = match($s->channel){ 'sms'=>'warning','telegram'=>'info','email'=>'primary','hybrid_mail'=>'secondary',default=>'secondary' }; @endphp
+                        @php $rang = match($s->channel){ 'sms'=>'warning','telegram'=>'info','email'=>'primary',default=>'secondary' }; @endphp
                         <span class="badge bg-{{ $rang }} text-uppercase" style="font-size:.65rem">{{ $s->channel }}</span>
                         @if($s->is_default)<span class="badge bg-success ms-1" style="font-size:.6rem">default</span>@endif
                     </td>

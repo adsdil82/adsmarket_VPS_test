@@ -213,16 +213,87 @@ class HybridPochtaService
         return null;
     }
 
-    /** Xat holati va tafsilotlari */
+    /**
+     * Xat holati va tafsilotlari. Hujjatda yo'l "/api/mail/:id" deb yozilgan
+     * (Express uslubidagi path-parametr), lekin "id" parametri "query" deb
+     * belgilangan — bu ehtimol hujjatdagi beparvolik. Ikkalasini ham
+     * qo'llab-quvvatlash uchun id both path segment VA query sifatida yuboriladi.
+     */
     public function getMailById(int $letterId): ?array
     {
-        return $this->request('GET', "/api/mail/{$letterId}");
+        return $this->request('GET', "/api/mail/{$letterId}", ['id' => $letterId]);
+    }
+
+    /**
+     * Holat-sinxronlash uchun: 404 va "topilmadi" (masalan tarmoq/auth xatosi)
+     * holatlarini bir-biridan ajratadi — chunki 404 kabinetda o'chirilgan
+     * xat uchun ham qaytadi (o'chirilgan xat butunlay API'dan yo'qoladi,
+     * IsDeleted bayrog'i emas), buni "API xatosi" bilan aralashtirmaslik kerak.
+     *
+     * @return array{topildi: bool, ochirilgan: bool, data: ?array}
+     */
+    public function mailHolatiTekshir(int $letterId): array
+    {
+        $token = $this->getToken();
+        if (!$token) {
+            return ['topildi' => false, 'ochirilgan' => false, 'data' => null];
+        }
+
+        try {
+            $resp = Http::timeout(20)->withToken($token)
+                ->get(self::BASE_URL . "/api/mail/{$letterId}", ['id' => $letterId]);
+
+            if ($resp->status() === 401) {
+                $this->clearToken();
+                $token = $this->getToken();
+                if (!$token) return ['topildi' => false, 'ochirilgan' => false, 'data' => null];
+                $resp = Http::timeout(20)->withToken($token)
+                    ->get(self::BASE_URL . "/api/mail/{$letterId}", ['id' => $letterId]);
+            }
+
+            if ($resp->status() === 404) {
+                return ['topildi' => true, 'ochirilgan' => true, 'data' => null];
+            }
+            if ($resp->ok()) {
+                return ['topildi' => true, 'ochirilgan' => false, 'data' => $resp->json()];
+            }
+
+            Log::warning("HybridPochta mailHolatiTekshir [{$letterId}] {$resp->status()}", ['body' => $resp->body()]);
+        } catch (\Exception $e) {
+            Log::error('HybridPochta mailHolatiTekshir exception: ' . $e->getMessage());
+        }
+
+        return ['topildi' => false, 'ochirilgan' => false, 'data' => null];
+    }
+
+    /**
+     * Sana/filtr bo'yicha xatlar ro'yxatini bevosita Hybrid Pochta API'sining
+     * o'zidan olish (bizning lokal pochta_loglar jadvalimizdan mustaqil —
+     * solishtirish/audit uchun foydali: masalan API real holatini tekshirish).
+     *
+     * @param array $filtr  uid, receiver, region, area, creatorUser, senderUser,
+     *                      isSent, createdStart/End, sentStart/End, pagesCount*,
+     *                      isPerformed, performType, sort, desc
+     */
+    public function mailRoyxati(int $skip = 0, int $limit = 50, array $filtr = []): ?array
+    {
+        return $this->request('GET', '/api/mail', array_merge(
+            ['skip' => $skip, 'limit' => $limit],
+            array_filter($filtr, fn($v) => $v !== null && $v !== '')
+        ));
     }
 
     // ─── PDF generatsiya ─────────────────────────────────────────────────────
 
-    /** Kredit + Shablon asosida PDF yaratib base64 qaytarish */
-    public function generatePdfBase64(RegKredit $kredit, PochtaShablon $shablon): string
+    /**
+     * Kredit + Shablon asosida PDF yaratib base64 va HAQIQIY sahifa sonini
+     * qaytaradi. Hybrid Pochta 1 varaqdan ortiq xat uchun qo'shimcha to'lov
+     * oladi — shuning uchun chaqiruvchi tomon 'sahifalar' > 1 bo'lsa xatni
+     * API'ga yubormasligi kerak (PochXatController shu tekshiruvni qiladi).
+     *
+     * @return array{base64: string, sahifalar: int}
+     */
+    public function generatePdfBase64(RegKredit $kredit, PochtaShablon $shablon): array
     {
         $vars = $this->buildVars($kredit);
         $matn = $shablon->renderMatn($vars);
@@ -233,7 +304,13 @@ class HybridPochtaService
             'vars'   => $vars,
         ])->setPaper('A4', 'portrait');
 
-        return base64_encode($pdf->output());
+        $bytes     = $pdf->output();
+        $sahifalar = $pdf->getDomPDF()->getCanvas()->get_page_count();
+
+        return [
+            'base64'    => base64_encode($bytes),
+            'sahifalar' => $sahifalar,
+        ];
     }
 
     // ─── Template vars ────────────────────────────────────────────────────────
@@ -241,11 +318,14 @@ class HybridPochtaService
     public function buildVars(RegKredit $kredit): array
     {
         $mijoz        = $kredit->mijoz;
-        $kechikishKun = max(0, (int) now()->diffInDays($kredit->tugash_sana) * -1);
+        // Carbon 3'da diffInDays($absolute=true) ham ba'zan manfiy/kasr son qaytarishi
+        // mumkin ekan (kuzatilgan xato) — abs()+int bilan har doim toza kun soni olinadi.
+        $kechikishKun = $kredit->tugash_sana ? max(0, (int) abs(now()->diffInDays($kredit->tugash_sana, true))) : 0;
 
         return [
             'mijoz_fio'       => trim("{$mijoz->familiya} {$mijoz->ism} {$mijoz->otasining_ismi}"),
             'shartnoma_raqam' => $kredit->shartnoma_raqam ?? "K-{$kredit->id}",
+            'eski_raqam'      => $kredit->eskiRaqamKorinishi() ?? '',
             'kechikish_kun'   => $kechikishKun,
             'jami_qarz'       => number_format(
                 (float)($kredit->qoldiq_qarz ?? $kredit->kredit_summa), 0, '.', ' '

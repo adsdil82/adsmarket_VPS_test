@@ -48,17 +48,20 @@ class SmsService
 
 
     /**
-     * So'nggi 24 soat ichida shu shartnoma + shablon uchun SMS yuborilganmi tekshirish
+     * Bugun shu TELEFON RAQAMga shu shablon (template) allaqachon yuborilganmi
+     * tekshirish. Ataylab contract_id/customer_id emas, TELEFON bo'yicha
+     * tekshiriladi — shunda bir xil raqam bir nechta mijoz/shartnomaga
+     * bog'langan bo'lsa ham, kuniga bir shablon bir marta yuboriladi.
      */
-    public function isDuplicateToday(?int $customerId, ?int $contractId, ?int $templateId): bool
+    public function isDuplicateToday(?string $phone, ?int $templateId): bool
     {
-        if (!$contractId || !$templateId) return false;
+        if (!$phone || !$templateId) return false;
 
         return NotificationLog::where('channel', 'sms')
-            ->where('contract_id', $contractId)
+            ->where('phone', $phone)
             ->where('template_id', $templateId)
             ->whereIn('status', ['sent', 'test'])
-            ->where('created_at', '>=', now()->subHours(24))
+            ->whereDate('created_at', today())
             ->exists();
     }
 
@@ -82,9 +85,10 @@ class SmsService
             return $this->logSkipped($phone, $message, $customerId, $contractId, $templateId, $batchId, "SMS moduli o'chirilgan (Sozlamalarda yoqilmagan)");
         }
 
-        // Takroriy SMS oldini olish (so'nggi 24 soat ichida shu shartnoma+shablon uchun yuborilganmi)
-        if ($recipientType !== 'test' && $this->isDuplicateToday($customerId, $contractId, $templateId)) {
-            return $this->logSkipped($phone, $message, $customerId, $contractId, $templateId, $batchId, "Bu shablon ushbu shartnoma uchun so'nggi 24 soat ichida allaqachon yuborilgan");
+        // Takroriy SMS oldini olish (bugun shu TELEFON raqamga shu shablon allaqachon yuborilganmi —
+        // bir xil raqam bir nechta mijoz/shartnomaga bog'liq bo'lsa ham faqat bir marta yuboriladi)
+        if ($recipientType !== 'test' && $this->isDuplicateToday($phone, $templateId)) {
+            return $this->logSkipped($phone, $message, $customerId, $contractId, $templateId, $batchId, "Bu shablon ushbu telefon raqamiga bugun allaqachon yuborilgan");
         }
 
         $result = $this->provider->send($phone, $message);

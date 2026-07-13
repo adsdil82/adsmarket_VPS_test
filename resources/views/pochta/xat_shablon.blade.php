@@ -3,15 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <style>
-  body        { font-family: DejaVu Sans, Arial, sans-serif; font-size: 12pt; color: #000; margin: 0; padding: 0; }
-  .page       { padding: 20mm 25mm 20mm 25mm; min-height: 257mm; }
-  .header     { border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 20px; }
-  .org-name   { font-size: 14pt; font-weight: bold; }
-  .org-sub    { font-size: 9pt; color: #555; }
-  .title      { text-align: center; font-size: 13pt; font-weight: bold; margin: 20px 0 15px; text-transform: uppercase; }
-  .body       { line-height: 1.8; white-space: pre-wrap; font-size: 11pt; }
-  .footer     { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 10px; font-size: 9pt; color: #555; }
-  .sign-block { margin-top: 30px; }
+  /* DIQQAT: Hybrid Pochta 1-varaqdan ortiq xat uchun qo'shimcha to'lov oladi —
+     shu sabab bu shablon ATAYLAB ixcham qilingan (kam margin, kichikroq
+     line-height). HybridPochtaService::generatePdfBase64() PDF chiqqandan
+     keyin haqiqiy sahifa sonini DomPDF'dan so'rab tekshiradi va 1 tadan
+     ko'p bo'lsa xat yaratilishini bloklaydi. */
+  body        { font-family: DejaVu Sans, Arial, sans-serif; font-size: 11pt; color: #000; margin: 0; padding: 0; }
+  .page       { padding: 15mm 20mm; }
+  .header     { border-bottom: 2px solid #333; padding-bottom: 6px; margin-bottom: 14px; }
+  .org-name   { font-size: 13pt; font-weight: bold; }
+  .org-sub    { font-size: 8.5pt; color: #555; }
+  .title      { text-align: center; font-size: 12.5pt; font-weight: bold; margin: 14px 0 10px; text-transform: uppercase; }
+  .body       { line-height: 1.4; white-space: pre-wrap; font-size: 10.5pt; }
+  .footer     { margin-top: 24px; border-top: 1px solid #ccc; padding-top: 8px; font-size: 8.5pt; color: #555; }
+  .sign-block { margin-top: 18px; }
 </style>
 </head>
 <body>

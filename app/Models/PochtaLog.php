@@ -44,6 +44,7 @@ class PochtaLog extends Model
             'yaratildi'  => '<span class="badge bg-info text-dark">Yaratildi</span>',
             'kutilmoqda' => '<span class="badge bg-warning text-dark">Kutilmoqda</span>',
             'xato'       => '<span class="badge bg-danger">Xato</span>',
+            'ochirilgan' => '<span class="badge bg-secondary">Kabinetda o\'chirilgan</span>',
             default      => '<span class="badge bg-secondary">' . e($this->holat) . '</span>',
         };
     }

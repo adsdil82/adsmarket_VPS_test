@@ -13,3 +13,7 @@ Schedule::command('devices:check-overdue')->dailyAt('00:10');
 Schedule::command('devices:auto-unlock')->dailyAt('00:20');
 // Har soatda provayderlar bilan sinxronlash
 Schedule::command('devices:sync-providers')->hourly();
+
+// ─── AutoPay Scheduler ───────────────────────────────────────────
+// Faol AutoPay shartnomalari bo'yicha tranzaksiyalarni har soatda tekshirish
+Schedule::command('autopay:sync')->hourly();

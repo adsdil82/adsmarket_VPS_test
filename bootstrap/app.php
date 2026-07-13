@@ -17,8 +17,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'filial.check'      => \App\Http\Middleware\FilialCheck::class,
             'rol.check'         => \App\Http\Middleware\RolCheck::class,
+            'ruxsat.check'      => \App\Http\Middleware\RuxsatCheck::class,
             'litsenziya.tekshir' => \App\Http\Middleware\LitsenziyaTekshir::class,
             'litsenziya.limit' => \App\Http\Middleware\LitsenziyaLimitTekshir::class,
+        ]);
+
+        // AutoPay serverlari o'z tomonidan to'g'ridan-to'g'ri POST qiladi —
+        // sessiya/CSRF tokeni yo'q, Bearer token orqali autentifikatsiya qilinadi.
+        $middleware->validateCsrfTokens(except: [
+            'autopay/webhook',
+            'autopay/verify',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
