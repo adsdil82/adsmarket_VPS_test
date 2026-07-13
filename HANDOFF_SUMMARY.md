@@ -1,388 +1,439 @@
-# ADSmarket POS moduli — HANDOFF SUMMARY
+# ADSmarket (polygon) — HANDOFF SUMMARY
 
-> Server: `/var/www/adsmarket` (SSH: `nasiyapro`, config `/d/ClaudeProjekt/.ssh/config`)
+> Server: `/var/www/adsmarket` (SSH: `nasiyapro`, config `D:/ClaudeProjekt/.ssh/config`)
 > Local nusxa: `D:\ClaudeProjekt\adsmarket_sql\`
-> Git: server repoda mavjud. Bosqich 1-4(qism1) — commit `bcef5d2`. Bosqich 4
-> PIN-terminal UI-test tuzatishlari — commit `97bf290`. Multi-barkod — commit `d05b53c`.
-> Sana: 2026-07-08 (birinchi yaratilgan: 2026-07-07)
+> Domen: `https://adsmarket.oilainvest.uz` (ichki tailscale IP: `100.77.240.39`)
+> GitHub: `git@github-personal:adsdil82/adsmarket_VPS_test.git` (branch `main`)
+> **Oxirgi commit**: `0353552` — "POS multi-barkod, AutoPay moduli, HibritPochta/SMS
+> qayta yozish, Xodimlar ish haqi moduli va oy-tab dizayni" — **push qilingan**.
+> Sana: 2026-07-13 (birinchi yaratilgan: 2026-07-07)
 
-## 1. Umumiy kontekst
+## 0. TEZKOR BOSHLASH (yangi sessiya shu yerdan boshlasin)
 
-Foydalanuvchi (Uzbek/Cyrillic, 28 bo'limli spec) to'liq alohida **POS (Kassa) moduli**
-buyurtma qildi: unified POS menyu guruhi, Dashboard, Kassir smenasi, Qaytim/Vozvrat,
-Fullscreen PIN-kirish terminal, multi-barkod, chek/printer sozlamalari, to'liq RBAC va
-audit-log. Ish **bosqichma-bosqich** rejim bilan olib borildi — foydalanuvchi har
-bosqichdan keyin keyingisiga aniq buyruq berdi:
-
-- ✅ **Bosqich 1** — POS guruh (sidebar), POS Dashboard, POS hisobotlar
-- ✅ **Bosqich 2** — Kassir smenasi (ochish/yopish/topshirish)
-- ✅ **Bosqich 3** — Qaytim/Vozvrat moduli
-- ✅ **Bosqich 4 (qism 1)** — Fullscreen PIN-kirish rejimi — backend TUGALLANDI,
-  **real brauzerda ham to'liq test qilindi (keyingi sessiyada), 2 ta xato topilib tuzatildi**
-- ✅ **Bosqich 4 (qism 2)** — Multi-barkod — **TUGALLANDI va TEST QILINDI**
-- ⬜ **Bosqich 4 (qolgan qismi)** — chek/printer sozlamalari, POS umumiy sozlamalar
-  sahifasi — **BOSHLANMAGAN**
-
-**Muhim tamoyil butun sessiya davomida**: *"Mavjud ishlayotgan funksiyalarni buzma."*
-Shu sababli ko'p joyda **refactor emas, duplikatsiya** yo'li tanlandi (masalan,
-`terminal/sotish.blade.php` — `ombor/pos/index.blade.php`ning mustaqil nusxasi).
+1. Bu faylni va [TODO_NEXT.md](TODO_NEXT.md)ni to'liq o'qing.
+2. Git holati **toza** — `git status` bo'sh chiqishi kerak (agar chiqmasa,
+   demak avvalgi sessiyada tugallanmagan ish bor, avval shuni tekshiring).
+3. Deploy oqimi har doim shu tartibda: LOCAL faylni tahrirlash
+   (`D:\ClaudeProjekt\adsmarket_sql\`) → `php -l` bilan sintaksis tekshirish →
+   `scp` orqali serverga yuklash → `php artisan migrate --force` (agar
+   migratsiya bo'lsa) → `php artisan optimize:clear && php artisan
+   view:cache` → `chown -R www-data:www-data storage bootstrap/cache`.
+4. Har bir o'zgarishdan keyin **hech bo'lmaganda** tinker orqali to'liq HTTP
+   kernel simulyatsiyasi bilan tekshiring (pastda "Test metodologiyasi"
+   bo'limiga qarang) — real login parolimiz yo'q, shuning uchun brauzerda
+   to'g'ridan-to'g'ri UI test odatda **imkonsiz** (bo'lim 8ga qarang).
+5. Ishni tugatgach: `git add -A` → `git status --short` bilan **albatta**
+   tekshirib chiqing (sertifikat/backup/shaxsiy ma'lumot fayllari
+   staged bo'lib qolmasin) → commit → `git push origin main` → shu ikki
+   faylni (HANDOFF_SUMMARY.md, TODO_NEXT.md) yangilang.
 
 ---
 
-## 2. Bosqich 1 — POS guruh, Dashboard, Hisobotlar (TUGALLANGAN)
+## 1. Umumiy kontekst va modullar ro'yxati
 
-- Sidebar'da yagona **"POS"** guruhi yaratildi (`layouts/app.blade.php`), eski
-  "Kassa POS" / "Sotuv tarixi" / "Kassalar" / "Kassa transferi" shu guruhga ko'chirildi
-  (marshrutlar/ruxsatlar buzilmadi).
-- Yangi **POS Dashboard** (`/pos/dashboard`, `PosController::dashboard()`,
-  `ombor/pos/dashboard.blade.php`) — real ma'lumot bilan kartalar+jadvallar.
-- Yangi **POS hisobotlar** (`/pos/hisobotlar`, `PosController::hisobotlar()`,
-  `ombor/pos/hisobotlar.blade.php`) — filtrlar + Excel export.
-- **Tuzatilgan xato**: `dashboard()` dagi JOIN'da noaniq `holat` ustuni
-  (`pos_sotuv.holat` bilan `foydalanuvchilar.holat` orasida ziddiyat) — qator
-  qo'shib aniqlashtirildi.
+Loyiha — **NasiyaPro/ADSmarket** nomli Laravel 11 kredit-savdo (POS + nasiya)
+boshqaruv tizimi, "polygon" VPS muhitida joylashgan. Ushbu hujjat **barcha**
+modullar bo'yicha to'plangan holat — har bir katta modul alohida bo'limda.
 
-## 3. Bosqich 2 — Kassir smenasi (TUGALLANGAN)
+| # | Modul | Holat |
+|---|---|---|
+| 1 | POS (Kassa) — smena, qaytim, PIN-terminal, multi-barkod | ✅ Tugallangan, commit qilingan |
+| 2 | AutoPay integratsiyasi | ✅ Tugallangan, commit qilingan |
+| 3 | HibritPochta (pochta xabarnoma) qayta yozish | ✅ Tugallangan, commit qilingan |
+| 4 | SMS moduli qayta yozish | ✅ Tugallangan, commit qilingan |
+| 5 | **Xodimlar ish haqi (Payroll) moduli** | ✅ Tugallangan, commit qilingan |
+| 6 | Chek/printer sozlamalari (POS spec qoldig'i) | ❌ Boshlanmagan |
 
-**Yangi jadval**: `057_pos_smenalar.php`
-- `pos_smenalar`: smena_raqami (unique, format `SM-{filial}-{Ymd}-{seq}`), filial_id,
-  xodim_id, ochilgan_vaqt, yopilgan_vaqt, dastlabki_qoldiq, hisoblangan_qoldiq,
-  yakuniy_qoldiq, farq, topshirilgan_summa, topshirish_holati
-  (`yoq/kutilmoqda/tasdiqlangan/rad_etildi`), qabul_qilgan_id, qabul_vaqti,
-  rad_sababi, holat (`ochiq/yopiq`).
-- `pos_sotuv` jadvaliga `smena_id` (nullable FK) qo'shildi.
+**Muhim tamoyil butun loyiha davomida**: *"Mavjud ishlayotgan funksiyalarni
+buzma."* Ko'p joyda refactor emas, duplikatsiya yo'li tanlangan (masalan,
+`terminal/sotish.blade.php` — `ombor/pos/index.blade.php`ning mustaqil
+nusxasi).
 
-**Model**: `app/Models/PosSmena.php`
-- `joriyNaqdQoldiq()` — joriy naqd qoldiqni hisoblaydi:
-  ```php
-  dastlabki_qoldiq + SUM(naqd_summa - qayta_pul) [tugallangan sotuvlar]
-                    - SUM(qaytimlar naqd) [tugallangan qaytimlar]
-  ```
-- `scopeOchiq()`, `static yangiSmenaRaqami($filialId)`.
+---
 
-**Controller**: `app/Http/Controllers/PosSmenaController.php`
-- `static joriy(int $filialId): ?PosSmena` — **markaziy metod**, boshqa
-  controller'lar (`PosController`, `PosTerminalController`) shundan foydalanadi.
-- `ochishForma/ochish/yopishForma/yopish/topshirish/topshirishTasdiqlash/
-  topshirishRad/royxat/korish`.
-- `egalikTekshir()` — faqat egasi yoki admin/menejer amal qila oladi (403).
+## 2. POS (Kassa) moduli — TO'LIQ TUGALLANGAN
 
-**Muhim biznes-logika**: `PosController::index()` va `store()` endi **majburiy**
-ochiq smena talab qiladi — smena bo'lmasa `pos.smena.ochish-forma`ga
-redirect (yoki `store()`da 422 xato).
+> Batafsil texnik tafsilot juda katta bo'lgani uchun qisqartirilgan.
+> To'liq versiya git tarixida saqlanadi (`bcef5d2`, `97bf290`, `d05b53c`
+> commit xabarlarida va shu fayl 2026-07-08 versiyasida — `git log -p` bilan
+> ko'rish mumkin).
 
-**Yangi view'lar**: `resources/views/ombor/pos/smena/{ochish,yopish,royxat,korish}.blade.php`
+- **Bosqich 1** — POS sidebar guruhi, POS Dashboard (`/pos/dashboard`), POS
+  hisobotlar (Excel export).
+- **Bosqich 2** — Kassir smenasi: `pos_smenalar` jadvali,
+  `PosSmenaController::joriy()` — yagona manba ochiq smenani aniqlash uchun.
+  Barcha POS savdolar endi ochiq smena talab qiladi.
+- **Bosqich 3** — Qaytim/Vozvrat: ombor qoldig'ini tiklash, smena naqd
+  balansini kamaytirish, `pul_oqimlari`ga chiqim yozish, ortiqcha
+  qaytarishni bloklash (`PosTafsilot::qaytarilganMiqdor()`).
+- **Bosqich 4/1** — Fullscreen PIN-kirish terminal: kassir tanlash + PIN
+  klaviatura, bloklash (5 xato/15 daqiqa), qulflash/yechish, audit-log
+  (`pos_terminal_loglar`). **Real brauzerda test qilingan**, 2 ta jiddiy xato
+  topilib tuzatilgan (`sotuvchi` roli PIN tizimidan chetlangan edi; terminal
+  sarlavhasi smena-ochuvchini ko'rsatardi, joriy PIN-kassirni emas).
+- **Bosqich 4/2** — Multi-barkod: `tovar_barkodlar` jadvali (bitta tovarga
+  ko'p shtrix-kod), `PosController::tovarlar()` javobiga `barkodlar_royxati`
+  qo'shildi, ikkala ekranda (`ombor/pos/index.blade.php` va
+  `terminal/sotish.blade.php`) JS barkod-qidiruv yangilandi.
 
-**Sidebar/route**: `pos.smena.*` prefiksi, "Kassir smenalari" nav-item.
+**Muhim eslatmalar (hali ham amal qiladi)**:
+- `Foydalanuvchi::$fillable`dan PIN maydonlarini (`pin_kod`, `pin_xato_soni`,
+  `pin_bloklangan_gacha`) hech qachon olib tashlamang.
+- Rol nomi **`sotuvchi`** (haqiqiy POS operatorlari), `kassir` rolidan hech
+  kim foydalanmaydi — yangi PIN/kassir bog'liq so'rovlarda ikkalasini ham
+  hisobga oling.
+- Admin foydalanuvchilarning `filial_id`si `NULL` bo'lishi mumkin.
+- `terminal/sotish.blade.php` va `ombor/pos/index.blade.php` — qasddan
+  duplikatsiya, ikkalasini bir vaqtda yangilang.
 
-## 4. Bosqich 3 — Qaytim/Vozvrat (TUGALLANGAN)
+**Boshlanmagan qoldiq**: chek/printer sozlamalari (`pos_printer_settings`,
+`pos_receipt_templates`), POS umumiy sozlamalar sahifasi (auto-lock daqiqasi
+hozircha `PosTerminalController::AUTO_LOCK_DAQIQA = 10` kodda hardcoded).
 
-**Yangi jadvallar**:
-- `058_pos_qaytim_kategoriya.php` — `pul_kategoriyalar`ga `CF-2740` ("POS savdo
-  qaytimi", yunalish=chiqim, ota=`CF-2700`) qo'shadi.
-- `059_pos_qaytimlar.php` — `pos_qaytimlar` (qaytim_raqami unique
-  `QR-{filial}-{Ymd}-{seq}`, sotuv_id, smena_id — **qaytarish vaqtidagi** smena,
-  tolov_turi, jami_summa, sabab, holat) + `pos_qaytim_tafsilot`.
+---
 
-**Model**: `PosQaytim.php`, `PosQaytimTafsilot.php`.
-`PosTafsilot::qaytarilganMiqdor()` — shu tafsilot bo'yicha jami qaytarilgan
-miqdorni hisoblaydi (faqat `holat=tugallangan` qaytimlar bo'yicha) — **ortiqcha
-qaytarishni oldini olish** shu metodga tayanadi.
+## 3. AutoPay integratsiyasi — TUGALLANGAN
 
-**Controller**: `app/Http/Controllers/PosQaytimController.php`
-- `boshlash/saqlash/royxat/korish`.
-- `saqlash()`: DB::transaction ichida yozuv + `StockService::kirim()` (ombor
-  qoldig'ini tiklaydi), keyin **transaction TASHQARISIDA**
-  `TulovService::pulOqimigaYozKassaTuri(..., kategoriyaKodi:'CF-2740',
-  manbaTur:'pos_qaytim', yunalish:'chiqim')` — pul oqimidan **chiqim** yoziladi.
-- Har qatorda live tekshiruv: `qolgan = sotilgan - qaytarilgan` — 0 bo'lsa
-  ro'yxatdan chiqariladi, ortiqcha kiritilsa 422 xato.
+Click/Payme uslubidagi tashqi to'lov tizimi (AutoPay) bilan integratsiya —
+shartnoma yuborish, to'lovlarni avtomatik qabul qilish, sinxronlash.
 
-**Yangi view'lar**: `resources/views/ombor/pos/qaytim/{boshlash,royxat,korish}.blade.php`
-`ombor/pos/tarix.blade.php` va `chek.blade.php`ga "Qaytim" tugmasi qo'shildi
-(faqat `holat===tugallangan` bo'lganda).
+**Jadvallar**: `066_autopay_shartnomalar.php`, `067_autopay_tranzaksiyalar.php`,
+`069_autopay_shartnoma_ochirilgan_holat.php`,
+`070_autopay_shartnoma_manba_va_nullable.php` (manba, pinfl ustunlari,
+nullable FK), `071_autopay_kartalar.php`, `072_autopay_tranzaksiya_karta_ustunlari.php`.
 
-**To'liq end-to-end test qilingan**: smena ochish → sotuv (−2 dona) → qaytim
-(+1 dona) → ombor qoldig'i tiklanishi, smena naqd balansi, `pul_oqimlari`
-`yunalish=chiqim` yozuvi, ortiqcha qaytarish bloklanishi — barchasi tasdiqlangan,
+**Modellar**: `AutopayShartnoma`, `AutopayTranzaksiya`, `AutopayKarta`.
+
+**Controller**: `app/Http/Controllers/AutoPayController.php` — `index()`
+**3 tabga** bo'lingan (Shartnomalar / Tranzaksiyalar / Kartalar + E-GOV),
+bank-stil UI (`resources/views/autopay/index.blade.php`).
+
+**Asosiy funksiyalar**:
+- Webhook qabul qiluvchi endpoint va prepayment verification endpoint.
+- `loan_id` formatiga shartnoma raqami qo'shildi.
+- Checkbox orqali ko'p shartnomani birdaniga yuborish (bulk send).
+- To'liq sinxronlash: barcha AutoPay kontrakt/tranzaksiyalarni olish,
+  `tranzaksiyaniQayta()` — bog'lanmagan shartnoma uchun to'lov yozmaslik.
+- Shartnomaga biriktirish modali + qidiruv endpoint.
+- Tranzaksiyalar tabida davr bo'yicha sinxronlash, Manba ustuni, rang/filtr.
+- Kartalar tabi (mijoz qidirish + `card.info`).
+- E-GOV tabi (mijoz + xizmatlar + saqlash/olish/yangilash).
+- Bulk contract metodlari (`createOrUpdate`/`bulk.update`/`bulk.delete`).
+- To'lovni bekor qilish (`transaction.cancel`), noto'g'ri bog'langan 12 ta
+  AutoPay to'lovi bekor qilingan (bir martalik tozalash, production'da
+  bajarilgan).
+- Shartnomani tahrirlash (`contract.update`) tugmasi.
+- `app/Console/Commands/AutoPaySync.php` — buyruq orqali sinxronlash.
+
+**Xizmat**: `app/Services/AutoPayService.php`.
+
+**Real brauzerda test qilingan**: to'liq sinxronlash oqimi, shartnoma
+biriktirish, bulk send.
+
+---
+
+## 4. HibritPochta va SMS modullari — QAYTA YOZILGAN
+
+Eski `HybridMailController` + `xabarnoma/hybrid_mail/index.blade.php` va
+eski SMS view'lar (`guruhli.blade.php`, `tarix.blade.php`, `yakka.blade.php`)
+**butunlay o'chirilib**, yagona zamonaviy modullarga almashtirildi:
+
+- `app/Http/Controllers/HibritPochtaController.php` +
+  `resources/views/hibrit_pochta/index.blade.php` — bank-stil, yagona sahifa,
+  tab asosida.
+- `app/Http/Controllers/SmsController.php` (qayta yozilgan, +154 qator) +
+  `resources/views/xabarnoma/sms/index.blade.php` (yagona, eski 3 ta alohida
+  sahifa o'rniga).
+- `app/Services/HybridPochtaService.php` kengaytirildi (+92 qator).
+
+**Tuzatilgan xato (bu sessiyada)**: har ikkala yangi sahifada ham flash-xabar
+(`session('muvaffaqiyat')`/`session('xato')`) **ikki marta** ko'rinardi —
+sabab: `layouts/app.blade.php` global flash-xabar bloki bilan har bir sahifaning
+o'z takroriy bloki bir vaqtda ishlagan. Har ikki sahifadan ham takroriy blok
+olib tashlandi (`ish_haqi/index.blade.php`da ham xuddi shu xato topilib
+tuzatilgan — bo'lim 5.6ga qarang).
+
+---
+
+## 5. Xodimlar ish haqi (Payroll) moduli — TO'LIQ YANGI, TUGALLANGAN
+
+Foydalanuvchi so'rovi bo'yicha noldan qurilgan **to'liq mustaqil modul**:
+xodimlarga oylik ish haqi hisoblash, oklad proporsional to'lov (davomatga
+qarab), komissiya bonusi, savdo-reja bonusi, soliq/ushlanma, avans, va
+tarix/dashboard hisobotlari. Alohida sidebar guruh + menyu, o'z rol/ruxsat
+tizimi bilan (`ruxsat.check:xodimlar_ish_haqi`).
+
+### 5.1 Ma'lumotlar bazasi (migratsiyalar `074`-`079`)
+
+| Fayl | Vazifa |
+|---|---|
+| `074_xodimlar_ish_haqi_module.php` | `xodim_ish_haqi_sozlama` (oklad, bonus%, oylik reja), `xodim_davomat` (kunlik holat), `ish_haqi_hisoblari` (oylik hisob-kitob, snapshot maydonlari); "Ish haqi (avtomatik hisoblash)" harajat turi seed qilinadi |
+| `075_davomat_oy_holati.php` | `davomat_oy_holati` — oy yopish/ochiq holati (unique yil+oy) |
+| `076_ish_haqi_reja_min_max.php` | `reja_min_foizi` (default 80), `reja_max_foizi` (default 100) |
+| `077_ish_haqi_bajarilish_foizi.php` | `ish_haqi_hisoblari.reja_bajarilish_foizi` |
+| `078_ish_haqi_global_sozlama.php` | Singleton `ish_haqi_global_sozlama` (soliq 12%, boshqa ushlanma 0%) |
+| `079_ish_haqi_avans_va_ustunlar.php` | `soliq_foizi`/`boshqa_ushlanma_foizi` (nullable, xodimga individual), `dastlabki_qoldiq`; `ish_haqi_hisoblari`ga soliq/ushlanma snapshot ustunlari; `ish_haqi_avanslar` jadvali |
+
+### 5.2 Modellar (`app/Models/`)
+
+- **`XodimIshHaqiSozlama`** — xodimga individual sozlama (oklad, bonus%,
+  oylik reja, reja min/max%, soliq%/boshqa ushlanma% — **nullable**, `null`
+  bo'lsa global sozlamadan olinadi, dastlabki qoldiq).
+- **`XodimDavomat`** — kunlik davomat. `ICON_HOLATLARI` konstantasi har bir
+  holat uchun ikonka/rang/nom beradi (keldi ✓ yashil, kelmadi ✗ qizil, kech
+  qoldi, tatil, kasal, dam olish).
+- **`IshHaqiHisob`** — oylik hisob-kitob natijasi, **barcha stavkalar
+  hisoblash vaqtida shu qatorga "snapshot" qilinadi** (keyinchalik global/
+  xodim sozlamasi o'zgarsa ham, eski oylar o'zgarmaydi).
+  `qolganTolash(): float` — `jami_hisoblangan - avans_jami` (avansdan keyin
+  qolgan to'lanadigan summa) — bu **hamma joyda** "qancha to'lash kerak"
+  degan ma'noda ishlatiladi.
+- **`IshHaqiGlobalSozlama`** — singleton, `::ol()` static metodi orqali
+  olinadi (yo'q bo'lsa avtomatik yaratiladi).
+- **`IshHaqiAvans`** — oy davomida berilgan avanslar tarixi.
+- **`DavomatOyHolati`** — `::yopiqmi($yil, $oy)` — oy yopilganmi tekshiradi.
+- **`Foydalanuvchi`**ga qo'shilgan relationlar: `ishHaqiSozlama()`,
+  `davomatlar()`, `ishHaqiHisoblari()`, `ishHaqiAvanslari()`.
+
+### 5.3 Hisoblash mantiqi — `app/Services/IshHaqiHisoblashService.php`
+
+```
+oklad_qismi = oklad * (kelgan_kunlar / ish_kunlari_jami)
+komissiya_bonus = shu oyda shu xodimga tegishli shartnomalardan yig'ilgan
+                  to'lovlarning bonus_foizi% (odatiy 5%)
+reja_bonus = agar bajarilish% <= reja_min_foizi% → 0
+             agar bajarilish% >= reja_max_foizi% → reja_bonus_summa (to'liq)
+             oralig'ida → proporsional (chiziqli interpolatsiya):
+             reja_bonus_summa * (bajarilish% - min%) / (max% - min%)
+jami_gross = oklad_qismi + komissiya_bonus + reja_bonus + qoshimcha_hisoblash
+soliq_summa = jami_gross * soliq_foizi% (xodimniki, bo'sh bo'lsa global 12%)
+boshqa_ushlanma_summa = jami_gross * boshqa_ushlanma_foizi% (bo'sh bo'lsa global 0%)
+jami_hisoblangan = jami_gross - soliq_summa - boshqa_ushlanma_summa - jarima(ushlanma)
+qolganTolash = jami_hisoblangan - avans_jami (shu oyda berilgan avanslar yig'indisi)
+```
+
+- **`hisoblaOy()`** — bitta xodim uchun bitta oyni hisoblaydi/qayta hisoblaydi.
+  Agar oy allaqachon `holat=tolandi` bo'lsa — **o'zgarmas** (qayta
+  hisoblanmaydi).
+- **`qoshimchaVaUshlanmaSaqla()`** — qo'lda kiritiladigan qo'shimcha bonus
+  va jarima (ushlanma)ni saqlaydi, jami qayta hisoblanadi.
+- **`avansBer()`** — avans berish: `DB::transaction` ichida `Harajat` yozuvi
+  yaratiladi (`harajat_turi = "Ish haqi (avtomatik hisoblash)"`,
+  `tegishli_xodim_id`), `TulovService::pulOqimigaYozKassaTuri(...)` orqali
+  pul oqimiga **chiqim** yoziladi, `IshHaqiAvans` yozuvi yaratiladi va agar
+  shu oy uchun hisob mavjud bo'lsa `avans_jami` qayta yig'iladi.
+- **`tolash()`** — yakuniy to'lov: faqat **qolganTolash()** miqdorida (avans
+  ayirilgan holda) Harajat+PulOqim yaratiladi (agar qolgan 0 yoki manfiy
+  bo'lsa — Harajat yaratilmaydi), `holat=tolandi` qilinadi (shundan keyin
+  **o'zgartirib bo'lmaydi**).
+
+### 5.4 Controller — `app/Http/Controllers/IshHaqiController.php`
+
+5 ta tab: `davomat`, `hisoblash`, `tarix`, `sozlamalar`, `dashboard` —
+yagona `index($request)` metodida `$tab` query-param bo'yicha branch qilinadi
+(shu loyihada barcha "bank-stil" modullar shu patternda: AutoPay,
+HibritPochta ham shunday qurilgan).
+
+- `davomatSaqla()` / `oyYopish()` — oylik davomat grid saqlash va oy yopish
+  (`DavomatOyHolati::yopiqmi()` orqali tekshiriladi, yopilgan oyni tahrirlab
+  bo'lmaydi).
+- `sozlamaSaqla()` — xodimga individual sozlama (soliq%/boshqa ushlanma%
+  bo'sh yuborilsa `NULL` saqlanadi → global qiymatdan foydalaniladi).
+- `globalSozlamaSaqla()` — barcha xodimlar uchun global standart (soliq/
+  boshqa ushlanma%).
+- `avansBer()` — avans berish endpointi.
+- `hisobla()` — "Hisoblash (barchasi)" tugmasi — tanlangan oy/filial bo'yicha
+  barcha xodimlarni qayta hisoblaydi.
+
+### 5.5 Sahifa dizayni — `resources/views/ish_haqi/index.blade.php`
+
+**Davomat tabi**: oylik jadval — har bir kun ustun, har bir xodim qator,
+har katakda icon-select (✓/✗/kech qoldi/tatil/kasal/dam olish). Oy yopish
+tugmasi — yopilgandan keyin barcha select'lar `disabled`, avtomatik keyingi
+oy ochiladi.
+
+**Hisoblash tabi**: 3-guruhli jadval sarlavhasi (2 qatorli `<thead>`,
+`rowspan`/`colspan` bilan):
+- Yashil **HISOBLANDI** guruhi: Oklad qismi, Komissiya, Reja bonus(%), Qo'shimcha.
+- Qizil **USHLANDI** guruhi: Jarima, Soliq, Boshqa ushlanma.
+- Ko'k **TO'LANDI** guruhi: Avans, Yakuniy to'lov.
+- Bundan tashqari: O'tgan oy qoldig'i (kulrang), Jami, Oy yakuniy qoldig'i
+  (kulrang, `qolganTolash()` asosida hisoblanadi, oldingi oylardan qolgan
+  to'lanmagan qoldiq + bir martalik "Dastlabki qoldiq" ham qo'shiladi).
+- Har qatorda ikkita amal tugmasi: "Avans berish" (yashil, har doim) va
+  tafsilot/hisoblash modali ("...", faqat hisob mavjud bo'lsa).
+
+**Sozlamalar tabi**: yuqorida "Global sozlamalar" karta-forma (soliq%/boshqa
+ushlanma%, barcha xodimlarga standart sifatida), pastda har bir xodim uchun
+individual jadval (2-qatorli grouped header, "SHAXSIY STAVKA (bo'sh — global)"
+guruhi), tahrirlash modali orqali oklad/bonus/reja/soliq/boshqa
+ushlanma/dastlabki qoldiq belgilanadi.
+
+**Bu sessiyada qo'shilgan — Oy-tab dizayni (bo'lim 6ga qarang)**: Davomat va
+Hisoblash tablaridagi "Oy" `<select>` dropdown o'rniga, Pul Oqimi/AutoPay
+uslubidagi **tab-qator** (Yan/Fev/Mar/.../Dek) qo'yildi — bitta qatorda,
+bosilgan oy avtomatik faollashadi.
+
+### 5.6 Tuzatilgan xatolar (bu modul qurilishi davomida)
+
+1. **Flash-xabar 2 marta ko'rinishi** — `layouts/app.blade.php`da global
+   render bor edi, `ish_haqi/index.blade.php` (va `hibrit_pochta`,
+   `xabarnoma/sms`) o'zining alohida bloki bilan takrorlagan. Barchasidan
+   takroriy blok olib tashlandi.
+2. **Sozlamalar tabi 500 xatosi** (bu sessiyada topilib tuzatilgan) —
+   `Attempt to read property "soliq_foizi" on null` — xodim jadvalidagi
+   tahrirlash tugmasining `data-soliq-foizi="{{ $s->soliq_foizi }}"` va
+   `data-boshqa-ushlanma-foizi="{{ $s->boshqa_ushlanma_foizi }}"` atributlari
+   `?? ''` fallback'siz yozilgan edi (shu qatordagi boshqa barcha maydonlarda
+   fallback bor edi, faqat shu ikkitasida yo'q edi) — xodim hali sozlama
+   kiritmagan bo'lsa (`$s = null`) xato berardi. Tuzatildi:
+   `{{ $s->soliq_foizi ?? '' }}`.
+
+### 5.7 Real (tinker orqali to'liq HTTP-kernel) funksional test
+
+To'liq end-to-end tekshirilgan: global sozlamalar merosxo'rligi (soliq=12%,
+boshqa=0%), xodimga individual `dastlabki_qoldiq=100000`, `hisoblaOy()`
+to'g'ri natija (`oklad_qismi=2000000`, `soliq_summa=240000`,
+`jami=1760000`), `avansBer()` (500,000 berildi, `qolganTolash()=1260000`
+to'g'ri hisoblandi, alohida Harajat yozuvi yaratildi), `tolash()` faqat
+qolgan `1,260,000` uchun Harajat yaratdi (to'liq `1,760,000` emas). Barcha
 test ma'lumotlari tozalangan.
 
-## 5. Bosqich 4 (qism 1) — Fullscreen PIN-kirish rejimi (TUGALLANGAN)
+**Barcha 5 tab** (`davomat`, `hisoblash`, `tarix`, `sozlamalar`, `dashboard`)
+to'liq HTTP-kernel simulyatsiyasida `200 OK` qaytarishi tasdiqlangan.
 
-### 5.1 Yangi migratsiyalar
-- **`060_foydalanuvchi_pin.php`** — `foydalanuvchilar`ga qo'shadi:
-  `pin_kod` (nullable string), `pin_bloklangan_gacha` (nullable timestamp),
-  `pin_xato_soni` (unsignedTinyInteger, default 0).
-- **`061_pos_terminal_loglar.php`** — `pos_terminal_loglar` jadvali: xodim_id,
-  filial_id, `hodisa` enum(`kirish/xato_pin/bloklandi/qulflash/yechish/chiqish`),
-  ip, izoh, timestamps.
+---
 
-### 5.2 Model o'zgarishlari
-**`app/Models/Foydalanuvchi.php`**:
+## 6. Bu sessiyada bajarilgan qo'shimcha ish — Oy-tab dizayni
+
+Foydalanuvchi so'rovi: Hisoblash va Davomat tablaridagi oy tanlash filtri
+(`<select name="oy">`) ko'rinishini **tab-qator** (Pul Oqimi/AutoPay
+modullaridagi kabi bitta qatorli navigatsiya uslubida) ko'rinishiga
+o'tkazish, Yan/Fev/Mar/.../Dek tartibida, bosilgan oy avtomatik tanlanadi.
+
+**O'zgarishlar** (`resources/views/ish_haqi/index.blade.php`):
+- Yangi CSS: `.oy-tab-strip` (bitta qatorli konteyner, `overflow-x:auto`),
+  `.oy-tab` (pill-uslubdagi havola), `.oy-tab.active` (ko'k gradient).
+- Ikkala tabda (`davomat`, `hisoblash`) eski `<select name="oy">` olib
+  tashlandi, o'rniga 12 ta `<a class="oy-tab">` havola qo'shildi — har biri
+  `route('ish_haqi.index', array_merge(request()->except(['oy','page']),
+  ['tab' => ..., 'oy' => $i+1]))` orqali **joriy barcha filtrlarni (yil,
+  filial, qidiruv) saqlab qolgan holda** faqat `oy` parametrini almashtiradi.
+- Filter-bar formasiga `<input type="hidden" name="oy" value="{{ $oy }}">`
+  qo'shildi — Yil/Filial o'zgartirib "Ko'rish" bosilganda joriy oy saqlanib
+  qoladi (chunki oy endi formaning o'zida emas, alohida tab-qatorda).
+
+**Test qilingan**: to'liq HTTP-kernel simulyatsiyasi (haqiqiy login-sessiya
+bilan, quyidagi bo'lim 8ga qarang) orqali tasdiqlangan — `yil=2026`,
+`filial_id=3` kabi barcha parametrlar tab havolalarida to'g'ri saqlanib
+qolmoqda, faqat bosilgan oy `active` klassi bilan to'g'ri belgilanmoqda.
+Ikkala tab (`davomat`, `hisoblash`) uchun alohida tekshirilgan.
+
+**Diqqat — bu o'zgarish oson qaytariladi**: agar yangi dizayn mos kelmasa,
+`git revert` yoki `git log -p -- resources/views/ish_haqi/index.blade.php`
+orqali eski `<select>` versiyasini tiklash mumkin (commit `0353552`dan
+oldingi holat).
+
+---
+
+## 7. Git holati
+
+```
+fd9f773  Initial commit: ImkonPlus v1 — adsmarket polygon
+9b92247  Kredit shartnoma formasi va hujjat tizimini kengaytirish
+be2a51b  Shartnoma versiyasini qaytarish, DB/APP ZIP progress-bar, litsenziya
+9581410  Bank-style UI redesign, payment page overhaul, reporting improvements
+311a506  Bonus tovar, etiketka/hisobot shablonlari, balans va kirim-chiqim refaktori
+bcef5d2  POS module phase 4 fullscreen PIN preparation
+97bf290  Fix POS terminal: sotuvchi role excluded from PIN system, wrong cashier name
+d05b53c  Add multi-barkod support for products (POS + fullscreen terminal)
+c8a39c3  Update HANDOFF_SUMMARY.md and TODO_NEXT.md with browser-test findings
+0353552  POS multi-barkod, AutoPay moduli, HibritPochta/SMS qayta yozish,
+         Xodimlar ish haqi moduli va oy-tab dizayni  ← ENG OXIRGI
+```
+
+Barchasi `origin/main`ga push qilingan (`github-personal:adsdil82/adsmarket_VPS_test.git`).
+
+**`.gitignore`ga qo'shilgan** (bu sessiyada, sensitive ma'lumotlarni himoya
+qilish uchun): `/storage/app/certs/` (SSL sertifikat — `hp_cert.pfx`),
+`/storage/app/backup/` (biznes ma'lumotlari backup JSON), `/storage/app/existing_ids/`
+(mijozlar ro'yxati), `/migration_tmp/`, `*.bak_*`. **Bu papkalar hech qachon
+git orqali commit qilinmasin** — ular real production ma'lumot va
+sertifikatlarni o'z ichiga oladi.
+
+---
+
+## 8. Test metodologiyasi — MUHIM (nega browser test qilib bo'lmaydi)
+
+Bu VPS'dagi `/ish-haqi` va boshqa admin-panel sahifalarini **haqiqiy
+brauzerda** ko'rish uchun login parol kerak, lekin bazadagi parol **hash**
+holida saqlanadi va uni tiklab bo'lmaydi — shuning uchun avtomatlashtirilgan
+sessiyada odatiy login-forma orqali kirish **imkonsiz**.
+
+**Ishlatilgan muqobil usul — to'liq HTTP-kernel simulyatsiyasi (tinker orqali)**:
+
 ```php
-protected $fillable = [..., 'pin_kod', 'pin_xato_soni', 'pin_bloklangan_gacha', ...];
-protected $hidden   = [..., 'pin_kod', ...];
-protected $casts    = [..., 'pin_kod' => 'hashed', 'pin_bloklangan_gacha' => 'datetime'];
-
-public function pinTogri(string $pin): bool { ... Hash::check ... }
-public function pinBloklanganmi(): bool { ... isFuture() ... }
+$app = app();
+$store = $app['session']->driver();
+$store->start();
+$user = App\Models\Foydalanuvchi::find(13); // admin
+Illuminate\Support\Facades\Auth::guard('web')->login($user);
+$store->put('login_web_' . sha1(Illuminate\Auth\SessionGuard::class), $user->getAuthIdentifier());
+$store->save();
+$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+$request = Illuminate\Http\Request::create('/ish-haqi', 'GET', ['tab' => 'hisoblash']);
+$request->cookies->set(config('session.cookie'), $store->getId());
+$response = $kernel->handle($request);
+echo $response->getStatusCode(); // 200 kutilgan
+$kernel->terminate($request, $response);
 ```
-> ⚠️ **MUHIM TUZATILGAN XATO**: dastlab `pin_xato_soni` va `pin_bloklangan_gacha`
-> `$fillable`da YO'Q edi → `update()` chaqiruvlari bu maydonlarni **jimgina
-> e'tiborsiz qoldirar edi** (mass-assignment himoyasi). Tinker orqali test qilinmaguncha
-> aniqlanmagan. Hozir tuzatilgan va deploy qilingan.
 
-**`app/Models/PosTerminalLog.php`** — yangi model, `static yoz($hodisa, $xodimId, $filialId, $izoh=null)`.
+Bu usul **haqiqiy** middleware pipeline'ni (CSRF, session, `$errors` bag,
+va h.k.) to'liq ishga tushiradi, shuning uchun `request()` global helper,
+`session()`, `$errors` — barchasi **to'g'ri** ishlaydi (controller'ni
+to'g'ridan-to'g'ri chaqirishdan farqli o'laroq — pastga qarang).
 
-### 5.3 Controller
-**`app/Http/Controllers/PosTerminalController.php`** — yangi:
-- `pinForma()` — kassir tanlash + PIN klaviatura ekrani.
-- `pinTekshir(Request)` — dastlabki kirish, xato hisoblash, bloklash (5 xato →
-  15 daqiqa blok), `session(['pos_terminal' => [...]])`, `PosTerminalLog::yoz('kirish', ...)`.
-- `index()` — fullscreen savdo ekrani; sessiyani tekshiradi, ochiq smenani talab
-  qiladi (`PosSmenaController::joriy()`).
-- `qulflash()` — ekranni JS orqali qulflaydi (`session('pos_terminal.qulflangan')=true`).
-- `yechish(Request)` — PIN qayta kiritilganda: **barcha nomzod kassirlar bo'yicha
-  sikl** (`pinTogri()` har biriga), chunki hash to'g'ridan-to'g'ri qidirilmaydi.
-  Boshqa kassir aniqlansa `boshqa_kassir:true` qaytaradi — frontend savatni
-  tozalab, sahifani qayta yuklaydi.
-- `chiqish()` — sessiyani tozalaydi, `pos.terminal.pin-forma`ga redirect.
+**ESLATMA — controller'ni to'g'ridan-to'g'ri chaqirish YETARLI EMAS**:
+`app(IshHaqiController::class)->index($request)` orqali test qilish
+tezroq, lekin **`request()` global helper eski/bo'sh so'rovni qaytaradi**
+(chunki container'ga yangi `$request` bog'lanmagan) — bu Blade shablonidagi
+`request()->except(...)` kabi joylarni **noto'g'ri** ko'rsatishi mumkin
+(bu sessiyada oy-tab havolalarini tekshirishda aynan shu holat yuz berdi —
+`yil` parametri "yo'qolganday" ko'rindi, aslida test metodologiyasi
+kamchiligi edi). **Har doim to'liq kernel simulyatsiyasidan foydalaning**,
+ayniqsa `request()`/`session()` global helper'lariga tayanadigan joylarni
+tekshirganda.
 
-> ⚠️ **MUHIM TUZATILGAN XATO #2**: `pinForma()` va `yechish()`dagi nomzodlar
-> so'rovi dastlab `->where('filial_id', $filialId)` bilan filtrlangan edi.
-> **Admin (`rol=admin`) foydalanuvchilarning `filial_id`si odatda `NULL`** —
-> shu sabab admin PIN bilan hech qachon topilmas edi ("PIN noto'g'ri" xatosi,
-> hatto to'g'ri PIN kiritilsa ham). Tuzatildi:
-> `->where(fn($q) => $q->where('filial_id', $filialId)->orWhere('rol', 'admin'))`
-
-### 5.4 Marshrutlar (`routes/web.php`)
-```php
-Route::prefix('terminal')->name('terminal.')->group(function () {
-    Route::get('/pin',       [PosTerminalController::class, 'pinForma'])->name('pin-forma');
-    Route::post('/pin',      [PosTerminalController::class, 'pinTekshir'])->name('pin-tekshir');
-    Route::get('/',          [PosTerminalController::class, 'index'])->name('index');
-    Route::post('/qulflash', [PosTerminalController::class, 'qulflash'])->name('qulflash');
-    Route::post('/yechish',  [PosTerminalController::class, 'yechish'])->name('yechish');
-    Route::get('/chiqish',   [PosTerminalController::class, 'chiqish'])->name('chiqish');
-});
-```
-(shu `Route::middleware('auth')` blok ichida, `pos.*` guruhidan keyin joylashgan.)
-
-`admin.foydalanuvchilar.pin` — `POST /admin/foydalanuvchilar/{foydalanuvchi}/pin`
-→ `AdminController::foydalanuvchiPinOrnat()` (parol-reset patterniga o'xshash,
-`digits_between:4,6|confirmed` validatsiya bilan).
-
-### 5.5 View'lar (yangi)
-- **`resources/views/terminal/pin.blade.php`** — mustaqil (o'z `<html>`,
-  Bootstrap 5.3.3 CDN), kassir tanlash select + raqamli klaviatura.
-- **`resources/views/terminal/sotish.blade.php`** — mustaqil fullscreen savdo
-  ekrani. **`ombor/pos/index.blade.php`dan qasddan duplikatsiya qilingan**
-  (refactor emas!) — bir xil `/pos/tovarlar` va `/pos/saqlash` endpoint'laridan
-  foydalanadi, ustiga: qulflash overlay (PIN qayta kiritish), avtomatik
-  qulflash timer (10 daqiqa, `autoLockDaqiqa` orqali sozlanadigan).
-
-### 5.6 Admin UI
-`resources/views/admin/foydalanuvchilar.blade.php` — har bir kassir/menejer/admin
-qatoriga PIN o'rnatish tugmasi (🔢 ikonka) + modal qo'shildi (parol-reset
-modaliga o'xshash pattern).
-
-### 5.7 Sidebar
-`layouts/app.blade.php`:
-- "Fullscreen kassa" nav-item (`target="_blank"`, `route('terminal.pin-forma')`)
-  — "Kassa POS" ostiga qo'shildi.
-- `$aktiv_grup` aniqlash qatoriga `terminal.*` qo'shildi.
-
-### 5.8 Xavfsizlik chegarasi (ONGLI QAROR — foydalanuvchiga eslatish kerak)
-PIN qatlami **faqat "qaysi kassir terminaldan foydalanmoqda"ni aniqlaydi**
-(smena/audit maqsadida). Haqiqiy xavfsizlik chegarasi — odatiy Laravel
-`auth` sessiyasi (qurilma allaqachon tizimga kirgan bo'lishi kerak).
-`/pos/tovarlar` va `/pos/saqlash` endpoint'lari **PIN bo'yicha qayta
-tekshirilmaydi** — ular `Auth::user()->filial_id`ga tayanadi, PIN-sessiyaga
-emas. Bu **qasddan qilingan tanlov** (mavjud, test qilingan POS asosini
-buzmaslik uchun), lekin **haqiqiy production xavfsizlik talabi** bo'lsa,
-kelajakda qayta ko'rib chiqish kerak.
-
-### 5.9 Real brauzerda test qilingandan keyin topilgan va tuzatilgan 2 ta xato (commit `97bf290`)
-
-Avvalgi sessiyada bu funksiya faqat **tinker/curl** darajasida tekshirilgan edi
-(section 7 pastda). Keyingi sessiyada Chrome orqali to'liq PIN-kirish →
-lock/unlock → kassir-almashtirish oqimi bosqichma-bosqich sinovdan o'tkazildi
-va shu jarayonda ikkita jiddiy xato topildi:
-
-1. **`sotuvchi` roli PIN tizimidan butunlay chetlab qo'yilgan edi.** Tizimda
-   ikkita alohida rol bor — `kassir` ("Kassir", hech kim ishlatmaydi) va
-   `sotuvchi` ("Sotuvchi", **haqiqiy POS operatorlari shu rolda**). Uchta joyda
-   ro'yxat qat'iy `['admin','menejer','kassir']` bilan cheklangan edi:
-   - `resources/views/admin/foydalanuvchilar.blade.php` (86-qator) — "POS PIN
-     kod o'rnatish" tugmasi `sotuvchi` qatorlarida umuman ko'rinmas edi.
-   - `app/Http/Controllers/PosTerminalController.php` (2 joy — `pinForma()` va
-     `yechish()` dagi nomzodlar so'rovi) — haqiqiy kassirlar terminal
-     nomzodlar ro'yxatida topilmas edi.
-   - `app/Http/Controllers/PosController.php` (`hisobotlar()` dagi "kassirlar"
-     filtr-dropdown) — POS hisobotlarda ham `sotuvchi` ko'rinmas edi.
-   **Tuzatish**: har uch joyga `'sotuvchi'` qo'shildi (additiv, `kassir`ga
-   tegilmadi).
-2. **Terminal sarlavhasi/qulflash ekrani noto'g'ri odamni ko'rsatardi.**
-   `resources/views/terminal/sotish.blade.php` (89- va 229-qatorlar, JS
-   `JORIY_XODIM_ID`) `$smena->xodim->ism_familiya` (ya'ni **smenani ochgan
-   xodim**) dan foydalangan, PIN orqali joriy kirgan kassirdan emas. Agar
-   smenani boshqa odam ochib, keyin PIN orqali boshqa kassir terminaldan
-   foydalansa — sarlavha noto'g'ri ism ko'rsatar edi (audit maqsadiga zid).
-   **Tuzatish**: `PosTerminalController::index()` endi
-   `$kassir = Foydalanuvchi::find($xodimId)` ni view'ga uzatadi, view esa
-   `$kassir->ism_familiya`dan foydalanadi.
-
-Test qilingan (brauzerda, real UI orqali): PIN o'rnatish (admin panel),
-kassir tanlash + PIN klaviatura (noto'g'ri/to'g'ri), terminal ochilishi va
-sarlavhadagi kassir nomi to'g'riligi, qulflash/yechish (noto'g'ri/to'g'ri PIN),
-boshqa kassir PIN bilan yechilganda avtomatik almashish + savat tozalanishi +
-`location.reload()`, audit-log (`pos_terminal_loglar`) barcha hodisalarni
-to'g'ri yozgani. Test PIN'lar va audit-log yozuvlari tozalangan; "Tizim Admin"
-hisobidagi oldindan mavjud PIN test paytida **4321**ga almashtirildi (asl
-qiymati hash bo'lgani uchun tiklab bo'lmadi).
+**POST endpoint'lar uchun** (CSRF middleware bilan to'qnashadi): controller
+metodini to'g'ridan-to'g'ri chaqirish qabul qilinadi (business-logikani
+tekshirish uchun yetarli, CSRF himoyasining o'zini emas).
 
 ---
 
-## 6. Bosqich 4 (qism 2) — Multi-barkod (TUGALLANGAN, commit `d05b53c`)
+## 9. Umumiy arxitektura naqshlari (barcha yangi modullarda takrorlanadi)
 
-Bitta tovar uchun bir nechta shtrix-kod. Asosiy `tovar_katalog.barkod` ustuni
-**o'zgarishsiz qoldi** (orqaga moslik), yangi jadval faqat qo'shimcha
-barkodlarni saqlaydi.
-
-**Yangi**:
-- `database/migrations/062_tovar_barkodlar.php` — `tovar_barkodlar` (id,
-  tovar_id FK → `tovar_katalog` cascade-delete, barkod unique, timestamps).
-- `app/Models/TovarBarkod.php` — model, `belongsTo(TovarKatalog::class)`.
-- `TovarKatalog::barkodlar()` — yangi `hasMany` relation.
-
-**O'zgartirilgan**:
-- `PosController::tovarlar()` — qidiruv endi `orWhereHas('barkodlar', ...)`
-  orqali qo'shimcha barkodlarni ham qamrab oladi; har bir natijaga
-  `barkodlar_royxati` (asosiy + qo'shimcha, birlashtirilgan) massivi qo'shildi.
-- `resources/views/ombor/pos/index.blade.php` va
-  `resources/views/terminal/sotish.blade.php` (**ikkalasi ham** — qasddan
-  duplikatsiya, TODO_NEXT'da ogohlantirilganidek) — `barkodSkan()` JS'idagi
-  `data.find(t => t.barkod === q)` endi
-  `data.find(t => (t.barkodlar_royxati || [t.barkod]).includes(q))`ga
-  almashtirildi.
-- `app/Http/Controllers/TovarKatalogController.php` (`store()`/`update()`) —
-  `qoshimcha_barkodlar[]` massivini validatsiya qilib saqlaydi/yangilaydi
-  (`update()`da eskilarini o'chirib qayta yozadi — forma har doim to'liq
-  ro'yxatni qayta yuboradi).
-- `resources/views/ombor/katalog/create.blade.php` va `edit.blade.php` —
-  "Qo'shimcha shtrix-kodlar" bo'limi, JS orqali dinamik qo'shish/o'chirish
-  (`qoshimchaBarkodQosh()`, har bir qatorda o'chirish tugmasi).
-
-**Test qilingan (brauzerda)**: mahsulotga (`LG Vc 76 a`, id=135) qo'shimcha
-barkod qo'shildi va saqlandi → oddiy POS ekranida shu barkod bilan
-skanerlanganda mahsulot to'g'ri savatga tushdi → xuddi shu barkod fullscreen
-terminalda ham ishladi → **regressiya yo'q**: asosiy (eski) barkod ikkala
-ekranda ham muammosiz davom etmoqda. Test barkodi bazadan tozalangan.
+- **Bank-stil yagona-sahifa modul**: bitta controller `index($tab)`
+  branch qiladi, bitta Blade fayl `@if($tab === '...')` bloklari bilan,
+  umumiy CSS (`.bank-table`, `.bank-wrap`, `.filter-bar`, `.badge-modern`),
+  yuqorida `nav-tabs` orqali tab almashtirish.
+- **Guruhlangan jadval sarlavhasi**: 2-qatorli `<thead>`, `rowspan`/`colspan`
+  bilan, har guruh uchun rang-gradient CSS klassi.
+- **Snapshot pattern**: hisoblash vaqtidagi stavkalar keyinchalik sozlama
+  o'zgarsa ham o'zgarmasligi uchun natija jadvaliga saqlanadi.
+- **Global + individual sozlama**: `$individual ?? $global` pattern —
+  individual `NULL` bo'lsa global standart ishlatiladi.
+- **Harajat/PulOqim yozish patterni**: `Harajat::create([...])` →
+  `TulovService::pulOqimigaYozKassaTuri(filialId:, kassaTuri:, summa:,
+  sana:, kategoriyaKodi:, izoh:, manbaTur:, manbaId:, yunalish:)`.
 
 ---
 
-## 7. O'zgargan/yaratilgan fayllar ro'yxati
+## 10. Xavfsizlik va maxfiylik eslatmalari
 
-> Bosqich 1-4(qism1) — commit `bcef5d2`da. PIN-terminal UI-test tuzatishlari —
-> commit `97bf290`da. Multi-barkod — commit `d05b53c`da. Quyidagi ro'yxat
-> **tarixiy** (bu fayllar avval untracked/modified holatda edi, hozir hammasi
-> commit qilingan).
-
-### Yangi (endi commit qilingan) — bevosita POS bilan bog'liq:
-```
-app/Http/Controllers/PosQaytimController.php
-app/Http/Controllers/PosSmenaController.php
-app/Http/Controllers/PosTerminalController.php
-app/Models/PosQaytim.php
-app/Models/PosQaytimTafsilot.php
-app/Models/PosSmena.php
-app/Models/PosTerminalLog.php
-database/migrations/057_pos_smenalar.php
-database/migrations/058_pos_qaytim_kategoriya.php
-database/migrations/059_pos_qaytimlar.php
-database/migrations/060_foydalanuvchi_pin.php
-database/migrations/061_pos_terminal_loglar.php
-resources/views/ombor/pos/dashboard.blade.php
-resources/views/ombor/pos/hisobotlar.blade.php
-resources/views/ombor/pos/qaytim/         (papka)
-resources/views/ombor/pos/smena/          (papka)
-resources/views/terminal/                 (papka: pin.blade.php, sotish.blade.php)
-app/Models/TovarBarkod.php
-database/migrations/062_tovar_barkodlar.php
-```
-
-### O'zgartirilgan (modified) — bevosita POS bilan bog'liq:
-```
-app/Http/Controllers/AdminController.php     (+ foydalanuvchiPinOrnat)
-app/Http/Controllers/PosController.php       (+ smena majburiyligi, dashboard/hisobotlar)
-app/Models/Foydalanuvchi.php                 (+ PIN maydonlari/metodlar)
-app/Models/PosSotuv.php                      (+ smena_id)
-app/Models/PosTafsilot.php                   (+ qaytarilganMiqdor)
-resources/views/admin/foydalanuvchilar.blade.php  (+ PIN modal)
-resources/views/layouts/app.blade.php        (+ POS guruh, Fullscreen kassa link)
-resources/views/ombor/pos/chek.blade.php     (+ Qaytim tugmasi)
-resources/views/ombor/pos/index.blade.php    (+ smena-bar, + multi-barkod skanerlash)
-resources/views/ombor/pos/tarix.blade.php    (+ Qaytim tugmasi)
-routes/web.php                               (+ pos.smena.*, pos.qaytim.*, terminal.*, admin PIN route)
-app/Models/TovarKatalog.php                  (+ barkodlar() relation)
-app/Http/Controllers/TovarKatalogController.php (+ qo'shimcha barkodlar saqlash)
-resources/views/ombor/katalog/create.blade.php  (+ qo'shimcha barkodlar UI)
-resources/views/ombor/katalog/edit.blade.php    (+ qo'shimcha barkodlar UI)
-resources/views/terminal/sotish.blade.php    (+ to'g'ri kassir nomi, + multi-barkod skanerlash)
-```
-
-### Boshqa (bu sessiyaga bevosita aloqasi yo'q, oldingi sessiyalardan qolgan
-### tugallanmagan/tugallangan ishlar — HANDOFF uchun eslatib o'tiladi, lekin
-### POS spec doirasiga kirmaydi):
-```
-Bonus tovar avtomatik hisoblash (047-049 migratsiyalar, PLReportService,
-  BLReportService, hisobot/bonus_tovarlar.blade.php)
-Etiketka shablonlari (050, EtiketkaShablon model, BarcodeLabelController)
-Hisobot shablonlari (051, HisobotShablon model, hisobot/konstruktor.blade.php)
-Balans tenglashtiruvchi/rezerv (052-053, pul-oqimlari/balans/index.blade.php)
-Eski-ID unique ustunlar (054-056 — insertOrIgnore dedup uchun)
-Kirim/Chiqim hujjatlar refactor (ombor/kirim/, ombor/chiqim/ papkalar,
-  hujjatlar/ subpapkalar, ImportService)
-lang/uz/validation.php — yangi validatsiya xabarlari
-```
-> Bu fayllar hali ham commit qilinmagan holatda turibdi (POS ishlaridan
-> mustaqil). Agar ular tugallangan bo'lsa, POS commit'laridan **alohida**
-> commit qilish tavsiya etiladi.
-
----
-
-## 8. Test qilingan narsalar
-
-**Bosqich 4 qism 1 (PIN-terminal), birinchi sessiya** — faqat tinker/curl:
-1. `Foydalanuvchi::pinTogri()` / `pinBloklanganmi()` — to'g'ri/noto'g'ri PIN,
-   hash tekshiruvi.
-2. Bloklash logikasi: `pin_xato_soni++` → 5-chida `pin_bloklangan_gacha` o'rnatiladi
-   → `pinBloklanganmi()=true`.
-3. To'liq terminal oqimi tinker/curl orqali (route darajasida `302`, `500` yo'q).
-4. `AdminController::foydalanuvchiPinOrnat()` — PIN o'rnatish, keyin
-   `pinTogri()` bilan tasdiqlash.
-
-**Bosqich 4 qism 1, ikkinchi sessiya — real brauzerda** (bo'lim 5.9'da
-batafsil): PIN o'rnatish, kassir tanlash + klaviatura, terminal ochilishi +
-to'g'ri kassir nomi, qulflash/yechish, boshqa-kassir almashish, audit-log —
-barchasi Chrome orqali tasdiqlangan, 2 ta xato tuzatilgan.
-
-**Bosqich 4 qism 2 (multi-barkod), real brauzerda** (bo'lim 6'da batafsil):
-qo'shimcha barkod qo'shish, ikkala ekranda (oddiy POS + fullscreen terminal)
-skanerlash, asosiy barkod regressiyasiz ishlashi.
-
-**Barcha test ma'lumotlari** (PIN qiymatlari, `pos_terminal_loglar` yozuvlari,
-test barkodlar) har safar tozalangan — production ma'lumotlarga ta'sir
-qilmagan.
-
----
-
-## 9. Keyingi bosqichlar (foydalanuvchi so'ragan, hali BOSHLANMAGAN)
-
-1. **Chek/printer sozlamalari** — `pos_printer_settings`, `pos_receipt_templates`
-   jadvallari, POS sozlamalar sahifasi — hali boshlanmagan.
-2. **POS sozlamalari** umumiy sahifasi (`pos_settings` jadvali) — auto-lock
-   daqiqasi hozircha kodda hardcoded (`AUTO_LOCK_DAQIQA=10`), sozlamalar
-   sahifasi orqali boshqarilishi kerak edi spec bo'yicha.
-3. Mobil/planshet ekranida fullscreen terminal ko'rinishi hali maxsus test
-   qilinmagan (desktop brauzerda to'liq tasdiqlangan).
+- `storage/app/certs/hp_cert.pfx` — HibritPochta SSL sertifikati, **hech
+  qachon** git'ga qo'shilmasin (`.gitignore`da).
+- `storage/app/backup/*.json`, `storage/app/existing_ids/*.txt` — real
+  mijozlar/to'lovlar ma'lumoti, **hech qachon** git'ga qo'shilmasin.
+- Har safar `git add -A` qilgandan keyin **albatta** `git status --short`
+  bilan tekshiring — yangi sensitive fayl turi paydo bo'lsa `.gitignore`ga
+  qo'shing, keyingina commit qiling.

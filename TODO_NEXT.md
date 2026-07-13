@@ -1,181 +1,135 @@
-# TODO_NEXT.md — POS moduli, keyingi sessiya uchun
+# TODO_NEXT.md — ADSmarket (polygon), keyingi sessiya uchun
 
 > To'liq texnik tafsilot uchun qarang: [HANDOFF_SUMMARY.md](HANDOFF_SUMMARY.md)
-> Commitlar: `bcef5d2` (Bosqich 1-4 qism1), `97bf290` (PIN-terminal UI-test
-> tuzatishlari), `d05b53c` (multi-barkod).
+> Eng oxirgi commit: `0353552` — "POS multi-barkod, AutoPay moduli,
+> HibritPochta/SMS qayta yozish, Xodimlar ish haqi moduli va oy-tab dizayni"
+> — **GitHub'ga push qilingan** (`origin/main`).
 
-## 1) Nima bajarildi
+## 1) Nima bajarildi (barcha modullar, hozirgacha)
 
-- **Bosqich 1** ✅ — POS sidebar guruhi, POS Dashboard (`/pos/dashboard`),
-  POS hisobotlar (`/pos/hisobotlar`, Excel export).
-- **Bosqich 2** ✅ — Kassir smenasi: ochish/yopish/topshirish/tasdiqlash/rad,
-  `PosSmenaController::joriy()` — barcha POS savdolar endi ochiq smena talab qiladi.
-- **Bosqich 3** ✅ — Qaytim/Vozvrat: ombor qoldig'ini tiklash, smena naqd
-  balansini kamaytirish, `pul_oqimlari`ga chiqim yozish, ortiqcha qaytarishni
-  bloklash.
-- **Bosqich 4, qism 1** ✅ — Fullscreen PIN-kirish rejimi: kassir tanlash,
-  PIN klaviatura, bloklash (5 xato/15 daqiqa), qulflash/yechish, audit-log
-  (`pos_terminal_loglar`), admin panelda PIN o'rnatish UI. **Real brauzerda
-  to'liq test qilingan**, 2 ta xato topilib tuzatilgan (`sotuvchi` roli PIN
-  tizimidan chetlangan edi; terminal sarlavhasi smena-ochuvchini ko'rsatardi,
-  joriy PIN-kassirni emas) — tafsilot HANDOFF_SUMMARY.md 5.9-bo'limda.
-- **Bosqich 4, qism 2** ✅ — Multi-barkod: `tovar_barkodlar` jadvali, admin
-  formada qo'shimcha barkodlar UI, POS va fullscreen terminalda skanerlash
-  — real brauzerda test qilingan, tafsilot HANDOFF_SUMMARY.md 6-bo'limda.
+- **POS moduli** ✅ — sidebar guruhi, Dashboard, hisobotlar, kassir smenasi,
+  qaytim/vozvrat, fullscreen PIN-terminal (brauzerda test qilingan),
+  multi-barkod (brauzerda test qilingan).
+- **AutoPay integratsiyasi** ✅ — shartnoma/tranzaksiya/karta, webhook,
+  to'liq sinxronlash, E-GOV, bulk amallar, bank-stil 3-tabli UI (brauzerda
+  test qilingan).
+- **HibritPochta va SMS modullari** ✅ — eski kontroller/view'lar butunlay
+  o'chirilib, yagona zamonaviy modullarga almashtirildi.
+- **Xodimlar ish haqi (Payroll) moduli** ✅ — to'liq yangi modul: davomat
+  (oylik grid + oy yopish), proporsional reja bonusi, global/xodim bo'yicha
+  soliq/ushlanma sozlamalari, avans, hisoblash/tarix/dashboard tablari.
+  To'liq HTTP-kernel simulyatsiyasida barcha 5 tab tekshirilgan, funksional
+  test (hisoblash/avans/tolash) to'g'ri natija bergan.
+- **Bu sessiyada qo'shimcha**: Ish haqi modulidagi Sozlamalar tabi 500
+  xatosi tuzatildi (`$s->soliq_foizi` null-safe emas edi); Davomat/Hisoblash
+  tablaridagi oy-select o'rniga tab-qator (Yan/Fev/.../Dek) dizayni
+  qo'yildi; butun repo (78 fayl, ~9000 qator) commit qilinib GitHub'ga
+  push qilindi; `.gitignore`ga sertifikat/backup/shaxsiy ma'lumot
+  papkalari qo'shildi.
 
 ## 2) Nima test qilindi
 
-- Barcha backend logika **tinker** orqali funksional test qilindi (PIN
-  hashing, bloklash, to'liq terminal oqimi: kirish→qulflash→yechish→chiqish).
-- Barcha yangi/o'zgargan marshrutlar **curl** orqali tekshirildi — `302`
-  (login redirect), `500` yo'q, `laravel.log`da yangi xato yo'q.
-- Qaytim modulida to'liq end-to-end ssenariy: sotuv → qisman qaytim → ombor/
-  smena/pul-oqimi muvofiqligi → ortiqcha qaytarish bloklanishi.
-- **PIN-terminal to'liq real brauzerda (Chrome) test qilindi**: PIN o'rnatish,
-  kassir tanlash+klaviatura, terminal ochilishi, qulflash/yechish, boshqa
-  kassir bilan almashish, audit-log yozuvlari.
-- **Multi-barkod real brauzerda test qilindi**: qo'shimcha barkod qo'shish,
-  ikkala ekranda (oddiy POS + fullscreen terminal) skanerlash, asosiy barkod
-  regressiyasiz ishlashi.
-- **Barcha test ma'lumotlari tozalangan** (test PIN'lar, test smenalar, test
-  qaytimlar, `pos_terminal_loglar` test yozuvlari, test barkodlar) — production'ga
-  ta'sir yo'q. Istisno: "Tizim Admin" hisobidagi oldindan mavjud PIN test
-  paytida qayta o'rnatilgan (4321) — asl qiymati tiklanmagan (hash edi).
+- **POS/AutoPay**: real brauzerda (Chrome) to'liq test qilingan (tafsilot
+  HANDOFF_SUMMARY.md 2-3-bo'limlarda).
+- **Ish haqi moduli**: real login-parol yo'qligi sababli **to'liq HTTP-kernel
+  simulyatsiyasi** (tinker orqali, haqiqiy sessiya-login bilan) orqali
+  test qilindi — barcha 5 tab `200 OK`, funksional hisoblash/avans/tolash
+  ssenariylari to'g'ri natija berdi. **Haqiqiy brauzerda vizual ko'rinish
+  hali tasdiqlanmagan** — pastga, bo'lim 3ga qarang.
+- Oy-tab havolalari real HTTP-kernel orqali tekshirildi: `yil`, `filial_id`
+  kabi barcha joriy filtrlar saqlanib qolayotgani va `active` klass to'g'ri
+  qo'yilayotgani tasdiqlangan (ikkala tab: `davomat`, `hisoblash`).
 
-## 3) Nima hali tugallanmagan
+## 3) Nima hali tugallanmagan / ehtiyot choralar kerak
 
+- ❌ **Ish haqi moduli — haqiqiy brauzerda vizual test qilinmagan**. Admin
+  hisobining paroli hash holida saqlangani uchun avtomatlashtirilgan
+  sessiyada login qilib bo'lmadi. Agar foydalanuvchi real brauzerda
+  ko'rsatib bersa yoki vaqtinchalik test paroli bersa — quyidagilarni
+  tekshirish kerak:
+  - Oy-tab qatorining vizual ko'rinishi (rang, joylashuv, mobil ekranda
+    `overflow-x:auto` to'g'ri ishlayaptimi).
+  - Sozlamalar tabi — global karta + xodim jadvali, tahrirlash modali.
+  - Hisoblash tabidagi 3-guruhli sarlavha (yashil/qizil/ko'k) to'g'ri
+    ko'rinishi.
+  - Davomat tabidagi icon-select'lar (rang/belgi) va oy yopish tugmasi.
 - ❌ **Chek/printer sozlamalari** (`pos_printer_settings`,
-  `pos_receipt_templates`) — boshlanmagan.
-- ❌ **POS sozlamalari sahifasi** (`pos_settings`) — boshlanmagan; hozircha
-  auto-lock daqiqasi (`PosTerminalController::AUTO_LOCK_DAQIQA = 10`) kodda
-  hardcoded.
-- ⚠️ Mobil/planshet ekranida fullscreen terminal ko'rinishi maxsus test
-  qilinmagan (faqat desktop brauzerda tasdiqlangan).
-- ✅ Server repo — **hammasi commit qilingan** (3 ta commit, yuqorida). POS
-  bilan bog'liq bo'lmagan boshqa ishlar (bonus tovar, etiketka shablon,
-  balans, kirim/chiqim refactor) hali alohida holatda — pastdagi "Git holati"
-  bo'limiga qarang.
+  `pos_receipt_templates`) — POS spec'ning boshlanmagan qismi, hali
+  tegilmagan.
+- ❌ **POS umumiy sozlamalar sahifasi** (`pos_settings`) — auto-lock
+  daqiqasi hozircha kodda hardcoded (`AUTO_LOCK_DAQIQA=10`).
+- ⚠️ Ish haqi moduli — **Dashboard tabi** (5-tab) faqat "render xatosiz"
+  darajasida tekshirilgan (200 OK), ichidagi grafik/statistika mantig'i
+  chuqur funksional test qilinmagan.
+- ✅ Git holati — **hammasi commit va push qilingan**, ishchi katalog toza
+  bo'lishi kerak (`git status` bo'sh).
 
-## 4) Keyingi sessionda qaysi fayldan boshlash kerak
+## 4) Keyingi sessiyada qaysi fayldan boshlash kerak
 
-1. Avval **[HANDOFF_SUMMARY.md](HANDOFF_SUMMARY.md)**ni o'qing — to'liq
-   texnik kontekst shu yerda.
-2. Agar **chek/printer sozlamalari**dan boshlanadigan bo'lsa:
-   - Yangi migratsiya raqami: `063` (oxirgisi `062_tovar_barkodlar.php`).
-   - `PosController::chekKorish()` — hozirgi chek ko'rinishini o'rganib chiqing.
-3. Agar **POS sozlamalari sahifasi**dan boshlanadigan bo'lsa:
-   - `pos_settings` jadvali (yoki mavjud sozlamalar patterniga qarang —
-     `admin_sozlamalar` kabi boshqa modullar qanday qilingan tekshiring).
-   - `PosTerminalController::AUTO_LOCK_DAQIQA` konstantasini shu sozlamadan
-     o'qiydigan qilib almashtirish kerak bo'ladi.
+1. Avval **[HANDOFF_SUMMARY.md](HANDOFF_SUMMARY.md)**ni to'liq o'qing —
+   barcha modullar bo'yicha texnik kontekst shu yerda.
+2. `cd /var/www/adsmarket && git status` bilan boshlang — toza bo'lishi kerak.
+3. Agar foydalanuvchi **ish haqi modulini haqiqiy brauzerda tekshirishni**
+   so'rasa — bo'lim 3'dagi ro'yxatdan boshlang.
+4. Agar **chek/printer sozlamalari**dan boshlanadigan bo'lsa: yangi
+   migratsiya raqami `080` dan boshlanadi (oxirgisi
+   `079_ish_haqi_avans_va_ustunlar.php`).
+5. Agar **POS sozlamalari sahifasi**dan boshlanadigan bo'lsa: `pos_settings`
+   jadvali, `admin_sozlamalar` patterniga o'xshab qiling.
 
-## 5) POS fullscreen PIN login / lock-unlock / multi-barkod / chek-printer — qolgan ishlar
+## 5) Ehtiyot bo'lish kerak bo'lgan joylar (barcha modullar)
 
-| Bo'lim | Holat | Izoh |
-|---|---|---|
-| PIN login (kassir tanlash + klaviatura) | ✅ Tugallandi, brauzerda test qilingan | `terminal/pin.blade.php`, `PosTerminalController::pinForma/pinTekshir` |
-| Bloklash (5 xato/15 daqiqa) | ✅ Tugallandi | `Foydalanuvchi::pinBloklanganmi()` |
-| Lock/Unlock (qulflash/yechish) | ✅ Tugallandi, brauzerda test qilingan | `PosTerminalController::qulflash/yechish` |
-| Avtomatik qulflash (inaktivlik timeri) | ✅ Kod yozildi, ⚠️ real vaqt sinovi yo'q | JS: `terminal/sotish.blade.php` → `faollikKuzatish()`, hozircha 10 daqiqa hardcoded |
-| Kassir almashtirish (boshqa PIN bilan unlock) | ✅ Tugallandi, brauzerda test qilingan | `yechish()` → `boshqa_kassir:true` → JS `location.reload()` |
-| Audit-log (`pos_terminal_loglar`) | ✅ Tugallandi | `kirish/xato_pin/bloklandi/qulflash/yechish/chiqish` hodisalari |
-| Multi-barkod | ✅ Tugallandi, brauzerda test qilingan | `tovar_barkodlar` jadvali, `TovarKatalog::barkodlar()` |
-| Chek shabloni sozlamalari | ❌ Boshlanmagan | `pos_receipt_templates` |
-| Printer sozlamalari | ❌ Boshlanmagan | `pos_printer_settings` |
-| POS umumiy sozlamalar sahifasi | ❌ Boshlanmagan | `pos_settings`, auto-lock daqiqasini shu yerdan boshqarish kerak |
+- **`terminal/sotish.blade.php` va `ombor/pos/index.blade.php`** — QASDDAN
+  duplikatsiya, ikkalasini bir vaqtda yangilang.
+- **`Foydalanuvchi::$fillable`** — PIN maydonlarini olib tashlamang.
+- **Rol nomlari — `sotuvchi` vs `kassir`**: haqiqiy POS operatorlari
+  `sotuvchi` rolida.
+- **Admin foydalanuvchilarning `filial_id`si `NULL` bo'lishi mumkin.**
+- **Ish haqi — snapshot pattern**: `ish_haqi_hisoblari` jadvalidagi
+  soliq/bonus/ushlanma stavkalari hisoblash vaqtida "muzlatiladi" — global
+  yoki xodim sozlamasini keyinroq o'zgartirish **eski oylarga ta'sir
+  qilmaydi** (bu ataylab qilingan, xato emas).
+- **Ish haqi — `holat=tolandi`**: bu oy uchun boshqa hech narsa
+  o'zgartirilmaydi (hisoblash ham, ushlanma/qo'shimcha ham) — bu ham
+  ataylab (to'lov tarixini himoya qilish uchun).
+- **Tinker orqali View render qilishda** `Undefined variable $errors` va
+  `request()->except()` **noto'g'ri natija** berishi mumkin — bu haqiqiy
+  xato EMAS, controller'ni to'g'ridan-to'g'ri chaqirish (kernel'ni chetlab
+  o'tish) natijasi. **Har doim to'liq HTTP-kernel simulyatsiyasidan
+  foydalaning** (HANDOFF_SUMMARY.md bo'lim 8'dagi tayyor kod namunasi bilan).
+- **`.gitignore`da endi bor**: `/storage/app/certs/`, `/storage/app/backup/`,
+  `/storage/app/existing_ids/`, `/migration_tmp/`, `*.bak_*` — bu papkalar
+  **hech qachon** `git add`ga qo'shilmasin (sertifikat + real mijoz
+  ma'lumotlari). Har `git add -A`dan keyin `git status --short` bilan
+  albatta tekshiring.
+- **Migratsiya raqamlash** — ketma-ket davom eting, oxirgisi
+  `079_ish_haqi_avans_va_ustunlar.php`, keyingisi `080_...`.
 
-## 6) Ehtiyot bo'lish kerak bo'lgan joylar
-
-- **`terminal/sotish.blade.php` va `ombor/pos/index.blade.php` — QASDDAN
-  duplikatsiya qilingan** (refaktor emas). Savat/to'lov logikasi **VA** endi
-  barkod-skan logikasi ham ikkalasida bir xil bo'lishi kerak — multi-barkod
-  qo'shilganda ikkalasi ham yangilangan, kelajakda ham shunday davom eting.
-- **`Foydalanuvchi::$fillable`** — PIN bilan bog'liq maydonlarni (`pin_kod`,
-  `pin_xato_soni`, `pin_bloklangan_gacha`) olib tashlamang — avvalgi
-  sessiyada ularning yo'qligi sabab jiddiy "jim" xato bo'lgan edi.
-- **Rol nomlari — `sotuvchi` vs `kassir`**: tizimda ikkita alohida rol bor,
-  haqiqiy POS operatorlari **`sotuvchi`** rolida (`kassir` rolidan hech kim
-  foydalanmaydi). Har qanday yangi PIN/kassir-bog'liq `whereIn('rol', [...])`
-  yozganda **`'sotuvchi'`ni albatta qo'shing** — bu xato PIN-terminalni
-  haqiqiy kassirlar uchun butunlay ishlamas holga keltirgan edi (tuzatildi,
-  commit `97bf290`, 3 joyda: admin blade, `PosTerminalController` 2 joy,
-  `PosController::hisobotlar()`).
-- **Terminal view'da kassir nomi** — har doim `$kassir` (PIN-sessiyadagi
-  joriy foydalanuvchi, `PosTerminalController::index()` orqali uzatiladi)dan
-  foydalaning, **`$smena->xodim`dan EMAS** (bu smenani ochgan kishi, joriy
-  terminal-kassir emas) — aralashtirilgan xato bo'lgan (tuzatildi, `97bf290`).
-- **Admin foydalanuvchilarning `filial_id`si `NULL` bo'lishi mumkin** — har
-  qanday yangi PIN/filial-bog'liq so'rov yozganda buni eslab qoling
-  (`->orWhere('rol', 'admin')` pattern'idan foydalaning, `PosTerminalController`
-  ichida ikki joyda qo'llanilgan).
-- **`/pos/tovarlar` va `/pos/saqlash`** — bu endpoint'lar PIN-sessiyaga
-  bog'liq EMAS, `Auth::user()->filial_id`ga tayanadi. Agar kelajakda PIN
-  bo'yicha xavfsizlikni kuchaytirish so'ralsa, bu ikkala endpoint'ni **diqqat
-  bilan** qayta ko'rib chiqish kerak — ular hozir ham oddiy POS, ham
-  fullscreen terminal tomonidan ishlatiladi.
-- **Multi-barkod**: asosiy `tovar_katalog.barkod` ustuni hamon bitta va
-  majburiy emas (avtomatik EAN-13 generatsiya bo'ladi). Qo'shimcha barkodlar
-  `tovar_barkodlar` jadvalida, `cascade`da o'chadi. `PosController::tovarlar()`
-  javobidagi `barkodlar_royxati` maydoniga JS shu asosda mos keladi — agar
-  boshqa joyda ham `/pos/tovarlar` javobidan foydalanilsa, shu maydonni
-  hisobga oling.
-- **Migratsiya raqamlash** — ketma-ket, bo'sh joysiz davom eting (oxirgisi
-  `062_tovar_barkodlar.php`). Fayl nomi format: `063_tavsif.php`.
-- **`insertOrIgnore` dedup** — agar yangi jadvalga eski tizimdan import qilish
-  kerak bo'lsa, UNIQUE index kerakligini unutmang (`eski_id` ustuni pattern'i
-  — `054-056` migratsiyalarda qo'llanilgan).
-- **Tinker orqali View render qilishda** `Undefined variable $errors` xatosi
-  chiqishi mumkin — bu **haqiqiy xato emas** (`ShareErrorsFromSession`
-  middleware tinker'da ishlamaydi). Haqiqiy tekshiruv uchun har doim
-  qo'shimcha `curl` orqali yoki real brauzerda real marshrutni tekshiring.
-- **Chrome MCP orqali test qilishda**: ba'zan `ref`ga asoslangan klik
-  (`computer` tool, `ref` parametri) DOM elementida hech narsani ishga
-  tushirmasligi mumkin (masalan, PIN klaviatura tugmalari, admin panel
-  qatoridagi modal tugmalari) — sabab aniq emas. **Har doim koordinata
-  bo'yicha klikdan keyin ekranni tekshiring** (screenshot yoki tegishli
-  natija — masalan, modal ochilganini yoki dots to'lganini tasdiqlang);
-  agar ishlamasa, xuddi shu koordinatada qayta urinib ko'ring yoki
-  `form_input`/coordinate-click'ga o'ting.
-
-## 7) Mavjud ishlayotgan funksiyalarni buzmaslik bo'yicha eslatmalar
+## 6) Mavjud ishlayotgan funksiyalarni buzmaslik bo'yicha eslatmalar
 
 - **Har doim**: LOCAL (`D:\ClaudeProjekt\adsmarket_sql\`) faylni tahrirlang →
   SSH orqali `php -l` bilan sintaksis tekshiring → keyin `scp` bilan deploy
   qiling. Hech qachon to'g'ridan-to'g'ri serverda faylni tahrirlamang.
-- Har bir deploy'dan keyin: `php artisan view:cache && php artisan
-  optimize:clear && chown -R www-data:www-data storage bootstrap/cache`.
+- Har bir deploy'dan keyin: `php artisan optimize:clear && php artisan
+  view:cache && chown -R www-data:www-data storage bootstrap/cache`.
 - Migratsiyalarni ishga tushirishdan oldin **HAR DOIM** `php -l` bilan
   sintaksis tekshiring, keyin `php artisan migrate --force`.
-- Har qanday yangi funksiyani **tinker** orqali (SQL/logika xatosiz
-  ishlashini) VA **real brauzerda yoki curl** orqali (haqiqiy foydalanuvchi
-  oqimi/HTTP marshrut) ikki bosqichda tasdiqlang — faqat bittasi yetarli emas.
-  Backend-only (tinker/curl) test UI-daraja xatolarni (masalan, view'ga
-  noto'g'ri o'zgaruvchi uzatilishi) qamrab olmaydi — bu 2 marta shu sababdan
-  real xato o'tkazib yuborilgan (5.9-bo'lim).
-- Test uchun yaratilgan barcha DB yozuvlarni (test smenalar, test qaytimlar,
-  test PIN'lar, test audit-log yozuvlari, test barkodlar) **albatta tozalang**.
-- `PosSmenaController::joriy()` — **yagona manba** ochiq smenani aniqlash
-  uchun; yangi kod yozganda uni qayta ishlab chiqmang.
-- Sidebar `$aktiv_grup` aniqlash blokidagi `elseif` zanjiri **tartib-bog'liq**
-  — yangi guruh qo'shsangiz, mos `routeIs()` patternini to'g'ri joyga qo'ying
-  (`layouts/app.blade.php`, ~385-qator atrofida).
+- Har qanday yangi funksiyani **tinker** orqali (to'liq HTTP-kernel
+  simulyatsiyasi bilan, yuqoridagi eslatmaga qarang) VA imkon bo'lsa real
+  brauzerda tasdiqlang.
+- Test uchun yaratilgan barcha DB yozuvlarini **albatta tozalang**.
+- Ishni tugatgach: `git add -A` → `git status --short` bilan tekshirish →
+  commit → `git push origin main` → HANDOFF_SUMMARY.md va TODO_NEXT.md'ni
+  yangilash — bu **standart yakunlash protokoli**, har sessiyada takrorlang.
 
 ---
 
 ## Git holati (server, `/var/www/adsmarket`)
 
-- `bcef5d2` — Bosqich 1-4 (qism 1): POS Dashboard/hisobotlar, smena, qaytim,
-  fullscreen PIN-terminal (backend).
-- `97bf290` — PIN-terminal real-brauzer testida topilgan 2 ta xato tuzatildi
-  (`sotuvchi` roli, terminal sarlavhasidagi kassir nomi).
-- `d05b53c` — Multi-barkod (Bosqich 4, qism 2).
+```
+fd9f773 → 9b92247 → be2a51b → 9581410 → 311a506 → bcef5d2 → 97bf290
+→ d05b53c → c8a39c3 → 0353552 (HEAD, origin/main bilan sinxron)
+```
 
-**POS bilan bog'liq bo'lmagan** (oldingi sessiyalardan, hali commit
-qilinmagan): bonus tovar, etiketka shablon, hisobot konstruktor, balans,
-kirim/chiqim hujjatlar refactor — bularning holati (tugallanganmi yoki yo'qmi)
-hali tekshirilmagan. `migration_tmp/`, `routes/web.php.bak_etiketka`,
-`storage/app/backup/`, `storage/app/existing_ids/` — untracked, POS'ga
-aloqasi yo'q.
-
-**Tavsiya**: bu boshqa ishlarni commit qilishdan oldin alohida ko'rib chiqing
-— POS commit tarixini toza saqlash uchun ular bilan aralashtirmang.
+Barcha commit'lar push qilingan, ishchi katalog toza. Keyingi sessiya
+yangi ish boshlashdan oldin `git status`ni tekshirsin.
