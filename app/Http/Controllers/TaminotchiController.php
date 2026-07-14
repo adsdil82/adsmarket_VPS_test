@@ -918,6 +918,9 @@ class TaminotchiController extends Controller
     {
         $filialId  = $this->filialId();
         $usdKurs   = DB::table('valyutalar')->where('kod','USD')->value('kurs') ?: 1;
+        $tab       = in_array($request->get('tab'), ['taminotchi', 'barchasi'], true) ? $request->get('tab') : 'taminotchi';
+        $sanaDan   = $request->sana_dan;
+        $sanaGacha = $request->sana_gacha;
 
         $taminotchilar = Taminotchi::faol()
             ->when($filialId, fn($q) => $q->filialda($filialId))
@@ -926,21 +929,33 @@ class TaminotchiController extends Controller
             ->orderBy('nomi')
             ->get();
 
-        $tanlangan = null;
-        $kirimlar  = collect();
+        $tanlangan      = null;
+        $kirimlar       = collect();
+        $barchaKirimlar = collect();
 
-        if ($request->taminotchi_id) {
+        if ($tab === 'taminotchi' && $request->taminotchi_id) {
             $tanlangan = Taminotchi::find($request->taminotchi_id);
             if ($tanlangan) {
                 $kirimlar = TaminotKirim::where('taminotchi_id', $tanlangan->id)
+                    ->when($sanaDan, fn($q) => $q->whereDate('kirim_sana', '>=', $sanaDan))
+                    ->when($sanaGacha, fn($q) => $q->whereDate('kirim_sana', '<=', $sanaGacha))
                     ->withCount('qatorlar')
                     ->orderByDesc('kirim_sana')->orderByDesc('id')
                     ->get();
             }
+        } elseif ($tab === 'barchasi') {
+            $barchaKirimlar = TaminotKirim::with('taminotchi:id,nomi,asosiy_valyuta')
+                ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
+                ->when($sanaDan, fn($q) => $q->whereDate('kirim_sana', '>=', $sanaDan))
+                ->when($sanaGacha, fn($q) => $q->whereDate('kirim_sana', '<=', $sanaGacha))
+                ->when($request->qidiruv, fn($q) => $q->whereHas('taminotchi', fn($tq) => $tq->where('nomi', 'like', "%{$request->qidiruv}%")))
+                ->withCount('qatorlar')
+                ->orderByDesc('kirim_sana')->orderByDesc('id')
+                ->paginate(50)->withQueryString();
         }
 
         return view('taminotchi.kirim_reestr', compact(
-            'taminotchilar','tanlangan','kirimlar','usdKurs'
+            'taminotchilar','tanlangan','kirimlar','usdKurs','sanaDan','sanaGacha','tab','barchaKirimlar'
         ));
     }
 }

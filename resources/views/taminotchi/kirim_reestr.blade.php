@@ -7,7 +7,7 @@
 
 @push('styles')
 <style>
-.kr-wrap { display:flex; gap:0; border:1px solid #c7d7f8; border-radius:8px; overflow:hidden; height:calc(100vh - 160px); }
+.kr-wrap { display:flex; gap:0; border:1px solid #c7d7f8; border-radius:8px; overflow:hidden; height:calc(100vh - 260px); }
 
 /* ── Chap panel: ta'minotchilar ro'yxati ─────────────── */
 .kr-left {
@@ -69,6 +69,13 @@
 .badge-usd { background:#fef9c3; color:#a16207; border:1px solid #fde047; border-radius:3px; padding:1px 5px; font-size:.64rem; font-weight:700; }
 
 .kr-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#94a3b8; }
+
+/* ── Filtr paneli (tab tanlashdan tashqarida, doim ko'rinadi) ── */
+.kr-filter-bar { background:linear-gradient(90deg,#dbeafe,#bfdbfe); border:1px solid #93c5fd; border-radius:8px 8px 0 0; padding:8px 12px; }
+.kr-filter-bar .form-control, .kr-filter-bar .form-select { background:#fff; border:1px solid #60a5fa; color:#1e3a8a; font-size:.8rem; height:32px; font-weight:600; }
+.kr-tabs { border-bottom:none !important; }
+.kr-tabs .nav-link { font-weight:600; color:#1e3a8a; }
+.kr-tabs .nav-link.active { background:linear-gradient(180deg,#2563eb,#1d4ed8); color:#fff; border-color:#1d4ed8; }
 </style>
 @endpush
 
@@ -76,7 +83,7 @@
 @php
     $n  = fn($v) => number_format((float)$v,0,'.',' ');
     $nu = fn($v) => number_format((float)$v,2,'.',' ');
-    $toValyuta = fn($uzs) => $usdKurs > 0 ? (float)$uzs / (float)$usdKurs : 0;
+    $toValyuta = fn($uzs, $kurs) => $kurs > 0 ? (float)$uzs / (float)$kurs : 0;
     $isUsd = $tanlangan && $tanlangan->asosiy_valyuta === 'USD';
 @endphp
 
@@ -89,11 +96,60 @@
     @endif
 </div>
 
-<div class="kr-wrap shadow-sm">
-    {{-- ── Chap panel ───────────────────────── --}}
+<ul class="nav nav-tabs kr-tabs mb-0">
+    <li class="nav-item">
+        <a class="nav-link {{ $tab === 'taminotchi' ? 'active' : '' }}"
+           href="{{ route('taminotchi.kirim_reestr', ['tab'=>'taminotchi','sana_dan'=>$sanaDan,'sana_gacha'=>$sanaGacha,'qidiruv'=>request('qidiruv'),'taminotchi_id'=>$tanlangan?->id]) }}">
+            <i class="bi bi-people me-1"></i>Ta'minotchi bo'yicha
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {{ $tab === 'barchasi' ? 'active' : '' }}"
+           href="{{ route('taminotchi.kirim_reestr', ['tab'=>'barchasi','sana_dan'=>$sanaDan,'sana_gacha'=>$sanaGacha,'qidiruv'=>request('qidiruv')]) }}">
+            <i class="bi bi-list-columns-reverse me-1"></i>Barcha kirimlar
+        </a>
+    </li>
+</ul>
+
+{{-- ── Umumiy filtr paneli — tab/ta'minotchi tanlanishidan qat'i nazar doim ko'rinadi ── --}}
+<div class="kr-filter-bar mb-0">
+    <form method="GET" class="d-flex align-items-end flex-wrap gap-2">
+        <input type="hidden" name="tab" value="{{ $tab }}">
+        @if($tab === 'taminotchi' && $tanlangan)
+        <input type="hidden" name="taminotchi_id" value="{{ $tanlangan->id }}">
+        @endif
+        <div>
+            <label class="form-label small mb-1 text-dark">Sana dan</label>
+            <input type="date" name="sana_dan" class="form-control" value="{{ $sanaDan }}">
+        </div>
+        <div>
+            <label class="form-label small mb-1 text-dark">Sana gacha</label>
+            <input type="date" name="sana_gacha" class="form-control" value="{{ $sanaGacha }}">
+        </div>
+        <div>
+            <label class="form-label small mb-1 text-dark">Ta'minotchi qidirish</label>
+            <input type="search" name="qidiruv" class="form-control" placeholder="Nomi..." value="{{ request('qidiruv') }}">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm px-3" style="height:32px"><i class="bi bi-filter me-1"></i>Filtrlash</button>
+        @if($sanaDan || $sanaGacha || request('qidiruv'))
+        <a href="{{ route('taminotchi.kirim_reestr', ['tab'=>$tab,'taminotchi_id'=>$tanlangan?->id]) }}" class="btn btn-outline-secondary btn-sm px-2" style="height:32px">
+            <i class="bi bi-x-lg"></i>
+        </a>
+        @endif
+    </form>
+</div>
+
+{{-- ─────────────────────────────────────────────────────────────
+     Tab 1: Ta'minotchi bo'yicha (chap: ro'yxat, o'ng: tanlangan kirimlari)
+────────────────────────────────────────────────────────────── --}}
+@if($tab === 'taminotchi')
+<div class="kr-wrap shadow-sm" style="border-radius:0 0 8px 8px">
     <div class="kr-left">
         <div class="kr-left-head">
             <form method="GET">
+                <input type="hidden" name="tab" value="taminotchi">
+                <input type="hidden" name="sana_dan" value="{{ $sanaDan }}">
+                <input type="hidden" name="sana_gacha" value="{{ $sanaGacha }}">
                 <input type="search" name="qidiruv" placeholder="Ta'minotchi qidirish..." value="{{ request('qidiruv') }}"
                        onkeyup="if(event.key==='Enter') this.form.submit()">
                 @if($tanlangan)<input type="hidden" name="taminotchi_id" value="{{ $tanlangan->id }}">@endif
@@ -101,7 +157,7 @@
         </div>
         <div class="kr-left-list">
             @forelse($taminotchilar as $t)
-            <a href="{{ route('taminotchi.kirim_reestr', ['taminotchi_id'=>$t->id, 'qidiruv'=>request('qidiruv')]) }}"
+            <a href="{{ route('taminotchi.kirim_reestr', ['tab'=>'taminotchi','taminotchi_id'=>$t->id, 'qidiruv'=>request('qidiruv'), 'sana_dan'=>$sanaDan, 'sana_gacha'=>$sanaGacha]) }}"
                class="kr-item {{ $tanlangan && $tanlangan->id === $t->id ? 'active' : '' }}">
                 <span>{{ $t->nomi }}</span>
                 <span class="kr-count">{{ $t->kirimlar_count }}</span>
@@ -112,7 +168,6 @@
         </div>
     </div>
 
-    {{-- ── O'ng panel ───────────────────────── --}}
     <div class="kr-right">
         @if(!$tanlangan)
         <div class="kr-empty">
@@ -162,7 +217,7 @@
                         <td class="text-center"><span class="{{ $isUsd ? 'badge-usd' : 'badge-uzs' }}">{{ $tanlangan->asosiy_valyuta }}</span></td>
                         <td class="num" style="color:#1e293b">{{ $n($k->jami_summa) }}</td>
                         <td class="num" style="color:#1d4ed8">
-                            {{ $isUsd ? '$'.$nu($toValyuta($k->jami_summa)) : $n($k->jami_summa) }}
+                            {{ $isUsd ? '$'.$nu($toValyuta($k->jami_summa, $usdKurs)) : $n($k->jami_summa) }}
                         </td>
                         <td class="num" style="color:#15803d">{{ $n($k->tolangan) }}</td>
                         <td class="num" style="color:{{ $k->qoldiq > 0 ? '#dc2626' : '#94a3b8' }}; font-weight:700">{{ $n($k->qoldiq) }}</td>
@@ -185,7 +240,7 @@
                         <td class="num">{{ $kirimlar->sum('qatorlar_count') }}</td>
                         <td></td>
                         <td class="num">{{ $n($kirimlar->sum('jami_summa')) }}</td>
-                        <td class="num">{{ $isUsd ? '$'.$nu($toValyuta($kirimlar->sum('jami_summa'))) : $n($kirimlar->sum('jami_summa')) }}</td>
+                        <td class="num">{{ $isUsd ? '$'.$nu($toValyuta($kirimlar->sum('jami_summa'), $usdKurs)) : $n($kirimlar->sum('jami_summa')) }}</td>
                         <td class="num">{{ $n($kirimlar->sum('tolangan')) }}</td>
                         <td class="num" style="color:{{ $kirimlar->sum('qoldiq') > 0 ? '#fca5a5' : '#e0eaff' }}">{{ $n($kirimlar->sum('qoldiq')) }}</td>
                         <td></td>
@@ -197,4 +252,69 @@
         @endif
     </div>
 </div>
+@endif
+
+{{-- ─────────────────────────────────────────────────────────────
+     Tab 2: Barcha kirimlar — bitta yassi (flat) reestr jadvali
+────────────────────────────────────────────────────────────── --}}
+@if($tab === 'barchasi')
+<div class="bank-wrap shadow-sm" style="overflow:auto; max-height:calc(100vh - 320px); border:1px solid #93c5fd; border-radius:0 0 8px 8px">
+    <table class="bank-table">
+        <thead>
+            <tr>
+                <th class="tl" style="width:36px">#</th>
+                <th class="tl">Sana</th>
+                <th class="tl">Ta'minotchi</th>
+                <th class="tl">Hujjat №</th>
+                <th>Tovar soni</th>
+                <th>Valyuta</th>
+                <th>Jami summa (so'm)</th>
+                <th>To'langan</th>
+                <th>Qoldiq</th>
+                <th class="tl">Holat</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($barchaKirimlar as $i => $k)
+            <tr>
+                <td class="text-muted text-center" style="font-size:.75rem">{{ $barchaKirimlar->firstItem() + $i }}</td>
+                <td class="tl">
+                    <a href="{{ route('taminotchi.kirim.edit', [$k->taminotchi, $k]) }}" class="text-decoration-none fw-semibold" style="color:#1d4ed8">
+                        {{ $k->kirim_sana->format('d.m.Y') }}
+                    </a>
+                </td>
+                <td class="tl">
+                    <a href="{{ route('taminotchi.kirim_reestr', ['tab'=>'taminotchi','taminotchi_id'=>$k->taminotchi_id]) }}" class="text-decoration-none" style="color:#1e293b">
+                        {{ $k->taminotchi->nomi ?? '—' }}
+                    </a>
+                </td>
+                <td class="tl text-muted">{{ $k->hujjat_raqam ?? '—' }}</td>
+                <td class="num text-center">{{ $k->qatorlar_count }}</td>
+                <td class="text-center">
+                    <span class="{{ ($k->taminotchi->asosiy_valyuta ?? 'UZS') === 'USD' ? 'badge-usd' : 'badge-uzs' }}">{{ $k->taminotchi->asosiy_valyuta ?? 'UZS' }}</span>
+                </td>
+                <td class="num" style="color:#1e293b">{{ $n($k->jami_summa) }}</td>
+                <td class="num" style="color:#15803d">{{ $n($k->tolangan) }}</td>
+                <td class="num" style="color:{{ $k->qoldiq > 0 ? '#dc2626' : '#94a3b8' }}; font-weight:700">{{ $n($k->qoldiq) }}</td>
+                <td class="tl">
+                    <span class="status-{{ $k->holat }}">
+                        {{ $k->holat === 'toliq' ? "To'liq" : ($k->holat === 'qisman' ? 'Qisman' : 'Kutilmoqda') }}
+                    </span>
+                </td>
+            </tr>
+            @empty
+            <tr><td colspan="10" class="text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-2 d-block mb-2 opacity-25"></i>Kirimlar topilmadi
+            </td></tr>
+            @endforelse
+        </tbody>
+    </table>
+</div>
+@if($barchaKirimlar->hasPages())
+<div class="d-flex justify-content-between align-items-center mt-2">
+    <small class="text-muted">{{ $barchaKirimlar->firstItem() }}–{{ $barchaKirimlar->lastItem() }} / {{ $barchaKirimlar->total() }} ta</small>
+    {{ $barchaKirimlar->links('pagination::bootstrap-5') }}
+</div>
+@endif
+@endif
 @endsection
