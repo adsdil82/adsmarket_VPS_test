@@ -10,6 +10,7 @@ use App\Models\IshHaqiGlobalSozlama;
 use App\Models\IshHaqiHisob;
 use App\Models\RegKredit;
 use App\Models\Tulov;
+use App\Models\XodimBonus;
 use App\Models\XodimDavomat;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -104,11 +105,31 @@ class IshHaqiHisoblashService
             $rejaBonusSumma = round($rejaBonus * $ulush, 2);
         }
 
+        // Muddatli qo'shimcha ish haqi (masalan lavozim ustamasi) — shu oy oralig'ida amalda bo'lsa.
+        $qoshimchaIshHaqiSumma = $sozlama && $sozlama->qoshimchaAmaldaMi($boshi, $oxiri)
+            ? (float) $sozlama->qoshimcha_ish_haqi
+            : 0;
+
+        // Xodimga biriktirilgan (shablon asosidagi) faol bonuslar — shu oy oralig'ida amalda bo'lganlari.
+        $biriktirilganBonusSumma = 0;
+        $biriktirilganBonuslar = XodimBonus::with('bonusTuri')
+            ->where('xodim_id', $xodim->id)->where('holat', 'faol')->get();
+        foreach ($biriktirilganBonuslar as $b) {
+            if (!$b->amaldaMi($yil, $oy) || !$b->bonusTuri) {
+                continue;
+            }
+            $qiymat = $b->qiymat !== null ? (float) $b->qiymat : (float) $b->bonusTuri->standart_qiymat;
+            $biriktirilganBonusSumma += $b->bonusTuri->hisoblash_turi === 'foiz_okladdan'
+                ? round($oklad * $qiymat / 100, 2)
+                : $qiymat;
+        }
+        $biriktirilganBonusSumma = round($biriktirilganBonusSumma, 2);
+
         // Qo'lda kiritilgan qo'shimcha/jarima qiymatlarini saqlab qolamiz (qayta hisoblashda yo'qolmasin)
         $qoshimcha = (float) ($mavjud->qoshimcha_hisoblash ?? 0);
         $jarima    = (float) ($mavjud->ushlanma ?? 0);
 
-        $jamiGross = round($okladQismi + $komissiyaBonus + $rejaBonusSumma + $qoshimcha, 2);
+        $jamiGross = round($okladQismi + $komissiyaBonus + $rejaBonusSumma + $qoshimchaIshHaqiSumma + $biriktirilganBonusSumma + $qoshimcha, 2);
         $soliqSumma          = round($jamiGross * $soliqFoizi / 100, 2);
         $boshqaUshlanmaSumma = round($jamiGross * $boshqaUshlanmaFoizi / 100, 2);
 
@@ -130,6 +151,8 @@ class IshHaqiHisoblashService
                 'reja_bajarildimi'  => $rejaBajarildimi,
                 'reja_bajarilish_foizi' => $bajarilishFoizi,
                 'reja_bonus'        => $rejaBonusSumma,
+                'qoshimcha_ish_haqi_summa'  => $qoshimchaIshHaqiSumma,
+                'biriktirilgan_bonus_summa' => $biriktirilganBonusSumma,
                 'soliq_foizi'          => $soliqFoizi,
                 'soliq_summa'          => $soliqSumma,
                 'boshqa_ushlanma_foizi' => $boshqaUshlanmaFoizi,
@@ -167,7 +190,8 @@ class IshHaqiHisoblashService
         }
 
         $jamiGross = round(
-            (float) $hisob->oklad_qismi + (float) $hisob->komissiya_bonus + (float) $hisob->reja_bonus + $qoshimcha,
+            (float) $hisob->oklad_qismi + (float) $hisob->komissiya_bonus + (float) $hisob->reja_bonus
+                + (float) $hisob->qoshimcha_ish_haqi_summa + (float) $hisob->biriktirilgan_bonus_summa + $qoshimcha,
             2
         );
         $soliqSumma          = round($jamiGross * (float) $hisob->soliq_foizi / 100, 2);

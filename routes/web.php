@@ -228,12 +228,29 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [IshHaqiController::class, 'index'])->name('index');
         Route::post('/davomat', [IshHaqiController::class, 'davomatSaqla'])->middleware('ruxsat.check:xodimlar_ish_haqi,qoshish')->name('davomat.saqla');
         Route::post('/davomat/oy-yopish', [IshHaqiController::class, 'oyYopish'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('davomat.oy_yopish');
+        Route::post('/davomat/oy-ochish', [IshHaqiController::class, 'oyQaytaOchish'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('davomat.oy_ochish');
         Route::post('/hisobla', [IshHaqiController::class, 'hisobla'])->middleware('ruxsat.check:xodimlar_ish_haqi,qoshish')->name('hisobla');
         Route::post('/{hisob}/qoshimcha', [IshHaqiController::class, 'qoshimchaSaqla'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('qoshimcha.saqla');
         Route::post('/{hisob}/tola', [IshHaqiController::class, 'tola'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('tola');
         Route::post('/sozlama/{xodim}', [IshHaqiController::class, 'sozlamaSaqla'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('sozlama.saqla');
         Route::post('/sozlama-global', [IshHaqiController::class, 'globalSozlamaSaqla'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('sozlama.global_saqla');
+        Route::post('/dam-olish', [IshHaqiController::class, 'damOlishSaqla'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('dam_olish.saqla');
         Route::post('/avans/{xodim}', [IshHaqiController::class, 'avansBer'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('avans.ber');
+
+        // ─── Xodimlar (ro'yxat, ta'til, bonus, shartnoma) ──────────
+        Route::post('/xodim/qoshish', [IshHaqiController::class, 'xodimQoshish'])->middleware('ruxsat.check:xodimlar_ish_haqi,qoshish')->name('xodim.qoshish');
+        Route::post('/xodim/{xodim}', [IshHaqiController::class, 'xodimTahrirlash'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('xodim.tahrirlash');
+        Route::post('/xodim/{xodim}/tatil', [IshHaqiController::class, 'tatilBer'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('tatil.ber');
+        Route::post('/tatil/{tatil}/qaytdi', [IshHaqiController::class, 'tatilQaytdi'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('tatil.qaytdi');
+        Route::post('/tatil/{tatil}/bekor', [IshHaqiController::class, 'tatilBekorQil'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('tatil.bekor');
+        Route::post('/xodim/{xodim}/bonus', [IshHaqiController::class, 'bonusBiriktirish'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('bonus.biriktirish');
+        Route::post('/bonus/{bonus}/bekor', [IshHaqiController::class, 'bonusBekorQil'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('bonus.bekor');
+        Route::post('/bonus-turi', [IshHaqiController::class, 'bonusTuriSaqla'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('bonus_turi.saqla');
+        Route::post('/shartnoma-shabloni', [IshHaqiController::class, 'shartnomaShabloniSaqla'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('shartnoma_shabloni.saqla');
+        Route::post('/xodim/{xodim}/shartnoma', [IshHaqiController::class, 'shartnomaYarat'])->middleware('ruxsat.check:xodimlar_ish_haqi,qoshish')->name('shartnoma.yarat');
+        Route::post('/shartnoma/{shartnoma}', [IshHaqiController::class, 'shartnomaSaqla'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('shartnoma.saqla');
+        Route::post('/shartnoma/{shartnoma}/holat', [IshHaqiController::class, 'shartnomaHolatOzgartir'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('shartnoma.holat');
+        Route::get('/shartnoma/{shartnoma}/pdf', [IshHaqiController::class, 'shartnomaPdf'])->name('shartnoma.pdf');
     });
 
     // ─── Hisobotlar ───────────────────────────────────────────────

@@ -47,6 +47,7 @@ class AuthController extends Controller
                   ->orWhere('email', $request->login);
             })
             ->where('holat', 'faol')
+            ->where('tizimga_kirish_bormi', true)
             ->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {

@@ -26,6 +26,7 @@ class Foydalanuvchi extends Authenticatable implements Auditable
         'rol',
         'holat',
         'til',
+        'tizimga_kirish_bormi',
     ];
 
     protected $hidden = [
@@ -38,6 +39,7 @@ class Foydalanuvchi extends Authenticatable implements Auditable
         'password'              => 'hashed',
         'pin_kod'                => 'hashed',
         'pin_bloklangan_gacha'   => 'datetime',
+        'tizimga_kirish_bormi'   => 'boolean',
     ];
 
     // ─── Aloqalar ────────────────────────────────────────────────
@@ -82,6 +84,24 @@ class Foydalanuvchi extends Authenticatable implements Auditable
     public function ishHaqiHisoblari(): HasMany
     {
         return $this->hasMany(IshHaqiHisob::class, 'xodim_id');
+    }
+
+    /** Ta'til (yillik/kasallik/boshqa) yozuvlari */
+    public function tatillar(): HasMany
+    {
+        return $this->hasMany(XodimTatil::class, 'xodim_id');
+    }
+
+    /** Biriktirilgan bonuslar */
+    public function bonuslar(): HasMany
+    {
+        return $this->hasMany(XodimBonus::class, 'xodim_id');
+    }
+
+    /** Mehnat shartnomalari tarixi */
+    public function shartnomalar(): HasMany
+    {
+        return $this->hasMany(XodimShartnoma::class, 'xodim_id');
     }
 
     // ─── Rol tekshiruvlari ────────────────────────────────────────

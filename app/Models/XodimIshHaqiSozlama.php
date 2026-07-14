@@ -12,6 +12,9 @@ class XodimIshHaqiSozlama extends Model
     protected $fillable = [
         'xodim_id', 'oklad', 'bonus_foizi', 'oylik_reja_summa', 'reja_min_foizi', 'reja_max_foizi', 'reja_bonus_summa', 'holat',
         'soliq_foizi', 'boshqa_ushlanma_foizi', 'dastlabki_qoldiq',
+        'lavozim', 'telefon', 'manzil', 'passport_malumot',
+        'ishga_kirgan_sana', 'ishdan_boshagan_sana',
+        'qoshimcha_ish_haqi', 'qoshimcha_boshlanish_sana', 'qoshimcha_tugash_sana',
     ];
 
     protected $casts = [
@@ -24,10 +27,33 @@ class XodimIshHaqiSozlama extends Model
         'soliq_foizi'      => 'decimal:2',
         'boshqa_ushlanma_foizi' => 'decimal:2',
         'dastlabki_qoldiq' => 'decimal:2',
+        'ishga_kirgan_sana'   => 'date',
+        'ishdan_boshagan_sana' => 'date',
+        'qoshimcha_ish_haqi'   => 'decimal:2',
+        'qoshimcha_boshlanish_sana' => 'date',
+        'qoshimcha_tugash_sana'     => 'date',
     ];
 
     public function xodim(): BelongsTo
     {
         return $this->belongsTo(Foydalanuvchi::class, 'xodim_id');
+    }
+
+    /** Muddatli qo'shimcha ish haqi berilgan oy oralig'ida (boshi..oxiri) amalda ekanligini tekshiradi. */
+    public function qoshimchaAmaldaMi(\Carbon\Carbon $boshi, \Carbon\Carbon $oxiri): bool
+    {
+        if ((float) $this->qoshimcha_ish_haqi <= 0) {
+            return false;
+        }
+
+        if ($this->qoshimcha_boshlanish_sana && $this->qoshimcha_boshlanish_sana->gt($oxiri)) {
+            return false;
+        }
+
+        if ($this->qoshimcha_tugash_sana && $this->qoshimcha_tugash_sana->lt($boshi)) {
+            return false;
+        }
+
+        return true;
     }
 }
