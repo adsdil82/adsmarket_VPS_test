@@ -50,6 +50,7 @@ use App\Http\Controllers\PosTolovUsuliController;
 use App\Http\Controllers\AutoPayController;
 use App\Http\Controllers\HibritPochtaController;
 use App\Http\Controllers\IshHaqiController;
+use App\Http\Controllers\OperatsionKunController;
 use App\Http\Controllers\BirlikController;
 use App\Http\Controllers\HarajatTuriController;
 use App\Http\Controllers\PulKategoriyaController;
@@ -125,7 +126,7 @@ Route::middleware('auth')->group(function () {
             ->middleware(['rol.check:admin,menejer', 'litsenziya.tekshir:shartnoma', 'litsenziya.limit:shartnoma_max'])
             ->name('create');
         Route::post('/',         [RegKreditController::class, 'store'])
-            ->middleware(['rol.check:admin,menejer', 'litsenziya.tekshir:shartnoma', 'litsenziya.limit:shartnoma_max'])
+            ->middleware(['rol.check:admin,menejer', 'litsenziya.tekshir:shartnoma', 'litsenziya.limit:shartnoma_max', 'kun.tekshir'])
             ->name('store');
         Route::get('/{kredit}',  [RegKreditController::class, 'show'])->name('show');
         // Hybrid Pochta xat yuborish (Phase 3)
@@ -143,7 +144,7 @@ Route::middleware('auth')->group(function () {
             ->middleware('rol.check:admin,menejer')
             ->name('edit');
         Route::put('/{kredit}',  [RegKreditController::class, 'update'])
-            ->middleware('rol.check:admin,menejer')
+            ->middleware(['rol.check:admin,menejer', 'kun.tekshir'])
             ->name('update');
         Route::post('/{kredit}/activate', [RegKreditController::class, 'activate'])
             ->middleware('rol.check:admin,menejer')
@@ -157,10 +158,10 @@ Route::middleware('auth')->group(function () {
             ->middleware('rol.check:admin,menejer,kassir')
             ->name('tulov.create');
         Route::post('/{kredit}/tulov',         [TulovController::class, 'store'])
-            ->middleware('rol.check:admin,menejer,kassir')
+            ->middleware(['rol.check:admin,menejer,kassir', 'kun.tekshir'])
             ->name('tulov.store');
         Route::post('/{kredit}/oldin-tulov',   [TulovController::class, 'oldinStore'])
-            ->middleware('rol.check:admin,menejer,kassir')
+            ->middleware(['rol.check:admin,menejer,kassir', 'kun.tekshir'])
             ->name('tulov.oldin-store');
         Route::get('/{kredit}/qoldiq',         [TulovController::class, 'ajaxQoldiq'])
             ->name('tulov.qoldiq');
@@ -170,7 +171,7 @@ Route::middleware('auth')->group(function () {
             ->middleware('rol.check:admin,menejer')
             ->name('tulov.edit');
         Route::put('/{kredit}/tulov/{tulov}', [TulovController::class, 'update'])
-            ->middleware('rol.check:admin,menejer')
+            ->middleware(['rol.check:admin,menejer', 'kun.tekshir'])
             ->name('tulov.update');
         Route::delete('/{kredit}/tulov/{tulov}', [TulovController::class, 'destroy'])
             ->middleware('rol.check:admin')
@@ -251,6 +252,15 @@ Route::middleware('auth')->group(function () {
         Route::post('/shartnoma/{shartnoma}', [IshHaqiController::class, 'shartnomaSaqla'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('shartnoma.saqla');
         Route::post('/shartnoma/{shartnoma}/holat', [IshHaqiController::class, 'shartnomaHolatOzgartir'])->middleware('ruxsat.check:xodimlar_ish_haqi,tahrirlash')->name('shartnoma.holat');
         Route::get('/shartnoma/{shartnoma}/pdf', [IshHaqiController::class, 'shartnomaPdf'])->name('shartnoma.pdf');
+    });
+
+    // ─── Ish kuni (operatsion kun boshqaruvi) ─────────────────────
+    Route::prefix('ish-kuni')->name('operatsion_kun.')->middleware('ruxsat.check:operatsion_kun')->group(function () {
+        Route::get('/',            [OperatsionKunController::class, 'index'])->name('index');
+        Route::get('/oldin-korish', [OperatsionKunController::class, 'oldinKorish'])->name('oldin_korish');
+        Route::post('/yopish',     [OperatsionKunController::class, 'yopish'])->middleware('ruxsat.check:operatsion_kun,yopish')->name('yopish');
+        Route::post('/ochish',     [OperatsionKunController::class, 'ochish'])->middleware('ruxsat.check:operatsion_kun,eski_tahrirlash')->name('ochish');
+        Route::get('/tarix',       [OperatsionKunController::class, 'tarix'])->name('tarix');
     });
 
     // ─── Hisobotlar ───────────────────────────────────────────────

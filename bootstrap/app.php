@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'ruxsat.check'      => \App\Http\Middleware\RuxsatCheck::class,
             'litsenziya.tekshir' => \App\Http\Middleware\LitsenziyaTekshir::class,
             'litsenziya.limit' => \App\Http\Middleware\LitsenziyaLimitTekshir::class,
+            'kun.tekshir'       => \App\Http\Middleware\OperatsionKunTekshirish::class,
         ]);
 
         // AutoPay serverlari o'z tomonidan to'g'ridan-to'g'ri POST qiladi —

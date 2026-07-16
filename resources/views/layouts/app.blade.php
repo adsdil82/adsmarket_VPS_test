@@ -357,9 +357,25 @@
         overflow-y: auto;
         max-height: calc(100vh - 120px);
     }
+    /* Operatsion kun yopiq bo'lganda kiritish sahifalarini vizual bloklash */
+    body.kun-yopiq .content-wrapper {
+        background-color: #e9ecef;
+        filter: grayscale(15%);
+    }
+    body.kun-yopiq .content-wrapper input:not([type=hidden]),
+    body.kun-yopiq .content-wrapper select,
+    body.kun-yopiq .content-wrapper textarea,
+    body.kun-yopiq .content-wrapper button[type=submit] {
+        pointer-events: none;
+        opacity: .6;
+    }
     </style>
 </head>
-<body>
+@php
+    $kunYopiqSahifa = isset($operatsionKunBadge) && $operatsionKunBadge && $operatsionKunBadge->status === 'yopiq'
+        && request()->routeIs(['kreditlar.create', 'kreditlar.store', 'kreditlar.edit', 'kreditlar.update', 'kreditlar.tulov.*']);
+@endphp
+<body class="{{ $kunYopiqSahifa ? 'kun-yopiq' : '' }}">
 <div class="d-flex">
 
     {{-- ── Sidebar ───────────────────────────────────────────── --}}
@@ -389,6 +405,7 @@
         elseif (request()->routeIs('katalog.*','tovar-guruhlar.*','kirim.*','chiqim.*','ombor.*'))    $aktiv_grup = 'tovarlar';
         elseif (request()->routeIs('harajatlar.*'))                                                    $aktiv_grup = 'harajatlar';
         elseif (request()->routeIs('ish_haqi.*'))                                                      $aktiv_grup = 'ish-haqi';
+        elseif (request()->routeIs('operatsion_kun.*'))                                                $aktiv_grup = 'ish-kuni';
         elseif (request()->routeIs('pul-oqimlari.*'))                                                 $aktiv_grup = 'pul-oqimlari';
         elseif (request()->routeIs('xabarnoma.*'))                                                    $aktiv_grup = 'xabarnoma';
         elseif (request()->routeIs('transfer.*'))                                                      $aktiv_grup = 'transfer';
@@ -795,6 +812,32 @@
                        class="nav-link text-white py-1 {{ request()->routeIs('ish_haqi.*') ? 'active' : '' }}">
                         <i class="bi bi-person-badge me-2" style="color:#f472b6"></i>
                         <span class="nav-label">Xodimlar ish haqi</span>
+                    </a>
+                </li>
+            </ul>
+            @endif
+
+            {{-- ISH KUNI --}}
+            @if(Auth::user()->ruxsat('operatsion_kun'))
+            <li class="grup-header">
+                <button class="grup-toggle" data-grup="ish-kuni">
+                    <span class="g-label">&#128197; ISH KUNI</span>
+                    <i class="g-icon bi {{ $aktiv_grup==='ish-kuni' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
+                </button>
+            </li>
+            <ul class="grup-items {{ $aktiv_grup!=='ish-kuni' ? 'closed' : '' }}" id="grup-ish-kuni">
+                <li class="nav-item">
+                    <a href="{{ route('operatsion_kun.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('operatsion_kun.index') ? 'active' : '' }}">
+                        <i class="bi bi-calendar-check me-2" style="color:#22d3ee"></i>
+                        <span class="nav-label">Kun holati</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('operatsion_kun.tarix') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('operatsion_kun.tarix') ? 'active' : '' }}">
+                        <i class="bi bi-clock-history me-2" style="color:#22d3ee"></i>
+                        <span class="nav-label">Yopish tarixi</span>
                     </a>
                 </li>
             </ul>
@@ -1225,6 +1268,21 @@
                 </div>
                 </div>{{-- /table-size-btn-group-wrap --}}
 
+                {{-- Operatsion kun ko'rsatkichi --}}
+                @if(isset($operatsionKunBadge) && $operatsionKunBadge)
+                <a href="{{ route('operatsion_kun.index') }}" class="text-decoration-none">
+                    @if($operatsionKunBadge->status === 'yopiq')
+                        <span class="badge bg-danger d-flex align-items-center gap-1" title="Operatsion kun yopiq">
+                            <i class="bi bi-lock-fill"></i> {{ $operatsionKunBadge->sana->format('d.m.Y') }}
+                        </span>
+                    @else
+                        <span class="badge bg-success d-flex align-items-center gap-1" title="Operatsion kun ochiq">
+                            <i class="bi bi-unlock-fill"></i> {{ $operatsionKunBadge->sana->format('d.m.Y') }}
+                        </span>
+                    @endif
+                </a>
+                @endif
+
                 {{-- Til tanlash --}}
                 @php
                     $joriyTil = app()->getLocale();
@@ -1321,7 +1379,7 @@
         </div>
 
         {{-- Sahifa kontenti --}}
-        <div class="p-4">
+        <div class="p-4 content-wrapper">
             @yield('content')
         </div>
 
