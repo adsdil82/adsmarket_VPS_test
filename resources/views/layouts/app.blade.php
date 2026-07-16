@@ -410,17 +410,6 @@
         elseif (request()->routeIs('malumotnamalar.*','admin.*','qurilma-provayderlar.*'))         $aktiv_grup = 'sozlamalar';
         @endphp
 
-        {{-- Menyudan qidirish --}}
-        <div class="px-2 mb-2">
-            <div class="position-relative">
-                <i class="bi bi-search position-absolute" style="left:10px;top:8px;font-size:.8rem;color:rgba(255,255,255,.5)"></i>
-                <input type="search" id="menu-qidiruv" name="menu-qidiruv-{{ Auth::id() }}" class="form-control form-control-sm ps-4"
-                       placeholder="{{ __('ui.menu_qidiruv') }}" aria-label="{{ __('ui.menu_qidiruv') }}"
-                       autocomplete="off" spellcheck="false" data-lpignore="true" data-form-type="other"
-                       style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff">
-            </div>
-        </div>
-
         {{-- Navigatsiya --}}
         <ul class="nav nav-pills flex-column gap-1 flex-grow-1" id="sidebar-menu">
 
@@ -1426,97 +1415,6 @@ window.addEventListener("resize", function() {
         var isOpen = !items.classList.contains('closed');
         iconBel(btn, isOpen);
         btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-    });
-})();
-
-// ── Menyudan qidirish (client-side, backendga so'rov yubormaydi) ──
-(function() {
-    var input = document.getElementById('menu-qidiruv');
-    if (!input) return;
-    var menu = document.getElementById('sidebar-menu');
-    var savedState = null; // qidiruvdan oldingi accordion holatini eslab qolish
-
-    // Brauzer avtofill/bfcache orqali maydonga tasodifan qiymat tushib
-    // qolsa (masalan login foydalanuvchi nomi bilan), sahifa yuklanganda
-    // majburiy tozalab qo'yamiz — aks holda qidiruv filtri butun menyuni
-    // yashirib qo'yishi mumkin.
-    input.value = '';
-    window.addEventListener('pageshow', function() { input.value = ''; });
-
-    function normalize(s) {
-        return (s || '').toLowerCase()
-            .replace(/oʻ|o'|о'/g, 'o')
-            .replace(/gʻ|g'|г'/g, 'g');
-    }
-
-    function tozala() {
-        input.value = '';
-        menu.querySelectorAll('.nav-item').forEach(function(li) { li.style.display = ''; });
-        menu.querySelectorAll('.grup-header').forEach(function(li) { li.style.display = ''; });
-        menu.querySelectorAll('.grup-items').forEach(function(ul) { ul.style.display = ''; });
-        if (savedState) {
-            document.querySelectorAll('.grup-toggle').forEach(function(btn) {
-                var grupId = btn.getAttribute('data-grup');
-                var wasOpen = savedState[grupId];
-                var items = document.getElementById('grup-' + grupId);
-                if (!items) return;
-                if (wasOpen) { items.classList.remove('closed'); } else { items.classList.add('closed'); }
-                var icon = btn.querySelector('.g-icon');
-                if (icon) { icon.classList.remove('bi-plus-lg','bi-dash-lg'); icon.classList.add(wasOpen ? 'bi-plus-lg' : 'bi-dash-lg'); }
-                btn.setAttribute('aria-expanded', wasOpen ? 'true' : 'false');
-            });
-            savedState = null;
-        }
-    }
-
-    input.addEventListener('input', function() {
-        var q = normalize(input.value.trim());
-
-        if (q === '') { tozala(); return; }
-
-        if (!savedState) {
-            savedState = {};
-            document.querySelectorAll('.grup-toggle').forEach(function(btn) {
-                var grupId = btn.getAttribute('data-grup');
-                var items = document.getElementById('grup-' + grupId);
-                savedState[grupId] = items && !items.classList.contains('closed');
-            });
-        }
-
-        document.querySelectorAll('.grup-items').forEach(function(ul) {
-            var grupId = ul.id.replace('grup-', '');
-            var btn = document.querySelector('.grup-toggle[data-grup="' + grupId + '"]');
-            var anyVisible = false;
-
-            ul.querySelectorAll('.nav-item').forEach(function(li) {
-                var label = li.querySelector('.nav-label');
-                var matn = normalize(label ? label.textContent : li.textContent);
-                var mos = matn.indexOf(q) !== -1;
-                li.style.display = mos ? '' : 'none';
-                if (mos) anyVisible = true;
-            });
-
-            var header = btn ? btn.closest('.grup-header') : null;
-            if (header) header.style.display = anyVisible ? '' : 'none';
-
-            if (anyVisible) {
-                ul.classList.remove('closed');
-                if (btn) { btn.setAttribute('aria-expanded', 'true'); var ic = btn.querySelector('.g-icon'); if (ic) { ic.classList.remove('bi-plus-lg','bi-dash-lg'); ic.classList.add('bi-dash-lg'); } }
-            } else {
-                ul.style.display = 'none';
-            }
-        });
-
-        // Bosh sahifa (guruhsiz) qatorini ham tekshirish
-        var boshLink = menu.querySelector('#sidebar-menu > .nav-item:first-child .nav-label');
-        if (boshLink) {
-            var boshLi = boshLink.closest('.nav-item');
-            boshLi.style.display = normalize(boshLink.textContent).indexOf(q) !== -1 ? '' : 'none';
-        }
-    });
-
-    input.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') { tozala(); input.blur(); }
     });
 })();
 
