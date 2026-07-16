@@ -41,13 +41,41 @@
 .tk-stat:last-child { border-right:none; }
 .tk-stat .lbl { font-size:.6rem; text-transform:uppercase; letter-spacing:.03em; color:#3b5fc0; font-weight:700; }
 .tk-stat .val { font-size:.9rem; font-weight:800; color:#1e293b; }
+
+.holat-tabs { display:flex; gap:5px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px; }
+.holat-tabs::-webkit-scrollbar { height:4px; }
+.holat-tab {
+    display:inline-flex; align-items:center; gap:5px; white-space:nowrap; text-decoration:none;
+    padding:6px 13px; border-radius:7px 7px 0 0; font-size:.74rem; font-weight:700;
+    background:#eef4ff; color:#1e3a8a; border:1px solid #93c5fd; border-bottom:none;
+}
+.holat-tab:hover { background:#dbeafe; color:#1e3a8a; }
+.holat-tab.active { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
 </style>
 @endpush
 
+@php
+$holatTablari = [
+    ''       => ['label' => 'Barchasi', 'icon' => 'bi-list-ul'],
+    'faol'   => ['label' => 'Faol',     'icon' => 'bi-check-circle'],
+    'nofaol' => ['label' => 'Nofaol',   'icon' => 'bi-archive'],
+];
+@endphp
+
 @section('content')
+
+<div class="holat-tabs">
+    @foreach($holatTablari as $key => $h)
+    <a class="holat-tab {{ request('holat', '') === $key ? 'active' : '' }}"
+       href="{{ route('katalog.index', array_merge(request()->except(['holat', 'page']), $key !== '' ? ['holat' => $key] : [])) }}">
+        <i class="bi {{ $h['icon'] }}"></i> {{ $h['label'] }}
+    </a>
+    @endforeach
+</div>
 
 <div class="filter-bar mb-0">
     <form method="GET" class="d-flex align-items-end gap-2 flex-wrap">
+        <input type="hidden" name="holat" value="{{ request('holat') }}">
         <div class="d-flex align-items-center gap-2 me-2">
             <i class="bi bi-box-seam" style="font-size:1.2rem;color:#1e3a8a"></i>
             <span class="fw-bold" style="color:#1e3a8a;font-size:1rem">Tovar katalogi</span>
@@ -79,13 +107,6 @@
                 @foreach($guruhlar as $g)
                     <option value="{{ $g->id }}" {{ request('guruh_id')==$g->id?'selected':'' }}>{{ $g->nomi }}</option>
                 @endforeach
-            </select>
-        </div>
-        <div>
-            <select name="holat" class="form-select" style="width:130px">
-                <option value="">Barcha holat</option>
-                <option value="faol" {{ request('holat')==='faol'?'selected':'' }}>Faol</option>
-                <option value="nofaol" {{ request('holat')==='nofaol'?'selected':'' }}>Nofaol</option>
             </select>
         </div>
         <div class="d-flex gap-1">

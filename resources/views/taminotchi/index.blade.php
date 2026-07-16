@@ -142,6 +142,16 @@
 
 /* Jadval to'liq kenglik, minimal padding konteyner */
 .bank-wrap { overflow: auto; max-height: calc(100vh - 160px); border: 1px solid #c7d7f8; border-radius: 0 0 6px 6px; }
+
+.holat-tabs { display:flex; gap:5px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px; }
+.holat-tabs::-webkit-scrollbar { height:4px; }
+.holat-tab {
+    display:inline-flex; align-items:center; gap:5px; white-space:nowrap; text-decoration:none;
+    padding:6px 13px; border-radius:7px 7px 0 0; font-size:.74rem; font-weight:700;
+    background:#eef4ff; color:#1e3a8a; border:1px solid #93c5fd; border-bottom:none;
+}
+.holat-tab:hover { background:#dbeafe; color:#1e3a8a; }
+.holat-tab.active { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
 </style>
 
 @push('scripts')
@@ -225,10 +235,26 @@
     $totKirim  = $taminotchilar->sum('davr_kirim');
     $totTolov  = $taminotchilar->sum('davr_tolov');
     $totOxiri  = $taminotchilar->sum('oxiri_qoldiq');
+
+    $holatTablari = [
+        ''       => ['label' => 'Barchasi', 'icon' => 'bi-list-ul'],
+        'faol'   => ['label' => 'Faol',     'icon' => 'bi-check-circle'],
+        'nofaol' => ['label' => 'Nofaol',   'icon' => 'bi-archive'],
+    ];
 @endphp
+
+<div class="holat-tabs">
+    @foreach($holatTablari as $key => $h)
+    <a class="holat-tab {{ request('holat', '') === $key ? 'active' : '' }}"
+       href="{{ route('taminotchi.index', array_merge(request()->except(['holat', 'page']), $key !== '' ? ['holat' => $key] : [])) }}">
+        <i class="bi {{ $h['icon'] }}"></i> {{ $h['label'] }}
+    </a>
+    @endforeach
+</div>
 
 <div class="filter-bar">
     <form method="GET" class="d-flex align-items-end gap-2 flex-wrap">
+        <input type="hidden" name="holat" value="{{ request('holat') }}">
         {{-- Chap: sarlavha --}}
         <div class="d-flex align-items-center gap-2 me-2" style="white-space:nowrap">
             <i class="bi bi-truck text-warning" style="font-size:1.1rem"></i>
@@ -248,14 +274,6 @@
         <div>
             <label>Davr oxiri</label>
             <input type="date" name="gacha_sana" class="form-control" value="{{ $gachaSana }}">
-        </div>
-        <div>
-            <label>Holat</label>
-            <select name="holat" class="form-select" style="width:110px">
-                <option value="">Barchasi</option>
-                <option value="faol"   {{ request('holat')==='faol'   ?'selected':'' }}>Faol</option>
-                <option value="nofaol" {{ request('holat')==='nofaol' ?'selected':'' }}>Nofaol</option>
-            </select>
         </div>
         <div class="col-auto">
             <label>Ko'rsatish</label>
