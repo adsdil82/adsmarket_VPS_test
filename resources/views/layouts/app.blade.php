@@ -395,49 +395,53 @@
 
         <hr class="text-white-50 my-1">
 
-        {{-- ── Aktiv guruhni PHP da aniqlaymiz ──────────────── --}}
+        {{-- ── Aktiv guruhni PHP da aniqlaymiz (7 blokli tuzilma) ──── --}}
         @php
         $aktiv_grup = 'none';
-        if (request()->routeIs('mijozlar.*'))                                                          $aktiv_grup = 'mijozlar';
-        elseif (request()->routeIs('kreditlar.*','autopay.*','hibrit_pochta.*','xabarnoma.sms.*'))       $aktiv_grup = 'shartnomalar';
-        elseif (request()->routeIs('hisobotlar.*'))                                                    $aktiv_grup = 'hisobotlar';
-        elseif (request()->routeIs('pos.*','terminal.*','malumotnamalar.kassalar.*','malumotnamalar.pos-tolov-usullari.*','transfer.kassa.*'))  $aktiv_grup = 'pos';
-        elseif (request()->routeIs('katalog.*','tovar-guruhlar.*','kirim.*','chiqim.*','ombor.*'))    $aktiv_grup = 'tovarlar';
-        elseif (request()->routeIs('harajatlar.*'))                                                    $aktiv_grup = 'harajatlar';
-        elseif (request()->routeIs('ish_haqi.*'))                                                      $aktiv_grup = 'ish-haqi';
-        elseif (request()->routeIs('operatsion_kun.*'))                                                $aktiv_grup = 'ish-kuni';
-        elseif (request()->routeIs('pul-oqimlari.*'))                                                 $aktiv_grup = 'pul-oqimlari';
-        elseif (request()->routeIs('xabarnoma.*'))                                                    $aktiv_grup = 'xabarnoma';
-        elseif (request()->routeIs('transfer.*'))                                                      $aktiv_grup = 'transfer';
-        elseif (request()->routeIs('taminotchi.*'))                                                    $aktiv_grup = 'taminotchi';
-        elseif (request()->routeIs('transfer.*'))                                                      $aktiv_grup = 'transfer';
-        elseif (request()->routeIs('qurilmalar.*','qurilma-provayderlar.*'))                          $aktiv_grup = 'qurilmalar-nazorati';
-        elseif (request()->routeIs('admin.deploy','admin.github'))                                     $aktiv_grup = 'vendor';
-        elseif (request()->routeIs('malumotnamalar.*','buxgalteriya.hisoblar.*'))                   $aktiv_grup = 'malumotnamalar-menu';
-        elseif (request()->routeIs('admin.*'))                                                         $aktiv_grup = 'boshqaruv';
+        if (request()->routeIs('mijozlar.*','kreditlar.*','autopay.*','qurilmalar.*'))
+                                                                                                     $aktiv_grup = 'mijozlar-shartnomalar';
+        elseif (request()->routeIs('pos.*','terminal.*','malumotnamalar.kassalar.*','malumotnamalar.pos-tolov-usullari.*','katalog.*','tovar-guruhlar.*','kirim.*','chiqim.*','ombor.*','taminotchi.*','transfer.*'))
+                                                                                                     $aktiv_grup = 'savdo-ombor';
+        elseif (request()->routeIs('pul-oqimlari.*','harajatlar.*','ish_haqi.*','operatsion_kun.*','buxgalteriya.*'))
+                                                                                                     $aktiv_grup = 'moliya';
+        elseif (request()->routeIs('hisobotlar.*'))                                                $aktiv_grup = 'hisobotlar';
+        elseif (request()->routeIs('xabarnoma.*','hibrit_pochta.*'))                                $aktiv_grup = 'xabarnomalar';
+        elseif (request()->routeIs('admin.deploy','admin.github'))                                  $aktiv_grup = 'vendor';
+        elseif (request()->routeIs('malumotnamalar.*','admin.*','qurilma-provayderlar.*'))         $aktiv_grup = 'sozlamalar';
         @endphp
 
+        {{-- Menyudan qidirish --}}
+        <div class="px-2 mb-2">
+            <div class="position-relative">
+                <i class="bi bi-search position-absolute" style="left:10px;top:8px;font-size:.8rem;color:rgba(255,255,255,.5)"></i>
+                <input type="text" id="menu-qidiruv" class="form-control form-control-sm ps-4"
+                       placeholder="{{ __('ui.menu_qidiruv') }}" aria-label="{{ __('ui.menu_qidiruv') }}"
+                       autocomplete="off" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff">
+            </div>
+        </div>
+
         {{-- Navigatsiya --}}
-        <ul class="nav nav-pills flex-column gap-1 flex-grow-1">
+        <ul class="nav nav-pills flex-column gap-1 flex-grow-1" id="sidebar-menu">
 
             {{-- Bosh sahifa --}}
             <li class="nav-item">
                 <a href="{{ route('dashboard') }}"
                    class="nav-link text-white {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                    <i class="bi bi-speedometer2 me-2"></i>
+                    <i class="bi bi-house-door me-2"></i>
                     <span class="nav-label">{{ __('ui.menu_bosh') }}</span>
                 </a>
             </li>
 
-            {{-- ── MIJOZLAR ──────────────────────────────────── --}}
-            @if(Auth::user()->ruxsat('mijozlar'))
+            {{-- ══════════ 1. MIJOZLAR VA SHARTNOMALAR ══════════ --}}
+            @if(Auth::user()->ruxsat('mijozlar') || Auth::user()->ruxsat('kreditlar') || Auth::user()->ruxsat('autopay') || Auth::user()->ruxsat('qurilmalar'))
             <li class="grup-header">
-                <button class="grup-toggle" data-grup="mijozlar">
-                    <span class="g-label">&#128100; {{ __('ui.menu_mijozlar') }}</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='mijozlar' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
+                <button class="grup-toggle" data-grup="mijozlar-shartnomalar" aria-expanded="{{ $aktiv_grup==='mijozlar-shartnomalar' ? 'true' : 'false' }}" aria-controls="grup-mijozlar-shartnomalar">
+                    <span class="g-label"><i class="bi bi-people-fill me-2"></i>Mijozlar va shartnomalar</span>
+                    <i class="g-icon bi {{ $aktiv_grup==='mijozlar-shartnomalar' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
                 </button>
             </li>
-            <ul class="grup-items {{ $aktiv_grup!=='mijozlar' ? 'closed' : '' }}" id="grup-mijozlar">
+            <ul class="grup-items {{ $aktiv_grup!=='mijozlar-shartnomalar' ? 'closed' : '' }}" id="grup-mijozlar-shartnomalar">
+                @if(Auth::user()->ruxsat('mijozlar'))
                 <li class="nav-item">
                     <a href="{{ route('mijozlar.index') }}"
                        class="nav-link text-white py-1 {{ request()->routeIs('mijozlar.*') && !request('holat') ? 'active' : '' }}">
@@ -459,46 +463,16 @@
                         <span class="nav-label">{{ __('ui.menu_nofaol_mijozlar') }}</span>
                     </a>
                 </li>
-            </ul>
-            @endif
-
-            {{-- ── SHARTNOMALAR ───────────────────────────────── --}}
-            @if(Auth::user()->ruxsat('kreditlar'))
-            <li class="grup-header">
-                <button class="grup-toggle" data-grup="shartnomalar">
-                    <span class="g-label">&#128196; {{ __('ui.menu_shartnomalar') }}</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='shartnomalar' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
-                </button>
-            </li>
-            <ul class="grup-items {{ $aktiv_grup!=='shartnomalar' ? 'closed' : '' }}" id="grup-shartnomalar">
+                @endif
+                @if(Auth::user()->ruxsat('kreditlar'))
                 <li class="nav-item">
                     <a href="{{ route('kreditlar.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('kreditlar.*') && !request('holat') ? 'active' : '' }}">
+                       class="nav-link text-white py-1 {{ request()->routeIs('kreditlar.*') ? 'active' : '' }}">
                         <i class="bi bi-file-earmark-text me-2"></i>
-                        <span class="nav-label">{{ __('ui.menu_barcha_sh') }}</span>
+                        <span class="nav-label">{{ __('ui.menu_shartnomalar') }}</span>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a href="{{ route('kreditlar.index', ['holat' => 'faol']) }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('kreditlar.index') && request('holat')==='faol' ? 'active' : '' }}">
-                        <i class="bi bi-file-check me-2 text-success"></i>
-                        <span class="nav-label">AKTIV</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('kreditlar.index', ['holat' => 'muddati_otgan']) }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('kreditlar.index') && request('holat')==='muddati_otgan' ? 'active' : '' }}">
-                        <i class="bi bi-exclamation-triangle me-2 text-danger"></i>
-                        <span class="nav-label">Muddati o'tgan</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('kreditlar.index', ['holat' => 'yopilgan']) }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('kreditlar.index') && request('holat')==='yopilgan' ? 'active' : '' }}">
-                        <i class="bi bi-file-x me-2 text-secondary"></i>
-                        <span class="nav-label">PASSIV</span>
-                    </a>
-                </li>
+                @endif
                 @if(Auth::user()->ruxsat('autopay'))
                 <li class="nav-item">
                     <a href="{{ route('autopay.index') }}"
@@ -508,32 +482,324 @@
                     </a>
                 </li>
                 @endif
-                @if(Auth::user()->ruxsat('hibrit_pochta'))
+                @if(Auth::user()->ruxsat('qurilmalar'))
                 <li class="nav-item">
-                    <a href="{{ route('hibrit_pochta.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('hibrit_pochta.*') ? 'active' : '' }}">
-                        <i class="bi bi-envelope-paper-fill me-2"></i>
-                        <span class="nav-label">HibritPochta</span>
+                    <a href="{{ route('qurilmalar.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('qurilmalar.index','qurilmalar.show','qurilmalar.edit','qurilmalar.loglar') ? 'active' : '' }}">
+                        <i class="bi bi-phone me-2"></i>
+                        <span class="nav-label">Qurilmalar</span>
+                    </a>
+                </li>
+                @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki() || Auth::user()->isOmborchi())
+                <li class="nav-item">
+                    <a href="{{ route('qurilmalar.create') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('qurilmalar.create') ? 'active' : '' }}">
+                        <i class="bi bi-phone-fill me-2"></i>
+                        <span class="nav-label">Qurilma qo'shish</span>
                     </a>
                 </li>
                 @endif
-                @if(Auth::user()->ruxsat('xabarnoma'))
+                @endif
+            </ul>
+            @endif
+
+            {{-- ══════════ 2. SAVDO VA OMBOR ══════════ --}}
+            @if(Auth::user()->ruxsat('tovarlar') || Auth::user()->ruxsat('malumotnomalar') || Auth::user()->ruxsat('transferlar') || Auth::user()->ruxsat('taminotchilar'))
+            <li class="grup-header">
+                <button class="grup-toggle" data-grup="savdo-ombor" aria-expanded="{{ $aktiv_grup==='savdo-ombor' ? 'true' : 'false' }}" aria-controls="grup-savdo-ombor">
+                    <span class="g-label"><i class="bi bi-shop me-2"></i>Savdo va ombor</span>
+                    <i class="g-icon bi {{ $aktiv_grup==='savdo-ombor' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
+                </button>
+            </li>
+            <ul class="grup-items {{ $aktiv_grup!=='savdo-ombor' ? 'closed' : '' }}" id="grup-savdo-ombor">
+                @if(Auth::user()->ruxsat('tovarlar') || Auth::user()->ruxsat('malumotnomalar') || Auth::user()->ruxsat('transferlar'))
                 <li class="nav-item">
-                    <a href="{{ route('xabarnoma.sms.kutilayotgan') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('xabarnoma.sms.*') ? 'active' : '' }}">
-                        <i class="bi bi-chat-dots-fill me-2 text-warning"></i>
-                        <span class="nav-label">SMS</span>
+                    <a href="{{ route('pos.dashboard') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pos.dashboard') ? 'active' : '' }}">
+                        <i class="bi bi-grid-1x2 me-2 text-info"></i>
+                        <span class="nav-label">POS</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('pos.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pos.index') ? 'active' : '' }}"
+                       onclick="return (typeof litsenziyaPosTekshir==='function') ? litsenziyaPosTekshir() : true">
+                        <i class="bi bi-cash-register me-2 text-warning"></i>
+                        <span class="nav-label">{{ __('ui.menu_kassa') }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('terminal.pin-forma') }}" target="_blank"
+                       class="nav-link text-white py-1 {{ request()->routeIs('terminal.*') ? 'active' : '' }}">
+                        <i class="bi bi-fullscreen me-2 text-primary"></i>
+                        <span class="nav-label">Fullscreen kassa</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('pos.tarix') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pos.tarix') ? 'active' : '' }}">
+                        <i class="bi bi-receipt me-2"></i>
+                        <span class="nav-label">Sotuvlar tarixi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('pos.hisobotlar') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pos.hisobotlar') ? 'active' : '' }}">
+                        <i class="bi bi-bar-chart-line me-2 text-success"></i>
+                        <span class="nav-label">POS hisobotlar</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('pos.smena.royxat') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pos.smena.*') ? 'active' : '' }}">
+                        <i class="bi bi-clock-history me-2 text-info"></i>
+                        <span class="nav-label">Kassir smenalari</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('pos.qaytim.royxat') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pos.qaytim.*') ? 'active' : '' }}">
+                        <i class="bi bi-arrow-return-left me-2 text-danger"></i>
+                        <span class="nav-label">Qaytarishlar</span>
+                    </a>
+                </li>
+                @if(Auth::user()->isAdmin())
+                <li class="nav-item"><a href="{{ route('malumotnamalar.kassalar.index') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.kassalar.*') ? 'active' : '' }}">
+                    <i class="bi bi-wallet2 me-2"></i>
+                    <span class="nav-label">Kassalar</span>
+                </a></li>
+                @endif
+                @if(Auth::user()->isAdmin() || Auth::user()->rol === 'menejer')
+                <li class="nav-item"><a href="{{ route('malumotnamalar.pos-tolov-usullari.index') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.pos-tolov-usullari.*') ? 'active' : '' }}">
+                    <i class="bi bi-credit-card-2-front me-2"></i>
+                    <span class="nav-label">POS to'lov usullari</span>
+                </a></li>
+                @endif
+                @endif
+                @if(Auth::user()->ruxsat('tovarlar') && (Auth::user()->isAdmin() || Auth::user()->isMenejerYoki()))
+                <li class="nav-item">
+                    <a href="{{ route('katalog.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('katalog.*') ? 'active' : '' }}">
+                        <i class="bi bi-box me-2"></i>
+                        <span class="nav-label">{{ __('ui.menu_katalog') }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('tovar-guruhlar.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('tovar-guruhlar.*') ? 'active' : '' }}">
+                        <i class="bi bi-tags me-2"></i>
+                        <span class="nav-label">{{ __('ui.menu_guruhlar') }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('kirim.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('kirim.*') ? 'active' : '' }}">
+                        <i class="bi bi-box-arrow-in-down me-2 text-success"></i>
+                        <span class="nav-label">{{ __('ui.menu_kirim') }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('chiqim.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('chiqim.*') ? 'active' : '' }}">
+                        <i class="bi bi-box-arrow-up me-2 text-danger"></i>
+                        <span class="nav-label">{{ __('ui.menu_chiqim') }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('ombor.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('ombor.index') ? 'active' : '' }}">
+                        <i class="bi bi-boxes me-2 text-info"></i>
+                        <span class="nav-label">Ombor qoldig'i</span>
+                    </a>
+                </li>
+                @endif
+                @if(Auth::user()->ruxsat('taminotchilar'))
+                <li class="nav-item">
+                    <a href="{{ route('taminotchi.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('taminotchi.index') ? 'active' : '' }}">
+                        <i class="bi bi-truck me-2 text-warning"></i>
+                        <span class="nav-label">Ta'minotchilar</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('taminotchi.tulov_reestr') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('taminotchi.tulov_reestr') ? 'active' : '' }}">
+                        <i class="bi bi-list-check me-2 text-success"></i>
+                        <span class="nav-label">To'lovlar reestri</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('taminotchi.kirim_reestr') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('taminotchi.kirim_reestr') ? 'active' : '' }}">
+                        <i class="bi bi-journal-text me-2 text-info"></i>
+                        <span class="nav-label">Kirimlar reestri</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('taminotchi.hisobot') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('taminotchi.hisobot') ? 'active' : '' }}">
+                        <i class="bi bi-bar-chart me-2 text-info"></i>
+                        <span class="nav-label">Ta'minotchi balansi</span>
+                    </a>
+                </li>
+                @endif
+                @if(Auth::user()->ruxsat('transferlar'))
+                <li class="nav-item">
+                    <a href="{{ route('transfer.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('transfer.index') ? 'active' : '' }}">
+                        <i class="bi bi-arrow-left-right me-2 text-info"></i>
+                        <span class="nav-label">Transferlar</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('transfer.tovar.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('transfer.tovar.*') ? 'active' : '' }}">
+                        <i class="bi bi-box-seam me-2 text-success"></i>
+                        <span class="nav-label">Tovar transferi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('transfer.supplier-return.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('transfer.supplier-return.*') ? 'active' : '' }}">
+                        <i class="bi bi-arrow-return-left me-2 text-secondary"></i>
+                        <span class="nav-label">Ta'minotchiga qaytarish</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('transfer.kassa.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('transfer.kassa.*') ? 'active' : '' }}">
+                        <i class="bi bi-cash-coin me-2 text-primary"></i>
+                        <span class="nav-label">Kassa transferi</span>
+                    </a>
+                </li>
+                @if(Auth::user()->isMenejerYoki())
+                <li class="nav-item">
+                    <a href="{{ route('transfer.shartnoma.xodim_tarixi') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('transfer.shartnoma.*') ? 'active' : '' }}">
+                        <i class="bi bi-person-check me-2 text-warning"></i>
+                        <span class="nav-label">Qayta tayinlash</span>
+                    </a>
+                </li>
+                @endif
+                @if(Auth::user()->isAdmin())
+                <li class="nav-item">
+                    <a href="{{ route('transfer.tolov_turi.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('transfer.tolov_turi.*') ? 'active' : '' }}">
+                        <i class="bi bi-credit-card me-2" style="color:#a5b4fc"></i>
+                        <span class="nav-label">To'lov turlari</span>
+                    </a>
+                </li>
+                @endif
+                <li class="nav-item">
+                    <a href="{{ route('transfer.audit') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('transfer.audit') ? 'active' : '' }}">
+                        <i class="bi bi-journal-text me-2 text-info"></i>
+                        <span class="nav-label">Audit jurnali</span>
                     </a>
                 </li>
                 @endif
             </ul>
             @endif
 
-            {{-- ── HISOBOTLAR ─────────────────────────────────── --}}
+            {{-- ══════════ 3. MOLIYA ══════════ --}}
+            @if(Auth::user()->ruxsat('pul_oqimlari') || Auth::user()->ruxsat('harajatlar') || Auth::user()->ruxsat('xodimlar_ish_haqi') || Auth::user()->ruxsat('operatsion_kun'))
+            <li class="grup-header">
+                <button class="grup-toggle" data-grup="moliya" aria-expanded="{{ $aktiv_grup==='moliya' ? 'true' : 'false' }}" aria-controls="grup-moliya">
+                    <span class="g-label"><i class="bi bi-wallet2 me-2"></i>Moliya</span>
+                    <i class="g-icon bi {{ $aktiv_grup==='moliya' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
+                </button>
+            </li>
+            <ul class="grup-items {{ $aktiv_grup!=='moliya' ? 'closed' : '' }}" id="grup-moliya">
+                @if(Auth::user()->ruxsat('pul_oqimlari'))
+                <li class="nav-item">
+                    <a href="{{ route('pul-oqimlari.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pul-oqimlari.index') ? 'active' : '' }}">
+                        <i class="bi bi-activity me-2" style="color:#6366f1"></i>
+                        <span class="nav-label">Moliyaviy panel</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('pul-oqimlari.moliyaviy-natija.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pul-oqimlari.moliyaviy-natija.*') ? 'active' : '' }}">
+                        <i class="bi bi-graph-up-arrow me-2 text-warning"></i>
+                        <span class="nav-label">Moliyaviy natija</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('pul-oqimlari.balans.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pul-oqimlari.balans.*') ? 'active' : '' }}">
+                        <i class="bi bi-bar-chart-steps me-2 text-info"></i>
+                        <span class="nav-label">Balans hisoboti</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('pul-oqimlari.hisobot') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pul-oqimlari.hisobot') ? 'active' : '' }}">
+                        <i class="bi bi-clipboard-data me-2" style="color:#22c55e"></i>
+                        <span class="nav-label">Pul oqimi hisoboti</span>
+                    </a>
+                </li>
+                @endif
+                @if(Auth::user()->ruxsat('harajatlar'))
+                <li class="nav-item">
+                    <a href="{{ route('harajatlar.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('harajatlar.index') ? 'active' : '' }}">
+                        <i class="bi bi-dash-circle me-2 text-danger"></i>
+                        <span class="nav-label">Harajatlar</span>
+                    </a>
+                </li>
+                @endif
+                @if(Auth::user()->ruxsat('xodimlar_ish_haqi'))
+                <li class="nav-item">
+                    <a href="{{ route('ish_haqi.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('ish_haqi.*') ? 'active' : '' }}">
+                        <i class="bi bi-cash-stack me-2" style="color:#f472b6"></i>
+                        <span class="nav-label">Ish haqi</span>
+                    </a>
+                </li>
+                @endif
+                @if(Auth::user()->ruxsat('operatsion_kun'))
+                <li class="nav-item">
+                    <a href="{{ route('operatsion_kun.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('operatsion_kun.index') ? 'active' : '' }}">
+                        <i class="bi bi-calendar-check me-2" style="color:#22d3ee"></i>
+                        <span class="nav-label">Ish kuni</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('operatsion_kun.tarix') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('operatsion_kun.tarix') ? 'active' : '' }}">
+                        <i class="bi bi-clock-history me-2" style="color:#22d3ee"></i>
+                        <span class="nav-label">Kun yopish tarixi</span>
+                    </a>
+                </li>
+                @endif
+                @if(Auth::user()->isAdmin() || Auth::user()->isHisobchi())
+                <li class="nav-item">
+                    <a href="{{ route('buxgalteriya.hisoblar.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('buxgalteriya.hisoblar.*') ? 'active' : '' }}">
+                        <i class="bi bi-journal-bookmark me-2 text-warning"></i>
+                        <span class="nav-label">Hisoblar rejasi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('buxgalteriya.tulov_turlari.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('buxgalteriya.tulov_turlari.*') ? 'active' : '' }}">
+                        <i class="bi bi-credit-card-2-front me-2 text-primary"></i>
+                        <span class="nav-label">Buxgalteriya to'lov turlari</span>
+                    </a>
+                </li>
+                @endif
+            </ul>
+            @endif
+
+            {{-- ══════════ 4. HISOBOTLAR ══════════ --}}
             @if(Auth::user()->ruxsat('hisobotlar'))
             <li class="grup-header">
-                <button class="grup-toggle" data-grup="hisobotlar">
-                    <span class="g-label">&#128202; {{ __('ui.menu_hisobotlar') }}</span>
+                <button class="grup-toggle" data-grup="hisobotlar" aria-expanded="{{ $aktiv_grup==='hisobotlar' ? 'true' : 'false' }}" aria-controls="grup-hisobotlar">
+                    <span class="g-label"><i class="bi bi-bar-chart-fill me-2"></i>{{ __('ui.menu_hisobotlar') }}</span>
                     <i class="g-icon bi {{ $aktiv_grup==='hisobotlar' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
                 </button>
             </li>
@@ -591,7 +857,7 @@
                     <a href="{{ route('hisobotlar.konstruktor') }}"
                        class="nav-link text-white py-1 {{ request()->routeIs('hisobotlar.konstruktor*') ? 'active' : '' }}">
                         <i class="bi bi-tools me-2" style="color:#a5b4fc"></i>
-                        <span class="nav-label">Konstruktor</span>
+                        <span class="nav-label">Hisobot konstruktori</span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -604,418 +870,23 @@
             </ul>
             @endif
 
-            {{-- ── POS ──────────────────────────────────────────── --}}
-            @if(Auth::user()->ruxsat('tovarlar') || Auth::user()->ruxsat('malumotnomalar') || Auth::user()->ruxsat('transferlar'))
+            {{-- ══════════ 5. XABARNOMALAR ══════════ --}}
+            @if(Auth::user()->ruxsat('xabarnoma') || Auth::user()->ruxsat('hibrit_pochta'))
             <li class="grup-header">
-                <button class="grup-toggle" data-grup="pos">
-                    <span class="g-label"><i class="bi bi-cash-register me-1"></i> POS</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='pos' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
+                <button class="grup-toggle" data-grup="xabarnomalar" aria-expanded="{{ $aktiv_grup==='xabarnomalar' ? 'true' : 'false' }}" aria-controls="grup-xabarnomalar">
+                    <span class="g-label"><i class="bi bi-bell-fill me-2"></i>Xabarnomalar</span>
+                    <i class="g-icon bi {{ $aktiv_grup==='xabarnomalar' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
                 </button>
             </li>
-            <ul class="grup-items {{ $aktiv_grup!=='pos' ? 'closed' : '' }}" id="grup-pos">
+            <ul class="grup-items {{ $aktiv_grup!=='xabarnomalar' ? 'closed' : '' }}" id="grup-xabarnomalar">
+                @if(Auth::user()->ruxsat('xabarnoma'))
                 <li class="nav-item">
-                    <a href="{{ route('pos.dashboard') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('pos.dashboard') ? 'active' : '' }}">
-                        <i class="bi bi-grid-1x2 me-2 text-info"></i>
-                        <span class="nav-label">POS Dashboard</span>
+                    <a href="{{ route('xabarnoma.sms.kutilayotgan') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('xabarnoma.sms.*') ? 'active' : '' }}">
+                        <i class="bi bi-chat-dots-fill me-2 text-warning"></i>
+                        <span class="nav-label">SMS</span>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a href="{{ route('pos.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('pos.index') ? 'active' : '' }}"
-                       onclick="return (typeof litsenziyaPosTekshir==='function') ? litsenziyaPosTekshir() : true">
-                        <i class="bi bi-cash-register me-2 text-warning"></i>
-                        <span class="nav-label">{{ __('ui.menu_kassa') }}</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('terminal.pin-forma') }}" target="_blank"
-                       class="nav-link text-white py-1 {{ request()->routeIs('terminal.*') ? 'active' : '' }}">
-                        <i class="bi bi-fullscreen me-2 text-primary"></i>
-                        <span class="nav-label">Fullscreen kassa</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('pos.tarix') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('pos.tarix') ? 'active' : '' }}">
-                        <i class="bi bi-clock-history me-2"></i>
-                        <span class="nav-label">Sotuv tarixi</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('pos.hisobotlar') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('pos.hisobotlar') ? 'active' : '' }}">
-                        <i class="bi bi-bar-chart-line me-2 text-success"></i>
-                        <span class="nav-label">POS hisobotlar</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('pos.smena.royxat') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('pos.smena.*') ? 'active' : '' }}">
-                        <i class="bi bi-clock-history me-2 text-info"></i>
-                        <span class="nav-label">Kassir smenalari</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('pos.qaytim.royxat') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('pos.qaytim.*') ? 'active' : '' }}">
-                        <i class="bi bi-arrow-return-left me-2 text-danger"></i>
-                        <span class="nav-label">Qaytim / Vozvrat</span>
-                    </a>
-                </li>
-                @if(Auth::user()->isAdmin())
-                <li class="nav-item"><a href="{{ route('malumotnamalar.kassalar.index') }}"
-                    class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.kassalar.*') ? 'active' : '' }}">
-                    <i class="bi bi-wallet2 me-2"></i>
-                    <span class="nav-label">Kassalar</span>
-                </a></li>
-                @endif
-                @if(Auth::user()->isAdmin() || Auth::user()->rol === 'menejer')
-                <li class="nav-item"><a href="{{ route('malumotnamalar.pos-tolov-usullari.index') }}"
-                    class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.pos-tolov-usullari.*') ? 'active' : '' }}">
-                    <i class="bi bi-credit-card-2-front me-2"></i>
-                    <span class="nav-label">POS to'lov usullari</span>
-                </a></li>
-                @endif
-                @if(Auth::user()->ruxsat('transferlar'))
-                <li class="nav-item">
-                    <a href="{{ route('transfer.kassa.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('transfer.kassa.*') ? 'active' : '' }}">
-                        <i class="bi bi-cash-coin me-2 text-primary"></i>
-                        <span class="nav-label">Kassa transferi</span>
-                    </a>
-                </li>
-                @endif
-            </ul>
-            @endif
-
-            {{-- ── TOVARLAR ────────────────────────────────────── --}}
-            @if(Auth::user()->ruxsat('tovarlar'))
-            <li class="grup-header">
-                <button class="grup-toggle" data-grup="tovarlar">
-                    <span class="g-label">&#127979; {{ __('ui.menu_tovarlar') }}</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='tovarlar' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
-                </button>
-            </li>
-            <ul class="grup-items {{ $aktiv_grup!=='tovarlar' ? 'closed' : '' }}" id="grup-tovarlar">
-                @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki())
-                <li class="nav-item">
-                    <a href="{{ route('katalog.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('katalog.*') ? 'active' : '' }}">
-                        <i class="bi bi-box me-2"></i>
-                        <span class="nav-label">{{ __('ui.menu_katalog') }}</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('tovar-guruhlar.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('tovar-guruhlar.*') ? 'active' : '' }}">
-                        <i class="bi bi-tags me-2"></i>
-                        <span class="nav-label">{{ __('ui.menu_guruhlar') }}</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('kirim.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('kirim.*') ? 'active' : '' }}">
-                        <i class="bi bi-box-arrow-in-down me-2 text-success"></i>
-                        <span class="nav-label">{{ __('ui.menu_kirim') }}</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('chiqim.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('chiqim.*') ? 'active' : '' }}">
-                        <i class="bi bi-box-arrow-up me-2 text-danger"></i>
-                        <span class="nav-label">{{ __('ui.menu_chiqim') }}</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('ombor.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('ombor.index') ? 'active' : '' }}">
-                        <i class="bi bi-boxes me-2 text-info"></i>
-                        <span class="nav-label">Ombor qoldig'i</span>
-                    </a>
-                </li>
-                @endif
-            </ul>
-            @endif
-
-            {{-- ── TA'MINOTCHILAR ──────────────────────────────────── --}}
-            @if(Auth::user()->ruxsat('taminotchilar'))
-            <li class="grup-header">
-                <button class="grup-toggle" data-grup="taminotchi">
-                    <span class="g-label">🚛 TA'MINOTCHILAR</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='taminotchi' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
-                </button>
-            </li>
-            <ul class="grup-items {{ $aktiv_grup!=='taminotchi' ? 'closed' : '' }}" id="grup-taminotchi">
-                <li class="nav-item">
-                    <a href="{{ route('taminotchi.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('taminotchi.index') ? 'active' : '' }}">
-                        <i class="bi bi-truck me-2 text-warning"></i>
-                        <span class="nav-label">Ta'minotchilar</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('taminotchi.tulov_reestr') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('taminotchi.tulov_reestr') ? 'active' : '' }}">
-                        <i class="bi bi-list-check me-2 text-success"></i>
-                        <span class="nav-label">To'lovlar reestri</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('taminotchi.kirim_reestr') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('taminotchi.kirim_reestr') ? 'active' : '' }}">
-                        <i class="bi bi-journal-text me-2 text-info"></i>
-                        <span class="nav-label">Kirimlar reestri</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('taminotchi.hisobot') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('taminotchi.hisobot') ? 'active' : '' }}">
-                        <i class="bi bi-bar-chart me-2 text-info"></i>
-                        <span class="nav-label">Hisobot / Balans</span>
-                    </a>
-                </li>
-            </ul>
-            @endif
-
-
-            {{-- HARAJATLAR --}}
-            @if(Auth::user()->ruxsat('harajatlar'))
-            <li class="grup-header">
-                <button class="grup-toggle" data-grup="harajatlar">
-                    <span class="g-label">&#128181; HARAJATLAR</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='harajatlar' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
-                </button>
-            </li>
-            <ul class="grup-items {{ $aktiv_grup!=='harajatlar' ? 'closed' : '' }}" id="grup-harajatlar">
-                <li class="nav-item">
-                    <a href="{{ route('harajatlar.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('harajatlar.index') ? 'active' : '' }}">
-                        <i class="bi bi-wallet2 me-2 text-danger"></i>
-                        <span class="nav-label">Harajatlar</span>
-                    </a>
-                </li>
-            </ul>
-            @endif
-
-            {{-- XODIMLAR ISH HAQI --}}
-            @if(Auth::user()->ruxsat('xodimlar_ish_haqi'))
-            <li class="grup-header">
-                <button class="grup-toggle" data-grup="ish-haqi">
-                    <span class="g-label">&#128100; ISH HAQI</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='ish-haqi' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
-                </button>
-            </li>
-            <ul class="grup-items {{ $aktiv_grup!=='ish-haqi' ? 'closed' : '' }}" id="grup-ish-haqi">
-                <li class="nav-item">
-                    <a href="{{ route('ish_haqi.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('ish_haqi.*') ? 'active' : '' }}">
-                        <i class="bi bi-person-badge me-2" style="color:#f472b6"></i>
-                        <span class="nav-label">Xodimlar ish haqi</span>
-                    </a>
-                </li>
-            </ul>
-            @endif
-
-            {{-- ISH KUNI --}}
-            @if(Auth::user()->ruxsat('operatsion_kun'))
-            <li class="grup-header">
-                <button class="grup-toggle" data-grup="ish-kuni">
-                    <span class="g-label">&#128197; ISH KUNI</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='ish-kuni' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
-                </button>
-            </li>
-            <ul class="grup-items {{ $aktiv_grup!=='ish-kuni' ? 'closed' : '' }}" id="grup-ish-kuni">
-                <li class="nav-item">
-                    <a href="{{ route('operatsion_kun.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('operatsion_kun.index') ? 'active' : '' }}">
-                        <i class="bi bi-calendar-check me-2" style="color:#22d3ee"></i>
-                        <span class="nav-label">Kun holati</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('operatsion_kun.tarix') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('operatsion_kun.tarix') ? 'active' : '' }}">
-                        <i class="bi bi-clock-history me-2" style="color:#22d3ee"></i>
-                        <span class="nav-label">Yopish tarixi</span>
-                    </a>
-                </li>
-            </ul>
-            @endif
-
-            {{-- PUL OQIMLARI --}}
-            @if(Auth::user()->ruxsat('pul_oqimlari'))
-            <li class="grup-header">
-                <button class="grup-toggle" data-grup="pul-oqimlari">
-                    <span class="g-label">&#9889; MOLIYA</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='pul-oqimlari' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
-                </button>
-            </li>
-            <ul class="grup-items {{ $aktiv_grup!=='pul-oqimlari' ? 'closed' : '' }}" id="grup-pul-oqimlari">
-                <li class="nav-item">
-                    <a href="{{ route('pul-oqimlari.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('pul-oqimlari.index') ? 'active' : '' }}">
-                        <i class="bi bi-arrow-left-right me-2" style="color:#6366f1"></i>
-                        <span class="nav-label">Pul Oqimlari</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('pul-oqimlari.moliyaviy-natija.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('pul-oqimlari.moliyaviy-natija.*') ? 'active' : '' }}">
-                        <i class="bi bi-graph-up-arrow me-2 text-warning"></i>
-                        <span class="nav-label">Moliyaviy natija</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('pul-oqimlari.balans.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('pul-oqimlari.balans.*') ? 'active' : '' }}">
-                        <i class="bi bi-bar-chart-steps me-2 text-info"></i>
-                        <span class="nav-label">Balans hisoboti</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('pul-oqimlari.hisobot') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('pul-oqimlari.hisobot') ? 'active' : '' }}">
-                        <i class="bi bi-clipboard-data me-2" style="color:#22c55e"></i>
-                        <span class="nav-label">Pul oqimi hisoboti</span>
-                    </a>
-                </li>
-            </ul>
-            @endif
-
-        
-        {{-- MA'LUMOTNOMALAR --}}
-        @if(Auth::user()->ruxsat('malumotnomalar'))
-        <li class="grup-header">
-            <button class="grup-toggle" data-grup="malumotnamalar-menu">
-                <span class="g-label">&#128218; RO'YXATLAR</span>
-                <i class="g-icon bi {{ $aktiv_grup==='malumotnamalar-menu' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
-            </button>
-        </li>
-        <ul class="grup-items {{ $aktiv_grup!=='malumotnamalar-menu' ? 'closed' : '' }}" id="grup-malumotnamalar-menu">
-            <li class="nav-item"><a href="{{ route('malumotnamalar.index') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.index') ? 'active' : '' }}">
-                Umumiy</a></li>
-            @if(Auth::user()->isAdmin())
-            <li class="nav-item ps-2 mt-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;opacity:.5">Tashkiliy</li>
-            <li class="nav-item"><a href="{{ route('malumotnamalar.filiallar.index') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.filiallar.*') ? 'active' : '' }}">
-                Filiallar</a></li>
-            <li class="nav-item"><a href="{{ route('admin.foydalanuvchilar') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('admin.foydalanuvchilar') ? 'active' : '' }}">
-                Foydalanuvchilar</a></li>
-            <li class="nav-item"><a href="{{ route('admin.rollar') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('admin.rollar') ? 'active' : '' }}">
-                Rollar</a></li>
-            <li class="nav-item"><a href="{{ route('malumotnamalar.tashkilot-rekvizit.index') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.tashkilot-rekvizit.*') ? 'active' : '' }}">
-                Tashkilot rekvizitlari</a></li>
-            @endif
-            <li class="nav-item ps-2 mt-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;opacity:.5">Tovar va Ombor</li>
-            <li class="nav-item"><a href="{{ route('tovar-guruhlar.index') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('tovar-guruhlar.*') ? 'active' : '' }}">
-                Tovar guruhlari</a></li>
-            <li class="nav-item"><a href="{{ route('katalog.index') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('katalog.*') ? 'active' : '' }}">
-                Tovar katalogi</a></li>
-            <li class="nav-item"><a href="{{ route('malumotnamalar.birliklar.index') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.birliklar.*') ? 'active' : '' }}">
-                Birliklar</a></li>
-            <li class="nav-item"><a href="{{ route('malumotnamalar.brendlar.index') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.brendlar.*') ? 'active' : '' }}">
-                Brendlar</a></li>
-            <li class="nav-item ps-2 mt-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;opacity:.5">Moliya</li>
-            @if(Auth::user()->isAdmin() || Auth::user()->isHisobchi())
-            <li class="nav-item"><a href="{{ route('buxgalteriya.tulov_turlari.index') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('buxgalteriya.tulov_turlari.*') ? 'active' : '' }}">
-                To'lov turlari</a></li>
-            @endif
-            <li class="nav-item"><a href="{{ route('malumotnamalar.harajat-turlari.index') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.harajat-turlari.*') ? 'active' : '' }}">
-                Harajat turlari</a></li>
-            <li class="nav-item"><a href="{{ route('malumotnamalar.pul-kategoriyalar.index') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.pul-kategoriyalar.*') ? 'active' : '' }}">
-                Pul oqimi kategoriyalari</a></li>
-            @if(Auth::user()->isAdmin() || Auth::user()->isHisobchi())
-            <li class="nav-item"><a href="{{ route('buxgalteriya.hisoblar.index') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('buxgalteriya.hisoblar.*') ? 'active' : '' }}">
-                Hisoblar rejasi</a></li>
-            <li class="nav-item"><a href="{{ route('malumotnamalar.valyutalar.index') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.valyutalar.*') ? 'active' : '' }}">
-                Valyutalar</a></li>
-            @endif
-            @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki())
-            <li class="nav-item ps-2 mt-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;opacity:.5">Hujjatlar</li>
-            <li class="nav-item"><a href="{{ route('xabarnoma.shablonlar.index') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('xabarnoma.shablonlar.*') ? 'active' : '' }}">
-                Xabarnoma shablonlari</a></li>
-            @endif
-            @if(Auth::user()->isAdmin())
-            <li class="nav-item ps-2 mt-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;opacity:.5">Hujjatlar</li>
-            <li class="nav-item"><a href="{{ route('malumotnamalar.shartnoma-rekvizit.index') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.shartnoma-rekvizit.*') ? 'active' : '' }}">
-                Shartnoma rekvizitlari</a></li>
-            <li class="nav-item"><a href="{{ route('malumotnamalar.statuslar.index') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.statuslar.*') ? 'active' : '' }}">
-                Statuslar va sabablar</a></li>
-            <li class="nav-item"><a href="{{ route('malumotnamalar.pochta-shablonlar.index') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.pochta-shablonlar.*') ? 'active' : '' }}">
-                <i class="bi bi-envelope-paper me-1" style="color:#a78bfa"></i>Pochta Shablonlari</a></li>
-            <li class="nav-item"><a href="{{ route('malumotnamalar.viloyatlar.index') }}" class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.viloyatlar.*') ? 'active' : '' }}"><i class="bi bi-geo-alt me-1" style="color:#34d399"></i>Viloyat/Tumanlar</a></li>
-            <li class="nav-item ps-2 mt-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;opacity:.5">Tizim</li>
-            <li class="nav-item"><a href="{{ route('admin.sozlamalar') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('admin.sozlamalar') ? 'active' : '' }}">
-                Sozlamalar</a></li>
-            <li class="nav-item"><a href="{{ route('admin.ruxsatlar') }}"
-                class="nav-link text-white py-1 {{ request()->routeIs('admin.ruxsatlar') ? 'active' : '' }}">
-                Ruxsatlar</a></li>
-            @endif
-        </ul>
-        @endif
-
-        {{-- QURILMALAR NAZORATI --}}
-        @if(Auth::user()->ruxsat('qurilmalar'))
-        <li class="grup-header">
-            <button class="grup-toggle" data-grup="qurilmalar-nazorati">
-                <span class="g-label">&#128241; QURILMALAR</span>
-                <i class="g-icon bi {{ $aktiv_grup==='qurilmalar-nazorati' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
-            </button>
-        </li>
-        <ul class="grup-items {{ $aktiv_grup!=='qurilmalar-nazorati' ? 'closed' : '' }}" id="grup-qurilmalar-nazorati">
-            <li class="nav-item">
-                <a href="{{ route('qurilmalar.index') }}"
-                   class="nav-link text-white py-1 {{ request()->routeIs('qurilmalar.index','qurilmalar.show','qurilmalar.edit','qurilmalar.loglar') ? 'active' : '' }}">
-                   Qurilmalar ro'yxati
-                </a>
-            </li>
-            @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki() || Auth::user()->isOmborchi())
-            <li class="nav-item">
-                <a href="{{ route('qurilmalar.create') }}"
-                   class="nav-link text-white py-1 {{ request()->routeIs('qurilmalar.create') ? 'active' : '' }}">
-                   Qurilma qo'shish
-                </a>
-            </li>
-            @endif
-            @if(Auth::user()->isAdmin())
-            <li class="nav-item">
-                <a href="{{ route('qurilma-provayderlar.index') }}"
-                   class="nav-link text-white py-1 {{ request()->routeIs('qurilma-provayderlar.*') ? 'active' : '' }}">
-                   Provayderlar
-                </a>
-            </li>
-            @endif
-        </ul>
-        @endif
-
-            {{-- XABARNOMA guruh --}}
-            @if(Auth::user()->ruxsat('xabarnoma'))
-            <li class="grup-header">
-                <button class="grup-toggle" data-grup="xabarnoma">
-                    <span class="g-label">&#128241; XABARNOMA</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='xabarnoma' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
-                </button>
-            </li>
-            <ul class="grup-items {{ $aktiv_grup!=='xabarnoma' ? 'closed' : '' }}" id="grup-xabarnoma">
                 <li class="nav-item">
                     <a href="{{ route('xabarnoma.telegram.index') }}"
                        class="nav-link text-white py-1 {{ request()->routeIs('xabarnoma.telegram.*') ? 'active' : '' }}">
@@ -1030,98 +901,100 @@
                         <span class="nav-label">Email</span>
                     </a>
                 </li>
+                @endif
+                @if(Auth::user()->ruxsat('hibrit_pochta'))
+                <li class="nav-item">
+                    <a href="{{ route('hibrit_pochta.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('hibrit_pochta.*') ? 'active' : '' }}">
+                        <i class="bi bi-envelope-paper-fill me-2"></i>
+                        <span class="nav-label">HibritPochta</span>
+                    </a>
+                </li>
+                @endif
+                @if(Auth::user()->ruxsat('xabarnoma'))
                 <li class="nav-item">
                     <a href="{{ route('xabarnoma.shablonlar.index') }}"
                        class="nav-link text-white py-1 {{ request()->routeIs('xabarnoma.shablonlar.*') ? 'active' : '' }}">
                         <i class="bi bi-file-text me-2" style="color:#a5b4fc"></i>
-                        <span class="nav-label">Shablonlar</span>
-                    </a>
-                </li>
-            </ul>
-            @endif
-
-                        {{-- ── TRANSFERLAR ─────────────────────────────────── --}}
-            @if(Auth::user()->ruxsat('transferlar'))
-            <li class="grup-header">
-                <button class="grup-toggle" data-grup="transfer">
-                    <span class="g-label">&#8644; TRANSFERLAR</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='transfer' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
-                </button>
-            </li>
-            <ul class="grup-items {{ $aktiv_grup!=='transfer' ? 'closed' : '' }}" id="grup-transfer">
-                <li class="nav-item">
-                    <a href="{{ route('transfer.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('transfer.index') ? 'active' : '' }}">
-                        <i class="bi bi-arrow-left-right me-2 text-info"></i>
-                        <span class="nav-label">Transferlar</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('transfer.tovar.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('transfer.tovar.*') ? 'active' : '' }}">
-                        <i class="bi bi-box-seam me-2 text-success"></i>
-                        <span class="nav-label">Tovar transferi</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('transfer.supplier-return.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('transfer.supplier-return.*') ? 'active' : '' }}">
-                        <i class="bi bi-arrow-return-left me-2 text-secondary"></i>
-                        <span class="nav-label">Ta'minotchiga qaytarish</span>
-                    </a>
-                </li>
-                @if(Auth::user()->isMenejerYoki())
-                <li class="nav-item">
-                    <a href="{{ route('transfer.shartnoma.xodim_tarixi') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('transfer.shartnoma.*') ? 'active' : '' }}">
-                        <i class="bi bi-person-check me-2 text-warning"></i>
-                        <span class="nav-label">Qayta tayinlash</span>
+                        <span class="nav-label">Xabarnoma shablonlari</span>
                     </a>
                 </li>
                 @endif
-                @if(Auth::user()->isAdmin())
-                <li class="nav-item">
-                    <a href="{{ route('transfer.tolov_turi.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('transfer.tolov_turi.*') ? 'active' : '' }}">
-                        <i class="bi bi-credit-card me-2" style="color:#a5b4fc"></i>
-                        <span class="nav-label">To'lov turlari</span>
-                    </a>
-                </li>
-                @endif
-                <li class="nav-item">
-                    <a href="{{ route('transfer.audit') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('transfer.audit') ? 'active' : '' }}">
-                        <i class="bi bi-journal-text me-2 text-info"></i>
-                        <span class="nav-label">Audit jurnali</span>
-                    </a>
-                </li>
             </ul>
             @endif
 
-            {{-- ── BOSHQARUV ───────────────────────────────────── --}}
-            @if(Auth::user()->ruxsat('boshqaruv'))
+            {{-- ══════════ 6. SOZLAMALAR (doim eng pastda) ══════════ --}}
+            @if(Auth::user()->ruxsat('malumotnomalar') || Auth::user()->ruxsat('boshqaruv') || Auth::user()->isAdmin())
             <li class="grup-header">
-                <button class="grup-toggle" data-grup="boshqaruv">
-                    <span class="g-label">&#9881; {{ __('ui.menu_boshqaruv') }}</span>
-                    <i class="g-icon bi {{ $aktiv_grup==='boshqaruv' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
+                <button class="grup-toggle" data-grup="sozlamalar" aria-expanded="{{ $aktiv_grup==='sozlamalar' ? 'true' : 'false' }}" aria-controls="grup-sozlamalar">
+                    <span class="g-label"><i class="bi bi-gear-fill me-2"></i>{{ __('ui.menu_sozlamalar') }}</span>
+                    <i class="g-icon bi {{ $aktiv_grup==='sozlamalar' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
                 </button>
             </li>
-            <ul class="grup-items {{ $aktiv_grup!=='boshqaruv' ? 'closed' : '' }}" id="grup-boshqaruv">
+            <ul class="grup-items {{ $aktiv_grup!=='sozlamalar' ? 'closed' : '' }}" id="grup-sozlamalar">
+                @if(Auth::user()->ruxsat('malumotnomalar'))
+                <li class="nav-item"><a href="{{ route('malumotnamalar.index') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.index') ? 'active' : '' }}">
+                    <i class="bi bi-list-ul me-2"></i><span class="nav-label">Maʼlumotnomalar</span></a></li>
                 @if(Auth::user()->isAdmin())
-                <li class="nav-item">
-                    <a href="{{ route('admin.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('admin.index') ? 'active' : '' }}">
-                        <i class="bi bi-shield-lock me-2 text-danger"></i>
-                        <span class="nav-label">{{ __('ui.menu_admin') }}</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('admin.sozlamalar') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('admin.sozlamalar') ? 'active' : '' }}">
-                        <i class="bi bi-gear me-2"></i>
-                        <span class="nav-label">{{ __('ui.menu_sozlamalar') }}</span>
-                    </a>
-                </li>
+                <li class="nav-item"><a href="{{ route('malumotnamalar.filiallar.index') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.filiallar.*') ? 'active' : '' }}">
+                    <i class="bi bi-diagram-3 me-2"></i><span class="nav-label">Filiallar</span></a></li>
+                <li class="nav-item"><a href="{{ route('admin.foydalanuvchilar') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('admin.foydalanuvchilar') ? 'active' : '' }}">
+                    <i class="bi bi-person-gear me-2"></i><span class="nav-label">Foydalanuvchilar</span></a></li>
+                <li class="nav-item"><a href="{{ route('admin.rollar') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('admin.rollar') ? 'active' : '' }}">
+                    <i class="bi bi-shield-check me-2"></i><span class="nav-label">Rollar va huquqlar</span></a></li>
+                <li class="nav-item"><a href="{{ route('admin.ruxsatlar') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('admin.ruxsatlar') ? 'active' : '' }}">
+                    <i class="bi bi-key me-2"></i><span class="nav-label">Ruxsatlar</span></a></li>
+                <li class="nav-item"><a href="{{ route('malumotnamalar.tashkilot-rekvizit.index') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.tashkilot-rekvizit.*') ? 'active' : '' }}">
+                    <i class="bi bi-building me-2"></i><span class="nav-label">Tashkilot rekvizitlari</span></a></li>
+                @endif
+                <li class="nav-item"><a href="{{ route('malumotnamalar.birliklar.index') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.birliklar.*') ? 'active' : '' }}">
+                    <i class="bi bi-rulers me-2"></i><span class="nav-label">Birliklar</span></a></li>
+                <li class="nav-item"><a href="{{ route('malumotnamalar.brendlar.index') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.brendlar.*') ? 'active' : '' }}">
+                    <i class="bi bi-award me-2"></i><span class="nav-label">Brendlar</span></a></li>
+                @if(Auth::user()->isAdmin() || Auth::user()->isHisobchi())
+                <li class="nav-item"><a href="{{ route('buxgalteriya.tulov_turlari.index') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('buxgalteriya.tulov_turlari.*') ? 'active' : '' }}">
+                    <i class="bi bi-credit-card-2-front me-2"></i><span class="nav-label">To'lov turlari</span></a></li>
+                <li class="nav-item"><a href="{{ route('malumotnamalar.valyutalar.index') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.valyutalar.*') ? 'active' : '' }}">
+                    <i class="bi bi-currency-exchange me-2"></i><span class="nav-label">Valyutalar</span></a></li>
+                @endif
+                <li class="nav-item"><a href="{{ route('malumotnamalar.harajat-turlari.index') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.harajat-turlari.*') ? 'active' : '' }}">
+                    <i class="bi bi-tag me-2"></i><span class="nav-label">Harajat turlari</span></a></li>
+                <li class="nav-item"><a href="{{ route('malumotnamalar.pul-kategoriyalar.index') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.pul-kategoriyalar.*') ? 'active' : '' }}">
+                    <i class="bi bi-diagram-2 me-2"></i><span class="nav-label">Pul oqimi kategoriyalari</span></a></li>
+                @if(Auth::user()->isAdmin())
+                <li class="nav-item"><a href="{{ route('malumotnamalar.shartnoma-rekvizit.index') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.shartnoma-rekvizit.*') ? 'active' : '' }}">
+                    <i class="bi bi-file-earmark-ruled me-2"></i><span class="nav-label">Shartnoma rekvizitlari</span></a></li>
+                <li class="nav-item"><a href="{{ route('malumotnamalar.statuslar.index') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.statuslar.*') ? 'active' : '' }}">
+                    <i class="bi bi-flag me-2"></i><span class="nav-label">Statuslar va sabablar</span></a></li>
+                <li class="nav-item"><a href="{{ route('malumotnamalar.pochta-shablonlar.index') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.pochta-shablonlar.*') ? 'active' : '' }}">
+                    <i class="bi bi-envelope-paper me-2" style="color:#a78bfa"></i><span class="nav-label">Pochta shablonlari</span></a></li>
+                <li class="nav-item"><a href="{{ route('malumotnamalar.viloyatlar.index') }}" class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.viloyatlar.*') ? 'active' : '' }}"><i class="bi bi-geo-alt me-2" style="color:#34d399"></i><span class="nav-label">Viloyat/Tumanlar</span></a></li>
+                @endif
+                @endif
+                @if(Auth::user()->ruxsat('qurilmalar') && Auth::user()->isAdmin())
+                <li class="nav-item"><a href="{{ route('qurilma-provayderlar.index') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('qurilma-provayderlar.*') ? 'active' : '' }}">
+                    <i class="bi bi-plug me-2"></i><span class="nav-label">Qurilma provayderlari</span></a></li>
+                @endif
+                @if(Auth::user()->isAdmin())
+                <li class="nav-item"><a href="{{ route('admin.sozlamalar') }}"
+                    class="nav-link text-white py-1 {{ request()->routeIs('admin.sozlamalar') ? 'active' : '' }}">
+                    <i class="bi bi-sliders me-2"></i><span class="nav-label">Tizim sozlamalari</span></a></li>
                 <li class="nav-item">
                     <a href="{{ route('admin.litsenziya') }}"
                        class="nav-link text-white py-1 {{ request()->routeIs('admin.litsenziya') ? 'active' : '' }}">
@@ -1132,39 +1005,11 @@
                         @endif
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a href="{{ route('admin.ruxsatlar') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('admin.ruxsatlar') ? 'active' : '' }}">
-                        <i class="bi bi-key me-2 text-warning"></i>
-                        <span class="nav-label">Ruxsatlar</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('admin.rollar') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('admin.rollar') ? 'active' : '' }}">
-                        <i class="bi bi-person-badge me-2 text-info"></i>
-                        <span class="nav-label">Rollar</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('buxgalteriya.hisoblar.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('buxgalteriya.hisoblar*') ? 'active' : '' }}">
-                        <i class="bi bi-journal-bookmark me-2 text-warning"></i>
-                        <span class="nav-label">Hisoblar rejasi</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('buxgalteriya.tulov_turlari.index') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('buxgalteriya.tulov_turlari*') ? 'active' : '' }}">
-                        <i class="bi bi-credit-card-2-front me-2 text-primary"></i>
-                        <span class="nav-label">To'lov turlari (yangi)</span>
-                    </a>
-                </li>
                 @endif
                 <li class="nav-item">
                     <a href="{{ route('admin.audit') }}"
                        class="nav-link text-white py-1 {{ request()->routeIs('admin.audit') ? 'active' : '' }}">
-                        <i class="bi bi-journal-text me-2 text-info"></i>
+                        <i class="bi bi-scroll me-2 text-info"></i>
                         <span class="nav-label">{{ __('ui.menu_audit') }}</span>
                     </a>
                 </li>
@@ -1175,7 +1020,7 @@
             @if(Auth::user()->isAdmin())
             <li id="vendor-menu-group" class="grup-header" style="display:none">
                 <button class="grup-toggle" data-grup="vendor" style="background:#7c3aed;color:#fff">
-                    <span class="g-label">&#128274; VENDOR</span>
+                    <span class="g-label"><i class="bi bi-lock-fill me-2"></i>Vendor</span>
                     <i class="g-icon bi {{ $aktiv_grup==='vendor' ? 'bi-plus-lg' : 'bi-dash-lg' }}"></i>
                 </button>
             </li>
@@ -1390,22 +1235,28 @@
 <nav id="mobile-bottom-nav" aria-label="Pastki navigatsiya">
     <a href="{{ route('dashboard') }}"
        class="bn-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-        <i class="bi bi-speedometer2"></i><span>Bosh</span>
+        <i class="bi bi-house-door"></i><span>Bosh</span>
     </a>
+    @if(Auth::user()->ruxsat('mijozlar'))
     <a href="{{ route('mijozlar.index') }}"
        class="bn-item {{ request()->routeIs('mijozlar.*') ? 'active' : '' }}">
         <i class="bi bi-people"></i><span>Mijozlar</span>
     </a>
-    <a href="{{ route('kreditlar.index') }}"
-       class="bn-item {{ request()->routeIs('kreditlar.*') ? 'active' : '' }}">
-        <i class="bi bi-file-earmark-text"></i><span>Shartnoma</span>
+    @endif
+    @if(Auth::user()->ruxsat('tovarlar') || Auth::user()->ruxsat('malumotnomalar') || Auth::user()->ruxsat('transferlar'))
+    <a href="{{ route('pos.dashboard') }}"
+       class="bn-item {{ request()->routeIs('pos.*') ? 'active' : '' }}">
+        <i class="bi bi-cash-register"></i><span>POS</span>
     </a>
-    <a href="{{ route('transfer.index') }}"
-       class="bn-item {{ request()->routeIs('transfer.*') ? 'active' : '' }}">
-        <i class="bi bi-arrow-left-right"></i><span>Transfer</span>
+    @endif
+    @if(Auth::user()->ruxsat('hisobotlar'))
+    <a href="{{ route('hisobotlar.index') }}"
+       class="bn-item {{ request()->routeIs('hisobotlar.*') ? 'active' : '' }}">
+        <i class="bi bi-bar-chart"></i><span>Hisobot</span>
     </a>
+    @endif
     <button class="bn-item" onclick="mobileMenuToggle()" id="bn-menu-btn">
-        <i class="bi bi-grid" id="bn-menu-icon"></i><span>Menyu</span>
+        <i class="bi bi-grid" id="bn-menu-icon"></i><span>Yana</span>
     </button>
 </nav>
 
@@ -1545,6 +1396,7 @@ window.addEventListener("resize", function() {
         if (open) { items.classList.remove('closed'); }
         else       { items.classList.add('closed');   }
         iconBel(btn, open);
+        if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
 
     // Bosish: ACCORDION — boshqalarini yop, buni ochilganini yop/och
@@ -1572,6 +1424,91 @@ window.addEventListener("resize", function() {
         if (!items) return;
         var isOpen = !items.classList.contains('closed');
         iconBel(btn, isOpen);
+        btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+})();
+
+// ── Menyudan qidirish (client-side, backendga so'rov yubormaydi) ──
+(function() {
+    var input = document.getElementById('menu-qidiruv');
+    if (!input) return;
+    var menu = document.getElementById('sidebar-menu');
+    var savedState = null; // qidiruvdan oldingi accordion holatini eslab qolish
+
+    function normalize(s) {
+        return (s || '').toLowerCase()
+            .replace(/oʻ|o'|о'/g, 'o')
+            .replace(/gʻ|g'|г'/g, 'g');
+    }
+
+    function tozala() {
+        input.value = '';
+        menu.querySelectorAll('.nav-item').forEach(function(li) { li.style.display = ''; });
+        menu.querySelectorAll('.grup-header').forEach(function(li) { li.style.display = ''; });
+        menu.querySelectorAll('.grup-items').forEach(function(ul) { ul.style.display = ''; });
+        if (savedState) {
+            document.querySelectorAll('.grup-toggle').forEach(function(btn) {
+                var grupId = btn.getAttribute('data-grup');
+                var wasOpen = savedState[grupId];
+                var items = document.getElementById('grup-' + grupId);
+                if (!items) return;
+                if (wasOpen) { items.classList.remove('closed'); } else { items.classList.add('closed'); }
+                var icon = btn.querySelector('.g-icon');
+                if (icon) { icon.classList.remove('bi-plus-lg','bi-dash-lg'); icon.classList.add(wasOpen ? 'bi-plus-lg' : 'bi-dash-lg'); }
+                btn.setAttribute('aria-expanded', wasOpen ? 'true' : 'false');
+            });
+            savedState = null;
+        }
+    }
+
+    input.addEventListener('input', function() {
+        var q = normalize(input.value.trim());
+
+        if (q === '') { tozala(); return; }
+
+        if (!savedState) {
+            savedState = {};
+            document.querySelectorAll('.grup-toggle').forEach(function(btn) {
+                var grupId = btn.getAttribute('data-grup');
+                var items = document.getElementById('grup-' + grupId);
+                savedState[grupId] = items && !items.classList.contains('closed');
+            });
+        }
+
+        document.querySelectorAll('.grup-items').forEach(function(ul) {
+            var grupId = ul.id.replace('grup-', '');
+            var btn = document.querySelector('.grup-toggle[data-grup="' + grupId + '"]');
+            var anyVisible = false;
+
+            ul.querySelectorAll('.nav-item').forEach(function(li) {
+                var label = li.querySelector('.nav-label');
+                var matn = normalize(label ? label.textContent : li.textContent);
+                var mos = matn.indexOf(q) !== -1;
+                li.style.display = mos ? '' : 'none';
+                if (mos) anyVisible = true;
+            });
+
+            var header = btn ? btn.closest('.grup-header') : null;
+            if (header) header.style.display = anyVisible ? '' : 'none';
+
+            if (anyVisible) {
+                ul.classList.remove('closed');
+                if (btn) { btn.setAttribute('aria-expanded', 'true'); var ic = btn.querySelector('.g-icon'); if (ic) { ic.classList.remove('bi-plus-lg','bi-dash-lg'); ic.classList.add('bi-dash-lg'); } }
+            } else {
+                ul.style.display = 'none';
+            }
+        });
+
+        // Bosh sahifa (guruhsiz) qatorini ham tekshirish
+        var boshLink = menu.querySelector('#sidebar-menu > .nav-item:first-child .nav-label');
+        if (boshLink) {
+            var boshLi = boshLink.closest('.nav-item');
+            boshLi.style.display = normalize(boshLink.textContent).indexOf(q) !== -1 ? '' : 'none';
+        }
+    });
+
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') { tozala(); input.blur(); }
     });
 })();
 
