@@ -414,9 +414,10 @@
         <div class="px-2 mb-2">
             <div class="position-relative">
                 <i class="bi bi-search position-absolute" style="left:10px;top:8px;font-size:.8rem;color:rgba(255,255,255,.5)"></i>
-                <input type="text" id="menu-qidiruv" class="form-control form-control-sm ps-4"
+                <input type="search" id="menu-qidiruv" name="menu-qidiruv-{{ Auth::id() }}" class="form-control form-control-sm ps-4"
                        placeholder="{{ __('ui.menu_qidiruv') }}" aria-label="{{ __('ui.menu_qidiruv') }}"
-                       autocomplete="off" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff">
+                       autocomplete="off" spellcheck="false" data-lpignore="true" data-form-type="other"
+                       style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff">
             </div>
         </div>
 
@@ -1434,6 +1435,13 @@ window.addEventListener("resize", function() {
     if (!input) return;
     var menu = document.getElementById('sidebar-menu');
     var savedState = null; // qidiruvdan oldingi accordion holatini eslab qolish
+
+    // Brauzer avtofill/bfcache orqali maydonga tasodifan qiymat tushib
+    // qolsa (masalan login foydalanuvchi nomi bilan), sahifa yuklanganda
+    // majburiy tozalab qo'yamiz — aks holda qidiruv filtri butun menyuni
+    // yashirib qo'yishi mumkin.
+    input.value = '';
+    window.addEventListener('pageshow', function() { input.value = ''; });
 
     function normalize(s) {
         return (s || '').toLowerCase()
