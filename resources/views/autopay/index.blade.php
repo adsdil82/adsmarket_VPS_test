@@ -436,7 +436,17 @@ th.check-col { vertical-align:middle; }
                     @endif
                 </td>
                 <td class="tl"><code class="small">{{ $sh->loan_id }}</code></td>
-                <td class="tl col-mijoz">{{ $sh->mijoz?->familiya }} {{ $sh->mijoz?->ism }}</td>
+                <td class="tl col-mijoz">
+                    @if($sh->mijoz)
+                        {{ $sh->mijoz->familiya }} {{ $sh->mijoz->ism }}
+                    @elseif($sh->kredit?->mijoz)
+                        {{ $sh->kredit->mijoz->familiya }} {{ $sh->kredit->mijoz->ism }}
+                    @elseif($sh->pinfl)
+                        <span class="text-muted small" title="Bu yozuv lokal mijoz bazasiga bog'lanmagan">PINFL: {{ $sh->pinfl }}</span>
+                    @else
+                        <span class="text-muted">—</span>
+                    @endif
+                </td>
                 <td class="tl text-muted col-filial">{{ $sh->kredit?->filial?->nomi }}</td>
                 <td class="tl text-muted col-telefon d-none">{{ $sh->mijoz?->telefon }}</td>
                 <td class="tl text-muted col-manzil d-none">{{ Str::limit($sh->mijoz?->manzil, 30) ?: '—' }}</td>
