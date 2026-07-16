@@ -220,7 +220,17 @@ th.check-col { vertical-align:middle; }
                 <th style="width:70px"></th>
             </tr>
             <tr class="jami-row">
-                <th class="tl sticky-col" colspan="12">JAMI ({{ $kreditlar->total() }} ta)</th>
+                <th class="tl sticky-col" colspan="2">JAMI ({{ $kreditlar->total() }} ta)</th>
+                <th class="col-mijoz"></th>
+                <th class="col-filial"></th>
+                <th class="tl col-telefon d-none"></th>
+                <th class="tl col-manzil d-none"></th>
+                <th class="tl col-boshlanish d-none"></th>
+                <th class="tl col-tugash d-none"></th>
+                <th class="col-muddat d-none"></th>
+                <th class="col-jami d-none"></th>
+                <th class="col-kredit d-none"></th>
+                <th class="col-tolangan d-none"></th>
                 <th class="num">{{ number_format($qoldiqJami ?? 0, 0, '.', ' ') }}</th>
                 <th class="num">{{ number_format($kechikkanJami ?? 0, 0, '.', ' ') }}</th>
                 <th></th>
