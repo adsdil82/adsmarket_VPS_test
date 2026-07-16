@@ -263,6 +263,27 @@ class RegKredit extends Model implements Auditable
             : null;
     }
 
+    /**
+     * Kechikkan (muddati o'tgan) summa — SMS/AutoPay/HibritPochta uchun
+     * yagona hisoblash manbasi. RegKreditController::kreditlarSorovi()
+     * dagi kechikkan_summa subquery'siga mos (bir xil mantiq, lekin bitta
+     * model uchun skalyar hisoblash — verify()/buildVars() kabi joylarda
+     * ishlatiladi).
+     */
+    public function kechikkanSummaHisobla(): float
+    {
+        if ($this->holat === 'muddati_otgan') {
+            return (float) $this->qoldiq_qarz;
+        }
+
+        return (float) $this->grafik()
+            ->whereIn('holat', ['tolanmagan', 'qisman', 'muddati_otgan'])
+            ->whereNotNull('tolov_sana')
+            ->where('tolov_sana', '<', now()->toDateString())
+            ->get()
+            ->sum(fn ($g) => $g->tolov_summa - $g->tolangan_summa);
+    }
+
     // ─── Scope'lar ────────────────────────────────────────────────
 
     public function scopeFaol($query)

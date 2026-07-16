@@ -25,6 +25,10 @@
 .bank-table tbody td { padding:4px 8px; vertical-align:middle; white-space:nowrap; }
 .num { font-family:'Roboto Mono','Courier New',monospace; text-align:right; font-weight:700; color:#0f172a; font-size:.85rem; }
 
+.jami-row th { background:linear-gradient(180deg,#fde68a,#fbbf24) !important; color:#7c2d12; position:sticky; top:26px; z-index:6; }
+.jami-row th.sticky-col { background:linear-gradient(180deg,#fde68a,#fbbf24) !important; z-index:8; }
+.jami-row th.num { font-family:'Roboto Mono','Courier New',monospace; }
+
 .bank-wrap { overflow:auto; max-height:calc(100vh - 320px); border:1px solid #93c5fd; border-radius:0 0 6px 6px; }
 @media (max-width: 768px) { .bank-wrap { max-height:calc(100vh - 260px); } }
 
@@ -153,6 +157,12 @@ th.check-col { vertical-align:middle; }
                 <th class="tl">Filial</th>
                 <th class="tl">Telefon</th>
                 <th>Qoldiq qarz</th>
+                <th>Kechikkan summa</th>
+            </tr>
+            <tr class="jami-row">
+                <th class="tl sticky-col" colspan="5">JAMI ({{ $kreditlar->total() }} ta)</th>
+                <th></th>
+                <th class="num">{{ number_format($kechikkanJami ?? 0, 0, '.', ' ') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -171,9 +181,10 @@ th.check-col { vertical-align:middle; }
                     @endunless
                 </td>
                 <td class="num">{{ number_format($kredit->qoldiq_qarz, 0, '.', ' ') }}</td>
+                <td class="num" style="color:#dc2626">{{ number_format($kredit->kechikkan_summa ?? 0, 0, '.', ' ') }}</td>
             </tr>
             @empty
-            <tr><td colspan="6" class="text-center text-muted py-5"><i class="bi bi-search fs-3 d-block mb-2"></i>Mijozlar topilmadi</td></tr>
+            <tr><td colspan="7" class="text-center text-muted py-5"><i class="bi bi-search fs-3 d-block mb-2"></i>Mijozlar topilmadi</td></tr>
             @endforelse
         </tbody>
     </table>

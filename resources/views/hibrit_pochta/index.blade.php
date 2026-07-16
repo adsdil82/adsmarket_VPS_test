@@ -25,6 +25,9 @@
 .bank-table tbody tr:nth-child(even) td { background:#eef4ff; }
 .bank-table tbody td { padding:4px 8px; vertical-align:middle; white-space:nowrap; }
 .num { font-family:'Roboto Mono','Courier New',monospace; text-align:right; font-weight:700; color:#0f172a; font-size:.85rem; }
+.jami-row th { background:linear-gradient(180deg,#fde68a,#fbbf24) !important; color:#7c2d12; position:sticky; top:26px; z-index:6; }
+.jami-row th.sticky-col { background:linear-gradient(180deg,#fde68a,#fbbf24) !important; z-index:8; }
+.jami-row th.num { font-family:'Roboto Mono','Courier New',monospace; }
 
 .bank-wrap { overflow:auto; height:calc(100vh - 260px); border:1px solid #93c5fd; border-radius:0 0 6px 6px; }
 @media (max-width: 768px) { .bank-wrap { height:calc(100vh - 220px); } }
@@ -110,10 +113,20 @@
                 <th class="tl">Telefon</th>
                 <th class="tl">Manzil</th>
                 <th>Qoldiq qarz</th>
+                <th>Kechikkan summa</th>
                 <th>Kechikish</th>
                 <th class="tl">Xat holati</th>
                 <th class="tl">Oxirgi yuborilgan</th>
                 <th style="width:130px"></th>
+            </tr>
+            <tr class="jami-row">
+                <th class="tl sticky-col" colspan="6">JAMI ({{ $kreditlar->total() }} ta)</th>
+                <th></th>
+                <th class="num">{{ number_format($kechikkanJami ?? 0, 0, '.', ' ') }}</th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -133,6 +146,7 @@
                 <td class="tl text-muted">{{ $kredit->mijoz?->telefon }}</td>
                 <td class="tl text-muted text-truncate" style="max-width:220px" title="{{ $kredit->mijoz?->manzil }}">{{ $kredit->mijoz?->manzil ?: '—' }}</td>
                 <td class="num" style="color:#dc2626">{{ number_format($kredit->qoldiq_qarz, 0, '.', ' ') }}</td>
+                <td class="num" style="color:#dc2626">{{ number_format($kredit->kechikkan_summa ?? 0, 0, '.', ' ') }}</td>
                 <td class="text-center"><span class="badge-modern" style="background:#fee2e2;color:#991b1b">{{ $kredit->tugash_sana ? (int) abs(now()->diffInDays($kredit->tugash_sana, true)) : 0 }} kun</span></td>
                 <td class="tl">
                     @if($oxirgiXat)
@@ -153,7 +167,7 @@
                 </td>
             </tr>
             @empty
-            <tr><td colspan="11" class="text-center text-muted py-5"><i class="bi bi-search fs-3 d-block mb-2"></i>Muddati o'tgan shartnomalar yo'q</td></tr>
+            <tr><td colspan="12" class="text-center text-muted py-5"><i class="bi bi-search fs-3 d-block mb-2"></i>Muddati o'tgan shartnomalar yo'q</td></tr>
             @endforelse
         </tbody>
     </table>

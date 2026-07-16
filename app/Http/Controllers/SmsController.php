@@ -96,27 +96,44 @@ class SmsController extends Controller
         $filtr    = in_array($request->get('filtr'), ['kechikkan', 'ertaga', 'hammasi'], true) ? $request->get('filtr') : 'kechikkan';
         $qidiruv  = trim((string) $request->get('qidiruv'));
 
-        $query = RegKredit::with(['mijoz', 'filial'])
-            ->whereIn('holat', ['faol', 'muddati_otgan'])
-            ->where('qoldiq_qarz', '>', 0)
-            ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
-            ->when($qidiruv, fn($q) => $q->where(function ($qq) use ($qidiruv) {
-                $qq->where('shartnoma_raqam', 'like', "%{$qidiruv}%")
-                   ->orWhereHas('mijoz', fn($m) => $m->where('ism', 'like', "%{$qidiruv}%")
-                                                      ->orWhere('familiya', 'like', "%{$qidiruv}%"));
-            }));
+        $kechikkanSelect = ['kechikkan_summa' => \App\Models\Grafik::selectRaw(
+                "CASE WHEN reg_kredit.holat = 'muddati_otgan' THEN reg_kredit.qoldiq_qarz ELSE COALESCE(SUM(tolov_summa - tolangan_summa),0) END"
+            )
+            ->whereColumn('reg_kredit_id', 'reg_kredit.id')
+            ->whereIn('holat', ['tolanmagan', 'qisman', 'muddati_otgan'])
+            ->whereNotNull('tolov_sana')
+            ->where('tolov_sana', '<', now()->toDateString()),
+        ];
 
-        if ($filtr === 'kechikkan') {
-            $query->whereHas('grafik', fn($q) => $q->whereIn('holat', ['muddati_otgan', 'qisman'])
-                ->whereNotNull('tolov_sana')->where('tolov_sana', '<', today()));
-        } elseif ($filtr === 'ertaga') {
-            $ertaga = now()->addDay()->toDateString();
-            $query->whereHas('grafik', fn($q) => $q->whereIn('holat', ['tolanmagan', 'qisman'])
-                ->whereDate('tolov_sana', $ertaga));
-        }
-        // 'hammasi' — qo'shimcha sana filtri yo'q, barcha qarzdor faol/muddati o'tgan shartnomalar
+        $baseQuery = function () use ($filialId, $qidiruv, $filtr) {
+            $q = RegKredit::query()
+                ->whereIn('holat', ['faol', 'muddati_otgan'])
+                ->where('qoldiq_qarz', '>', 0)
+                ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
+                ->when($qidiruv, fn($q) => $q->where(function ($qq) use ($qidiruv) {
+                    $qq->where('shartnoma_raqam', 'like', "%{$qidiruv}%")
+                       ->orWhereHas('mijoz', fn($m) => $m->where('ism', 'like', "%{$qidiruv}%")
+                                                          ->orWhere('familiya', 'like', "%{$qidiruv}%"));
+                }));
 
-        $kreditlar = $query->orderByDesc('qoldiq_qarz')->paginate(30)->withQueryString();
+            if ($filtr === 'kechikkan') {
+                $q->whereHas('grafik', fn($qq) => $qq->whereIn('holat', ['muddati_otgan', 'qisman'])
+                    ->whereNotNull('tolov_sana')->where('tolov_sana', '<', today()));
+            } elseif ($filtr === 'ertaga') {
+                $ertaga = now()->addDay()->toDateString();
+                $q->whereHas('grafik', fn($qq) => $qq->whereIn('holat', ['tolanmagan', 'qisman'])
+                    ->whereDate('tolov_sana', $ertaga));
+            }
+            // 'hammasi' — qo'shimcha sana filtri yo'q, barcha qarzdor faol/muddati o'tgan shartnomalar
+
+            return $q;
+        };
+
+        $kreditlar = $baseQuery()->with(['mijoz', 'filial'])
+            ->addSelect($kechikkanSelect)
+            ->orderByDesc('qoldiq_qarz')->paginate(30)->withQueryString();
+
+        $kechikkanJami = $baseQuery()->addSelect($kechikkanSelect)->get()->sum('kechikkan_summa');
 
         $shablonlar = NotificationTemplate::faol()->channel('sms')->orderBy('name')->get();
         $filiallar  = $user->isAdmin() ? Filial::faol()->get(['id','nomi','kod']) : collect();
@@ -128,7 +145,7 @@ class SmsController extends Controller
         $holat      = '';
 
         return view('xabarnoma.sms.index', compact(
-            'shablonlar', 'filiallar', 'tab', 'loglar', 'batchlar', 'kreditlar',
+            'shablonlar', 'filiallar', 'tab', 'loglar', 'batchlar', 'kreditlar', 'kechikkanJami',
             'statistika', 'qidiruv', 'holat', 'filtr', 'filialId'
         ));
     }

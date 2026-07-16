@@ -35,18 +35,34 @@ class HibritPochtaController extends Controller
         $shablonlar    = collect();
         $statistika    = [];
         $ozgaruvchilar = [];
+        $kechikkanJami = 0;
 
         if ($tab === 'kutilayotgan') {
-            $kreditlar = RegKredit::with(['mijoz', 'filial', 'oxirgiYuborilganPochta'])
+            $kechikkanSelect = ['kechikkan_summa' => \App\Models\Grafik::selectRaw(
+                    "CASE WHEN reg_kredit.holat = 'muddati_otgan' THEN reg_kredit.qoldiq_qarz ELSE COALESCE(SUM(tolov_summa - tolangan_summa),0) END"
+                )
+                ->whereColumn('reg_kredit_id', 'reg_kredit.id')
+                ->whereIn('holat', ['tolanmagan', 'qisman', 'muddati_otgan'])
+                ->whereNotNull('tolov_sana')
+                ->where('tolov_sana', '<', now()->toDateString()),
+            ];
+
+            $kunPochtaBaseQuery = fn () => RegKredit::query()
                 ->muddatiOtgan()
                 ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
                 ->when($qidiruv, fn($q) => $q->where(function ($qq) use ($qidiruv) {
                     $qq->where('shartnoma_raqam', 'like', "%{$qidiruv}%")
                        ->orWhereHas('mijoz', fn($m) => $m->where('ism', 'like', "%{$qidiruv}%")
                                                           ->orWhere('familiya', 'like', "%{$qidiruv}%"));
-                }))
+                }));
+
+            $kreditlar = $kunPochtaBaseQuery()
+                ->with(['mijoz', 'filial', 'oxirgiYuborilganPochta'])
+                ->addSelect($kechikkanSelect)
                 ->orderByDesc('qoldiq_qarz')
                 ->paginate(30)->withQueryString();
+
+            $kechikkanJami = $kunPochtaBaseQuery()->addSelect($kechikkanSelect)->get()->sum('kechikkan_summa');
         } elseif ($tab === 'loglar') {
             $loglar = PochtaLog::with(['kredit', 'mijoz', 'shablon'])
                 ->when($filialId, fn($q) => $q->whereHas('kredit', fn($k) => $k->where('filial_id', $filialId)))
@@ -83,7 +99,7 @@ class HibritPochtaController extends Controller
         $yoqilgan  = $this->svc->isEnabled();
 
         return view('hibrit_pochta.index', compact(
-            'tab', 'kreditlar', 'loglar', 'shablonlar', 'statistika',
+            'tab', 'kreditlar', 'loglar', 'shablonlar', 'statistika', 'kechikkanJami',
             'filiallar', 'filialId', 'qidiruv', 'holat', 'yoqilgan',
             'ozgaruvchilar'
         ));

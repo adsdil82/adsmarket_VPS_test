@@ -328,7 +328,7 @@ class HybridPochtaService
             'eski_raqam'      => $kredit->eskiRaqamKorinishi() ?? '',
             'kechikish_kun'   => $kechikishKun,
             'jami_qarz'       => number_format(
-                (float)($kredit->qoldiq_qarz ?? $kredit->kredit_summa), 0, '.', ' '
+                $kredit->kechikkanSummaHisobla(), 0, '.', ' '
             ) . " so'm",
             'yuborish_sana'  => now()->format('d.m.Y'),
             'tashkilot_nomi' => Sozlama::ol('kompaniya_nomi', config('app.name')),

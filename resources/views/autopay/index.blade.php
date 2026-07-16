@@ -26,6 +26,9 @@
 .bank-table tbody tr.row-bogsiz td { background:#fef3c7 !important; }
 .bank-table tbody td { padding:4px 8px; vertical-align:middle; white-space:nowrap; }
 .num { font-family:'Roboto Mono','Courier New',monospace; text-align:right; font-weight:700; color:#0f172a; font-size:.85rem; }
+.jami-row th { background:linear-gradient(180deg,#fde68a,#fbbf24) !important; color:#7c2d12; position:sticky; top:26px; z-index:6; }
+.jami-row th.sticky-col { background:linear-gradient(180deg,#fde68a,#fbbf24) !important; z-index:8; }
+.jami-row th.num { font-family:'Roboto Mono','Courier New',monospace; }
 
 .bank-wrap { overflow:auto; height:calc(100vh - 175px); border:1px solid #93c5fd; border-radius:0 0 6px 6px; }
 @media (max-width: 768px) { .bank-wrap { height:calc(100vh - 150px); } }
@@ -209,8 +212,16 @@ th.check-col { vertical-align:middle; }
                 <th class="col-kredit d-none">Kredit summa</th>
                 <th class="col-tolangan d-none">Jami to'langan</th>
                 <th>Qoldiq qarz</th>
+                <th>Kechikkan summa</th>
                 <th class="tl">AutoPay holati</th>
                 <th style="width:70px"></th>
+            </tr>
+            <tr class="jami-row">
+                <th class="tl sticky-col" colspan="12">JAMI ({{ $kreditlar->total() }} ta)</th>
+                <th class="num">{{ number_format($qoldiqJami ?? 0, 0, '.', ' ') }}</th>
+                <th class="num">{{ number_format($kechikkanJami ?? 0, 0, '.', ' ') }}</th>
+                <th></th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -239,6 +250,7 @@ th.check-col { vertical-align:middle; }
                 <td class="num col-kredit d-none">{{ number_format($kredit->kredit_summa, 0, '.', ' ') }}</td>
                 <td class="num col-tolangan d-none" style="color:#16a34a">{{ number_format($kredit->boshlangich_tolov + $kredit->tolov_qilingan, 0, '.', ' ') }}</td>
                 <td class="num" style="color:#dc2626">{{ number_format($kredit->qoldiq_qarz, 0, '.', ' ') }}</td>
+                <td class="num" style="color:#dc2626">{{ number_format($kredit->kechikkan_summa ?? 0, 0, '.', ' ') }}</td>
                 <td class="tl">
                     @if(!$sh)
                     <span class="badge-modern" style="background:#64748b;color:#fff">Yuborilmagan</span>
@@ -274,7 +286,7 @@ th.check-col { vertical-align:middle; }
                 </td>
             </tr>
             @empty
-            <tr><td colspan="15" class="text-center text-muted py-5"><i class="bi bi-search fs-3 d-block mb-2"></i>Muddati o'tgan shartnomalar yo'q</td></tr>
+            <tr><td colspan="16" class="text-center text-muted py-5"><i class="bi bi-search fs-3 d-block mb-2"></i>Muddati o'tgan shartnomalar yo'q</td></tr>
             @endforelse
         </tbody>
     </table>

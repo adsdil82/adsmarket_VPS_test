@@ -34,18 +34,37 @@ class AutoPayController extends Controller
         $kreditlar = collect();
         $shartnomalar = collect();
         $tranzaksiyalar = collect();
+        $kechikkanJami = 0;
+        $qoldiqJami = 0;
 
         if ($tab === 'kutilayotgan') {
-            $kreditlar = RegKredit::with(['mijoz', 'filial', 'autopayShartnoma'])
+            $kechikkanSelect = ['kechikkan_summa' => \App\Models\Grafik::selectRaw(
+                    "CASE WHEN reg_kredit.holat = 'muddati_otgan' THEN reg_kredit.qoldiq_qarz ELSE COALESCE(SUM(tolov_summa - tolangan_summa),0) END"
+                )
+                ->whereColumn('reg_kredit_id', 'reg_kredit.id')
+                ->whereIn('holat', ['tolanmagan', 'qisman', 'muddati_otgan'])
+                ->whereNotNull('tolov_sana')
+                ->where('tolov_sana', '<', now()->toDateString()),
+            ];
+
+            $baseQuery = fn () => RegKredit::query()
                 ->muddatiOtgan()
                 ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
                 ->when($qidiruv, fn($q) => $q->where(function ($qq) use ($qidiruv) {
                     $qq->where('shartnoma_raqam', 'like', "%{$qidiruv}%")
                        ->orWhereHas('mijoz', fn($m) => $m->where('ism', 'like', "%{$qidiruv}%")
                                                           ->orWhere('familiya', 'like', "%{$qidiruv}%"));
-                }))
+                }));
+
+            $kreditlar = $baseQuery()
+                ->with(['mijoz', 'filial', 'autopayShartnoma'])
+                ->addSelect($kechikkanSelect)
                 ->orderByDesc('qoldiq_qarz')
                 ->paginate(30)->withQueryString();
+
+            $kechikkanJami = $baseQuery()->addSelect($kechikkanSelect)
+                ->get()->sum('kechikkan_summa');
+            $qoldiqJami = $baseQuery()->sum('qoldiq_qarz');
         } elseif ($tab === 'yuborilgan') {
             $shartnomalar = AutopayShartnoma::with(['mijoz', 'kredit.filial'])
                 ->when($filialId, fn($q) => $q->whereHas('kredit', fn($k) => $k->where('filial_id', $filialId)))
@@ -158,7 +177,7 @@ class AutoPayController extends Controller
         $scoringYoqilgan = $this->autoPay->pullikYoqilganmi('scoring');
 
         return view('autopay.index', compact(
-            'kreditlar', 'shartnomalar', 'tranzaksiyalar',
+            'kreditlar', 'shartnomalar', 'tranzaksiyalar', 'kechikkanJami', 'qoldiqJami',
             'filiallar', 'filialId', 'yoqilgan', 'tab', 'qidiruv', 'holat', 'davr', 'manba',
             'tanlanganMijoz', 'kartaNatija', 'scoringMijoz', 'scoringNatija', 'scoringYoqilgan',
             'egovMijoz', 'egovXizmatlar', 'egovNatija', 'egovYoqilgan',
@@ -1136,7 +1155,7 @@ class AutoPayController extends Controller
             return response()->json(['code' => 101], 200);
         }
 
-        $debtTiyin = (int) round(((float) $shartnoma->kredit->qoldiq_qarz) * 100);
+        $debtTiyin = (int) round($shartnoma->kredit->kechikkanSummaHisobla() * 100);
 
         return response()->json(['code' => 100, 'debt' => $debtTiyin], 200);
     }
