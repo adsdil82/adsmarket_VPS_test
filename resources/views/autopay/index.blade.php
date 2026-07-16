@@ -173,6 +173,7 @@ th.check-col { vertical-align:middle; }
                 <i class="bi bi-layout-three-columns"></i>
             </button>
             <ul class="dropdown-menu p-2" style="font-size:.8rem;min-width:190px;max-height:340px;overflow:auto">
+                <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-1" data-col="xodim" data-default="0"> Xodim</label></li>
                 <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-1" data-col="mijoz" data-default="1"> Mijoz</label></li>
                 <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-1" data-col="filial" data-default="1"> Filial</label></li>
                 <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-1" data-col="telefon" data-default="0"> Telefon</label></li>
@@ -182,6 +183,7 @@ th.check-col { vertical-align:middle; }
                 <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-1" data-col="tugash" data-default="0"> Tugash</label></li>
                 <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-1" data-col="muddat" data-default="0"> Muddat</label></li>
                 <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-1" data-col="jami" data-default="0"> Tovar summasi</label></li>
+                <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-1" data-col="oldindan" data-default="0"> Oldindan</label></li>
                 <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-1" data-col="kredit" data-default="0"> Kredit summa</label></li>
                 <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-1" data-col="tolangan" data-default="0"> Jami to'langan</label></li>
             </ul>
@@ -204,6 +206,7 @@ th.check-col { vertical-align:middle; }
             <tr>
                 <th class="check-col sticky-col"><input type="checkbox" class="form-check-input" id="hammaBelgila"></th>
                 <th class="tl">Shartnoma</th>
+                <th class="tl col-xodim d-none">Xodim</th>
                 <th class="tl col-mijoz">Mijoz</th>
                 <th class="col-filial">Filial</th>
                 <th class="tl col-telefon d-none">Telefon</th>
@@ -212,6 +215,7 @@ th.check-col { vertical-align:middle; }
                 <th class="tl col-tugash d-none">Tugash</th>
                 <th class="col-muddat d-none">Muddat</th>
                 <th class="col-jami d-none">Tovar summasi</th>
+                <th class="col-oldindan d-none">Oldindan</th>
                 <th class="col-kredit d-none">Kredit summa</th>
                 <th class="col-tolangan d-none">Jami to'langan</th>
                 <th>Qoldiq qarz</th>
@@ -221,6 +225,7 @@ th.check-col { vertical-align:middle; }
             </tr>
             <tr class="jami-row">
                 <th class="tl sticky-col" colspan="2">JAMI ({{ $kreditlar->total() }} ta)</th>
+                <th class="col-xodim d-none"></th>
                 <th class="col-mijoz"></th>
                 <th class="col-filial"></th>
                 <th class="tl col-telefon d-none"></th>
@@ -228,9 +233,10 @@ th.check-col { vertical-align:middle; }
                 <th class="tl col-boshlanish d-none"></th>
                 <th class="tl col-tugash d-none"></th>
                 <th class="col-muddat d-none"></th>
-                <th class="col-jami d-none"></th>
-                <th class="col-kredit d-none"></th>
-                <th class="col-tolangan d-none"></th>
+                <th class="num col-jami d-none">{{ number_format($jamiSummalar->jami_summa ?? 0, 0, '.', ' ') }}</th>
+                <th class="num col-oldindan d-none">{{ number_format($jamiSummalar->boshlangich_tolov ?? 0, 0, '.', ' ') }}</th>
+                <th class="num col-kredit d-none">{{ number_format($jamiSummalar->kredit_summa ?? 0, 0, '.', ' ') }}</th>
+                <th class="num col-tolangan d-none">{{ number_format($jamiSummalar->jami_tolangan ?? 0, 0, '.', ' ') }}</th>
                 <th class="num">{{ number_format($qoldiqJami ?? 0, 0, '.', ' ') }}</th>
                 <th class="num">{{ number_format($kechikkanJami ?? 0, 0, '.', ' ') }}</th>
                 <th></th>
@@ -247,6 +253,7 @@ th.check-col { vertical-align:middle; }
                     @endif
                 </td>
                 <td class="tl"><a href="{{ route('kreditlar.show', $kredit) }}" class="text-decoration-none fw-semibold" style="color:#1d4ed8">{{ $kredit->shartnoma_raqam }}</a></td>
+                <td class="tl text-muted col-xodim d-none">{{ $kredit->xodim?->ism_familiya ?? '—' }}</td>
                 <td class="tl col-mijoz">
                     {{ $kredit->mijoz?->familiya }} {{ $kredit->mijoz?->ism }}
                     @unless($kredit->mijoz?->pinfl)
@@ -260,6 +267,7 @@ th.check-col { vertical-align:middle; }
                 <td class="tl text-muted col-tugash d-none">{{ $kredit->tugash_sana?->format('d.m.Y') ?? '—' }}</td>
                 <td class="text-center col-muddat d-none"><span class="badge-modern" style="background:#e0e7ff;color:#3730a3">{{ $kredit->muddati_oy }} oy</span></td>
                 <td class="num col-jami d-none">{{ number_format($kredit->jami_summa, 0, '.', ' ') }}</td>
+                <td class="num col-oldindan d-none">{{ number_format($kredit->boshlangich_tolov, 0, '.', ' ') }}</td>
                 <td class="num col-kredit d-none">{{ number_format($kredit->kredit_summa, 0, '.', ' ') }}</td>
                 <td class="num col-tolangan d-none" style="color:#16a34a">{{ number_format($kredit->boshlangich_tolov + $kredit->tolov_qilingan, 0, '.', ' ') }}</td>
                 <td class="num" style="color:#dc2626">{{ number_format($kredit->qoldiq_qarz, 0, '.', ' ') }}</td>
@@ -299,7 +307,7 @@ th.check-col { vertical-align:middle; }
                 </td>
             </tr>
             @empty
-            <tr><td colspan="16" class="text-center text-muted py-5"><i class="bi bi-search fs-3 d-block mb-2"></i>Muddati o'tgan shartnomalar yo'q</td></tr>
+            <tr><td colspan="18" class="text-center text-muted py-5"><i class="bi bi-search fs-3 d-block mb-2"></i>Muddati o'tgan shartnomalar yo'q</td></tr>
             @endforelse
         </tbody>
     </table>

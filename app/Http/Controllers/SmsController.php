@@ -129,11 +129,25 @@ class SmsController extends Controller
             return $q;
         };
 
-        $kreditlar = $baseQuery()->with(['mijoz', 'filial'])
+        $kreditlar = $baseQuery()->with(['mijoz', 'filial', 'xodim'])
             ->addSelect($kechikkanSelect)
             ->orderByDesc('qoldiq_qarz')->paginate(30)->withQueryString();
 
-        $kechikkanJami = $baseQuery()->addSelect($kechikkanSelect)->get()->sum('kechikkan_summa');
+        $sorovJami = $baseQuery()->addSelect($kechikkanSelect);
+        $jamiSummalar = \Illuminate\Support\Facades\DB::table(\Illuminate\Support\Facades\DB::raw('(' . $sorovJami->toSql() . ') as t'))
+            ->mergeBindings($sorovJami->getQuery())
+            ->selectRaw('
+                SUM(jami_summa) as jami_summa,
+                SUM(boshlangich_tolov) as boshlangich_tolov,
+                SUM(kredit_summa) as kredit_summa,
+                SUM(boshlangich_tolov + tolov_qilingan) as jami_tolangan,
+                SUM(qoldiq_qarz) as qoldiq_qarz,
+                SUM(kechikkan_summa) as kechikkan_summa
+            ')
+            ->first();
+
+        $kechikkanJami = (float) ($jamiSummalar->kechikkan_summa ?? 0);
+        $qoldiqJami = (float) ($jamiSummalar->qoldiq_qarz ?? 0);
 
         $shablonlar = NotificationTemplate::faol()->channel('sms')->orderBy('name')->get();
         $filiallar  = $user->isAdmin() ? Filial::faol()->get(['id','nomi','kod']) : collect();
@@ -145,7 +159,7 @@ class SmsController extends Controller
         $holat      = '';
 
         return view('xabarnoma.sms.index', compact(
-            'shablonlar', 'filiallar', 'tab', 'loglar', 'batchlar', 'kreditlar', 'kechikkanJami',
+            'shablonlar', 'filiallar', 'tab', 'loglar', 'batchlar', 'kreditlar', 'kechikkanJami', 'qoldiqJami', 'jamiSummalar',
             'statistika', 'qidiruv', 'holat', 'filtr', 'filialId'
         ));
     }

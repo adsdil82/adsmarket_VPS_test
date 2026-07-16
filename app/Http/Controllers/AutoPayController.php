@@ -36,6 +36,7 @@ class AutoPayController extends Controller
         $tranzaksiyalar = collect();
         $kechikkanJami = 0;
         $qoldiqJami = 0;
+        $jamiSummalar = null;
 
         if ($tab === 'kutilayotgan') {
             $kechikkanSelect = ['kechikkan_summa' => \App\Models\Grafik::selectRaw(
@@ -57,14 +58,26 @@ class AutoPayController extends Controller
                 }));
 
             $kreditlar = $baseQuery()
-                ->with(['mijoz', 'filial', 'autopayShartnoma'])
+                ->with(['mijoz', 'filial', 'xodim', 'autopayShartnoma'])
                 ->addSelect($kechikkanSelect)
                 ->orderByDesc('qoldiq_qarz')
                 ->paginate(30)->withQueryString();
 
-            $kechikkanJami = $baseQuery()->addSelect($kechikkanSelect)
-                ->get()->sum('kechikkan_summa');
-            $qoldiqJami = $baseQuery()->sum('qoldiq_qarz');
+            $sorovJami = $baseQuery()->addSelect($kechikkanSelect);
+            $jamiSummalar = \Illuminate\Support\Facades\DB::table(\Illuminate\Support\Facades\DB::raw('(' . $sorovJami->toSql() . ') as t'))
+                ->mergeBindings($sorovJami->getQuery())
+                ->selectRaw('
+                    SUM(jami_summa) as jami_summa,
+                    SUM(boshlangich_tolov) as boshlangich_tolov,
+                    SUM(kredit_summa) as kredit_summa,
+                    SUM(boshlangich_tolov + tolov_qilingan) as jami_tolangan,
+                    SUM(qoldiq_qarz) as qoldiq_qarz,
+                    SUM(kechikkan_summa) as kechikkan_summa
+                ')
+                ->first();
+
+            $kechikkanJami = (float) ($jamiSummalar->kechikkan_summa ?? 0);
+            $qoldiqJami = (float) ($jamiSummalar->qoldiq_qarz ?? 0);
         } elseif ($tab === 'yuborilgan') {
             $shartnomalar = AutopayShartnoma::with(['mijoz', 'kredit.filial'])
                 ->when($filialId, fn($q) => $q->whereHas('kredit', fn($k) => $k->where('filial_id', $filialId)))
@@ -177,7 +190,7 @@ class AutoPayController extends Controller
         $scoringYoqilgan = $this->autoPay->pullikYoqilganmi('scoring');
 
         return view('autopay.index', compact(
-            'kreditlar', 'shartnomalar', 'tranzaksiyalar', 'kechikkanJami', 'qoldiqJami',
+            'kreditlar', 'shartnomalar', 'tranzaksiyalar', 'kechikkanJami', 'qoldiqJami', 'jamiSummalar',
             'filiallar', 'filialId', 'yoqilgan', 'tab', 'qidiruv', 'holat', 'davr', 'manba',
             'tanlanganMijoz', 'kartaNatija', 'scoringMijoz', 'scoringNatija', 'scoringYoqilgan',
             'egovMijoz', 'egovXizmatlar', 'egovNatija', 'egovYoqilgan',

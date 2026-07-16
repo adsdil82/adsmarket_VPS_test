@@ -99,6 +99,21 @@
         @if($qidiruv)
         <a href="{{ route('hibrit_pochta.index', ['tab' => 'kutilayotgan', 'filial_id' => $filialId]) }}" class="btn btn-outline-secondary btn-sm px-2" style="height:32px"><i class="bi bi-x-lg"></i></a>
         @endif
+        <div class="dropdown">
+            <button type="button" class="btn btn-outline-secondary btn-sm px-2" style="height:32px" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Ustunlarni ko'rsatish/yashirish">
+                <i class="bi bi-layout-three-columns"></i>
+            </button>
+            <ul class="dropdown-menu p-2" style="font-size:.8rem;min-width:190px;max-height:340px;overflow:auto">
+                <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-hp" data-col="xodim" data-default="0"> Xodim</label></li>
+                <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-hp" data-col="boshlanish" data-default="0"> Boshlanish</label></li>
+                <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-hp" data-col="tugash" data-default="0"> Tugash</label></li>
+                <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-hp" data-col="muddat" data-default="0"> Muddat</label></li>
+                <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-hp" data-col="jami" data-default="0"> Tovar summasi</label></li>
+                <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-hp" data-col="oldindan" data-default="0"> Oldindan</label></li>
+                <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-hp" data-col="kredit" data-default="0"> Kredit summa</label></li>
+                <li><label class="dropdown-item form-check py-1"><input type="checkbox" class="form-check-input me-1 ustun-toggle-hp" data-col="tolangan" data-default="0"> Jami to'langan</label></li>
+            </ul>
+        </div>
         @if(!$yoqilgan)
         <span class="badge bg-warning text-dark ms-auto">Hibrit Pochta o'chirilgan — xat yubora olmaysiz</span>
         @endif
@@ -111,10 +126,18 @@
             <tr>
                 <th class="tl sticky-col">Shartnoma</th>
                 <th class="tl">Eski raqam</th>
+                <th class="tl col-xodim d-none">Xodim</th>
                 <th class="tl">Mijoz</th>
                 <th class="tl">Filial</th>
                 <th class="tl">Telefon</th>
                 <th class="tl">Manzil</th>
+                <th class="tl col-boshlanish d-none">Boshlanish</th>
+                <th class="tl col-tugash d-none">Tugash</th>
+                <th class="col-muddat d-none">Muddat</th>
+                <th class="col-jami d-none">Tovar summasi</th>
+                <th class="col-oldindan d-none">Oldindan</th>
+                <th class="col-kredit d-none">Kredit summa</th>
+                <th class="col-tolangan d-none">Jami to'langan</th>
                 <th>Qoldiq qarz</th>
                 <th>Kechikkan summa</th>
                 <th>Kechikish</th>
@@ -123,8 +146,20 @@
                 <th style="width:130px"></th>
             </tr>
             <tr class="jami-row">
-                <th class="tl sticky-col" colspan="6">JAMI ({{ $kreditlar->total() }} ta)</th>
+                <th class="tl sticky-col" colspan="2">JAMI ({{ $kreditlar->total() }} ta)</th>
+                <th class="col-xodim d-none"></th>
                 <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th class="col-boshlanish d-none"></th>
+                <th class="col-tugash d-none"></th>
+                <th class="col-muddat d-none"></th>
+                <th class="num col-jami d-none">{{ number_format($jamiSummalar->jami_summa ?? 0, 0, '.', ' ') }}</th>
+                <th class="num col-oldindan d-none">{{ number_format($jamiSummalar->boshlangich_tolov ?? 0, 0, '.', ' ') }}</th>
+                <th class="num col-kredit d-none">{{ number_format($jamiSummalar->kredit_summa ?? 0, 0, '.', ' ') }}</th>
+                <th class="num col-tolangan d-none">{{ number_format($jamiSummalar->jami_tolangan ?? 0, 0, '.', ' ') }}</th>
+                <th class="num">{{ number_format($qoldiqJami ?? 0, 0, '.', ' ') }}</th>
                 <th class="num">{{ number_format($kechikkanJami ?? 0, 0, '.', ' ') }}</th>
                 <th></th>
                 <th></th>
@@ -144,10 +179,18 @@
                     <span class="text-muted small">—</span>
                     @endif
                 </td>
+                <td class="tl text-muted col-xodim d-none">{{ $kredit->xodim?->ism_familiya ?? '—' }}</td>
                 <td class="tl">{{ $kredit->mijoz?->familiya }} {{ $kredit->mijoz?->ism }}</td>
                 <td class="tl text-muted">{{ $kredit->filial?->nomi }}</td>
                 <td class="tl text-muted">{{ $kredit->mijoz?->telefon }}</td>
                 <td class="tl text-muted text-truncate" style="max-width:220px" title="{{ $kredit->mijoz?->manzil }}">{{ $kredit->mijoz?->manzil ?: '—' }}</td>
+                <td class="tl text-muted col-boshlanish d-none">{{ $kredit->boshlanish_sana?->format('d.m.Y') ?? '—' }}</td>
+                <td class="tl text-muted col-tugash d-none">{{ $kredit->tugash_sana?->format('d.m.Y') ?? '—' }}</td>
+                <td class="text-center col-muddat d-none"><span class="badge-modern" style="background:#e0e7ff;color:#3730a3">{{ $kredit->muddati_oy }} oy</span></td>
+                <td class="num col-jami d-none">{{ number_format($kredit->jami_summa, 0, '.', ' ') }}</td>
+                <td class="num col-oldindan d-none">{{ number_format($kredit->boshlangich_tolov, 0, '.', ' ') }}</td>
+                <td class="num col-kredit d-none">{{ number_format($kredit->kredit_summa, 0, '.', ' ') }}</td>
+                <td class="num col-tolangan d-none">{{ number_format($kredit->boshlangich_tolov + $kredit->tolov_qilingan, 0, '.', ' ') }}</td>
                 <td class="num" style="color:#dc2626">{{ number_format($kredit->qoldiq_qarz, 0, '.', ' ') }}</td>
                 <td class="num" style="color:#dc2626">{{ number_format($kredit->kechikkan_summa ?? 0, 0, '.', ' ') }}</td>
                 <td class="text-center"><span class="badge-modern" style="background:#fee2e2;color:#991b1b">{{ $kredit->tugash_sana ? (int) abs(now()->diffInDays($kredit->tugash_sana, true)) : 0 }} kun</span></td>
@@ -170,7 +213,7 @@
                 </td>
             </tr>
             @empty
-            <tr><td colspan="12" class="text-center text-muted py-5"><i class="bi bi-search fs-3 d-block mb-2"></i>Muddati o'tgan shartnomalar yo'q</td></tr>
+            <tr><td colspan="20" class="text-center text-muted py-5"><i class="bi bi-search fs-3 d-block mb-2"></i>Muddati o'tgan shartnomalar yo'q</td></tr>
             @endforelse
         </tbody>
     </table>
@@ -1037,6 +1080,31 @@ document.addEventListener('click', function(e) {
             bootstrap.Modal.getInstance(modalEl)?.hide();
         });
 });
+})();
+
+(function () {
+    var table = document.querySelector('.bank-table');
+    if (!table) return;
+    var UST_KEY = 'hp_ustun_korinishi';
+    var saqlangan = {};
+    try { saqlangan = JSON.parse(localStorage.getItem(UST_KEY)) || {}; } catch (e) {}
+
+    function ustunniQoy(col, korinsin) {
+        table.querySelectorAll('.col-' + col).forEach(function (el) { el.classList.toggle('d-none', !korinsin); });
+    }
+
+    document.querySelectorAll('.ustun-toggle-hp').forEach(function (cb) {
+        var col = cb.dataset.col;
+        var def = cb.dataset.default === '1';
+        var korinsin = saqlangan.hasOwnProperty(col) ? !!saqlangan[col] : def;
+        cb.checked = korinsin;
+        ustunniQoy(col, korinsin);
+        cb.addEventListener('change', function () {
+            saqlangan[col] = cb.checked;
+            localStorage.setItem(UST_KEY, JSON.stringify(saqlangan));
+            ustunniQoy(col, cb.checked);
+        });
+    });
 })();
 </script>
 @endpush

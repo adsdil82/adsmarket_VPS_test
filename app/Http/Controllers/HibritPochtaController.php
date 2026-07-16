@@ -36,6 +36,8 @@ class HibritPochtaController extends Controller
         $statistika    = [];
         $ozgaruvchilar = [];
         $kechikkanJami = 0;
+        $qoldiqJami = 0;
+        $jamiSummalar = null;
 
         if ($tab === 'kutilayotgan') {
             $kechikkanSelect = ['kechikkan_summa' => \App\Models\Grafik::selectRaw(
@@ -57,12 +59,26 @@ class HibritPochtaController extends Controller
                 }));
 
             $kreditlar = $kunPochtaBaseQuery()
-                ->with(['mijoz', 'filial', 'oxirgiYuborilganPochta'])
+                ->with(['mijoz', 'filial', 'xodim', 'oxirgiYuborilganPochta'])
                 ->addSelect($kechikkanSelect)
                 ->orderByDesc('qoldiq_qarz')
                 ->paginate(30)->withQueryString();
 
-            $kechikkanJami = $kunPochtaBaseQuery()->addSelect($kechikkanSelect)->get()->sum('kechikkan_summa');
+            $sorovJami = $kunPochtaBaseQuery()->addSelect($kechikkanSelect);
+            $jamiSummalar = \Illuminate\Support\Facades\DB::table(\Illuminate\Support\Facades\DB::raw('(' . $sorovJami->toSql() . ') as t'))
+                ->mergeBindings($sorovJami->getQuery())
+                ->selectRaw('
+                    SUM(jami_summa) as jami_summa,
+                    SUM(boshlangich_tolov) as boshlangich_tolov,
+                    SUM(kredit_summa) as kredit_summa,
+                    SUM(boshlangich_tolov + tolov_qilingan) as jami_tolangan,
+                    SUM(qoldiq_qarz) as qoldiq_qarz,
+                    SUM(kechikkan_summa) as kechikkan_summa
+                ')
+                ->first();
+
+            $kechikkanJami = (float) ($jamiSummalar->kechikkan_summa ?? 0);
+            $qoldiqJami = (float) ($jamiSummalar->qoldiq_qarz ?? 0);
         } elseif ($tab === 'loglar') {
             $loglar = PochtaLog::with(['kredit', 'mijoz', 'shablon'])
                 ->when($filialId, fn($q) => $q->whereHas('kredit', fn($k) => $k->where('filial_id', $filialId)))
@@ -99,7 +115,7 @@ class HibritPochtaController extends Controller
         $yoqilgan  = $this->svc->isEnabled();
 
         return view('hibrit_pochta.index', compact(
-            'tab', 'kreditlar', 'loglar', 'shablonlar', 'statistika', 'kechikkanJami',
+            'tab', 'kreditlar', 'loglar', 'shablonlar', 'statistika', 'kechikkanJami', 'qoldiqJami', 'jamiSummalar',
             'filiallar', 'filialId', 'qidiruv', 'holat', 'yoqilgan',
             'ozgaruvchilar'
         ));
