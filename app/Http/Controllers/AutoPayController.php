@@ -19,6 +19,7 @@ class AutoPayController extends Controller
     public function __construct(private AutoPayService $autoPay) {}
 
     private const TABLAR = ['kutilayotgan', 'yuborilgan', 'tarix', 'kartalar', 'processing', 'monitoring', 'scoring', 'egov'];
+    private const PER_PAGE_VARIANTLARI = [5, 15, 20, 25, 30, 50, 100];
 
     /** Kechikkan shartnomalar / yuborilganlar / to'lovlar tarixi — 3 tabli AutoPay sahifasi. */
     public function index(Request $request)
@@ -30,6 +31,7 @@ class AutoPayController extends Controller
         $holat    = $request->get('holat');
         $manba    = $request->get('manba');
         $davr     = $request->get('davr', 'bugun');
+        $perPage  = in_array((int) $request->get('per_page'), self::PER_PAGE_VARIANTLARI, true) ? (int) $request->get('per_page') : 30;
 
         $kreditlar = collect();
         $shartnomalar = collect();
@@ -61,7 +63,7 @@ class AutoPayController extends Controller
                 ->with(['mijoz', 'filial', 'xodim', 'autopayShartnoma'])
                 ->addSelect($kechikkanSelect)
                 ->orderByDesc('qoldiq_qarz')
-                ->paginate(30)->withQueryString();
+                ->paginate($perPage)->withQueryString();
 
             $sorovJami = $baseQuery()->addSelect($kechikkanSelect);
             $jamiSummalar = \Illuminate\Support\Facades\DB::table(\Illuminate\Support\Facades\DB::raw('(' . $sorovJami->toSql() . ') as t'))
@@ -89,7 +91,7 @@ class AutoPayController extends Controller
                                                           ->orWhere('familiya', 'like', "%{$qidiruv}%"));
                 }))
                 ->orderByDesc('yuborilgan_vaqt')
-                ->paginate(30)->withQueryString();
+                ->paginate($perPage)->withQueryString();
         } elseif ($tab === 'tarix') {
             $davrOraligi = match ($davr) {
                 'bugun'    => [now()->startOfDay(), now()->endOfDay()],
@@ -104,7 +106,7 @@ class AutoPayController extends Controller
                 ->when($qidiruv, fn($q) => $q->whereHas('shartnoma', fn($s) => $s->where('loan_id', 'like', "%{$qidiruv}%")))
                 ->when($davrOraligi, fn($q) => $q->whereBetween('sana', $davrOraligi))
                 ->orderByDesc('sana')
-                ->paginate(30)->withQueryString();
+                ->paginate($perPage)->withQueryString();
         }
 
         $tanlanganMijoz = null;
@@ -190,7 +192,7 @@ class AutoPayController extends Controller
         $scoringYoqilgan = $this->autoPay->pullikYoqilganmi('scoring');
 
         return view('autopay.index', compact(
-            'kreditlar', 'shartnomalar', 'tranzaksiyalar', 'kechikkanJami', 'qoldiqJami', 'jamiSummalar',
+            'kreditlar', 'shartnomalar', 'tranzaksiyalar', 'kechikkanJami', 'qoldiqJami', 'jamiSummalar', 'perPage',
             'filiallar', 'filialId', 'yoqilgan', 'tab', 'qidiruv', 'holat', 'davr', 'manba',
             'tanlanganMijoz', 'kartaNatija', 'scoringMijoz', 'scoringNatija', 'scoringYoqilgan',
             'egovMijoz', 'egovXizmatlar', 'egovNatija', 'egovYoqilgan',

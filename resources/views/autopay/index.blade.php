@@ -33,8 +33,9 @@
 .jami-row th.sticky-col { background:linear-gradient(180deg,#fde68a,#fbbf24) !important; z-index:8; }
 .jami-row th.num { font-family:'Roboto Mono','Courier New',monospace; }
 
-.bank-wrap { overflow:auto; height:calc(100vh - 175px); border:1px solid #93c5fd; border-radius:0 0 6px 6px; }
-@media (max-width: 768px) { .bank-wrap { height:calc(100vh - 150px); } }
+.bank-wrap { overflow:auto; height:calc(100vh - 245px); border:1px solid #93c5fd; border-radius:0 0 6px 6px; }
+@media (max-width: 768px) { .bank-wrap { height:calc(100vh - 210px); } }
+.pagination-bar { padding: 8px 0; }
 
 .badge-modern { font-size:.62rem; font-weight:800; padding:2px 7px; border-radius:4px; letter-spacing:.03em; }
 
@@ -168,6 +169,11 @@ th.check-col { vertical-align:middle; }
         @if($qidiruv)
         <a href="{{ route('autopay.index', ['tab' => 'kutilayotgan', 'filial_id' => $filialId]) }}" class="btn btn-outline-secondary btn-sm px-2" style="height:32px"><i class="bi bi-x-lg"></i></a>
         @endif
+        <select name="per_page" class="form-select" style="width:90px" onchange="this.form.submit()" title="Sahifadagi qatorlar soni">
+            @foreach([5,15,20,25,30,50,100] as $pp)
+            <option value="{{ $pp }}" {{ $perPage == $pp ? 'selected' : '' }}>{{ $pp }} ta</option>
+            @endforeach
+        </select>
         <div class="dropdown">
             <button type="button" class="btn btn-outline-secondary btn-sm px-2" style="height:32px" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Ustunlarni ko'rsatish/yashirish">
                 <i class="bi bi-layout-three-columns"></i>
@@ -354,6 +360,11 @@ th.check-col { vertical-align:middle; }
         @if($qidiruv || $holat || $manba)
         <a href="{{ route('autopay.index', ['tab' => 'yuborilgan', 'filial_id' => $filialId]) }}" class="btn btn-outline-secondary btn-sm px-2" style="height:32px"><i class="bi bi-x-lg"></i></a>
         @endif
+        <select name="per_page" class="form-select" style="width:90px" onchange="this.form.submit()" title="Sahifadagi qatorlar soni">
+            @foreach([5,15,20,25,30,50,100] as $pp)
+            <option value="{{ $pp }}" {{ $perPage == $pp ? 'selected' : '' }}>{{ $pp }} ta</option>
+            @endforeach
+        </select>
         <div class="dropdown">
             <button type="button" class="btn btn-outline-secondary btn-sm px-2" style="height:32px" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Ustunlarni ko'rsatish/yashirish">
                 <i class="bi bi-layout-three-columns"></i>
@@ -611,6 +622,11 @@ th.check-col { vertical-align:middle; }
         @if($qidiruv || $davr !== 'bugun' || $manba)
         <a href="{{ route('autopay.index', ['tab' => 'tarix', 'filial_id' => $filialId]) }}" class="btn btn-outline-secondary btn-sm px-2" style="height:32px"><i class="bi bi-x-lg"></i></a>
         @endif
+        <select name="per_page" class="form-select" style="width:90px" onchange="this.form.submit()" title="Sahifadagi qatorlar soni">
+            @foreach([5,15,20,25,30,50,100] as $pp)
+            <option value="{{ $pp }}" {{ $perPage == $pp ? 'selected' : '' }}>{{ $pp }} ta</option>
+            @endforeach
+        </select>
         <div class="dropdown">
             <button type="button" class="btn btn-outline-secondary btn-sm px-2" style="height:32px" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Ustunlarni ko'rsatish/yashirish">
                 <i class="bi bi-layout-three-columns"></i>
