@@ -171,7 +171,7 @@ class ImportService
                 'jami_summa'          => $jamiSumma,
                 'boshlangich_tolov'   => $boshlangichTolov,
                 'kredit_summa'        => $kreditSumma,
-                'tolov_qilingan'      => max(0, $jamiSumma - $qoldiqQarz),
+                'tolov_qilingan'      => max(0, $kreditSumma - $qoldiqQarz),
                 'qoldiq_qarz'         => $qoldiqQarz,
                 'boshlanish_sana'     => $this->sanaTuzat($q->sha_sana ?? null),
                 'tugash_sana'         => $this->sanaTuzat($q->oxir_sana ?? $q->end_sana ?? null),
