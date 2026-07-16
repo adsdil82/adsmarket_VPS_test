@@ -25,7 +25,10 @@
 .bank-table tbody tr:nth-child(even) td { background:#eef4ff; }
 .bank-table tbody td { padding:4px 8px; vertical-align:middle; white-space:nowrap; }
 .num { font-family:'Roboto Mono','Courier New',monospace; text-align:right; font-weight:700; color:#0f172a; font-size:.85rem; }
-.jami-row th { background:linear-gradient(180deg,#fde68a,#fbbf24) !important; color:#7c2d12; position:sticky; top:26px; z-index:6; }
+.jami-row th {
+    background:linear-gradient(180deg,#fef9c3,#fde68a) !important; color:#7c2d12 !important;
+    font-weight:800; font-size:.78rem; text-transform:none; letter-spacing:0; padding:6px 8px;
+}
 .jami-row th.sticky-col { background:linear-gradient(180deg,#fde68a,#fbbf24) !important; z-index:8; }
 .jami-row th.num { font-family:'Roboto Mono','Courier New',monospace; }
 
