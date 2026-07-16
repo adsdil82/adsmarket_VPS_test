@@ -64,8 +64,33 @@
 
 .filter-bar { background:linear-gradient(90deg,#dbeafe,#bfdbfe); border:1px solid #93c5fd; border-bottom:none; border-radius:8px 8px 0 0; padding:10px 14px; }
 .filter-bar .form-control, .filter-bar .form-select { background:#fff; border:1px solid #60a5fa; color:#1e3a8a; font-size:.8rem; height:32px; font-weight:600; }
+
+.holat-tabs { display:flex; gap:5px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px; }
+.holat-tabs::-webkit-scrollbar { height:4px; }
+.holat-tab {
+    display:inline-flex; align-items:center; gap:5px; white-space:nowrap; text-decoration:none;
+    padding:6px 13px; border-radius:7px 7px 0 0; font-size:.74rem; font-weight:700;
+    background:#eef4ff; color:#1e3a8a; border:1px solid #93c5fd; border-bottom:none;
+}
+.holat-tab:hover { background:#dbeafe; color:#1e3a8a; }
+.holat-tab.active { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
+.holat-tab .badge { font-size:.62rem; font-weight:800; }
+.holat-tab:not(.active) .badge { background:#1d4ed8 !important; color:#fff; }
+.holat-tab.active .badge { background:rgba(255,255,255,.25) !important; color:#fff; }
 </style>
 @endpush
+
+@php
+$holatTablari = [
+    ''                   => ['label' => 'Barchasi',            'icon' => 'bi-list-ul'],
+    'faol'               => ['label' => 'AKTIV',                'icon' => 'bi-check-circle'],
+    'yopilgan'           => ['label' => 'PASSIV',                'icon' => 'bi-archive'],
+    'muddati_otgan'      => ['label' => "Muddati o'tgan",        'icon' => 'bi-exclamation-triangle'],
+    'muzlatilgan'        => ['label' => 'Muzlatilgan',           'icon' => 'bi-snow'],
+    'muddati_kelgan'     => ['label' => 'Muddati kelgan',        'icon' => 'bi-hourglass-split'],
+    'muddatidan_oldinda' => ['label' => 'Muddatidan oldinda',    'icon' => 'bi-lightning-charge'],
+];
+@endphp
 
 @section('content')
 
@@ -83,9 +108,19 @@
         @endif
     </div>
 
+    <div class="holat-tabs mb-2">
+        @foreach($holatTablari as $key => $h)
+        <a class="holat-tab {{ request('holat', '') === $key ? 'active' : '' }}"
+           href="{{ route('kreditlar.index', array_merge(request()->except(['holat', 'page']), $key !== '' ? ['holat' => $key] : [])) }}">
+            <i class="bi {{ $h['icon'] }}"></i> {{ $h['label'] }}
+        </a>
+        @endforeach
+    </div>
+
     <div class="card border-0 shadow-sm mb-3">
         <div class="card-body py-2">
             <form method="GET" class="row g-2 align-items-end">
+                <input type="hidden" name="holat" value="{{ request('holat') }}">
                 <div class="col-sm-4">
                     <input type="search" name="qidiruv" class="form-control form-control-sm"
                            placeholder="Shartnoma raqam, mijoz ismi, telefon..."
@@ -103,17 +138,6 @@
                     </select>
                 </div>
                 @endif
-                <div class="col-sm-2">
-                    <select name="holat" class="form-select form-select-sm">
-                        <option value="">Barcha holat</option>
-                        <option value="faol"          {{ request('holat') === 'faol'          ? 'selected' : '' }}>AKTIV</option>
-                        <option value="yopilgan"      {{ request('holat') === 'yopilgan'      ? 'selected' : '' }}>PASSIV</option>
-                        <option value="muddati_otgan" {{ request('holat') === 'muddati_otgan' ? 'selected' : '' }}>Muddati o'tgan</option>
-                        <option value="muzlatilgan"   {{ request('holat') === 'muzlatilgan'   ? 'selected' : '' }}>Muzlatilgan</option>
-                        <option value="muddati_kelgan"     {{ request('holat') === 'muddati_kelgan'     ? 'selected' : '' }}>Muddati kelgan</option>
-                        <option value="muddatidan_oldinda" {{ request('holat') === 'muddatidan_oldinda' ? 'selected' : '' }}>Muddatidan oldinda</option>
-                    </select>
-                </div>
                 <div class="col-sm-2">
                     <select name="xodim_id" class="form-select form-select-sm">
                         <option value="">Barcha xodimlar</option>
@@ -210,8 +234,18 @@
 {{-- Bank-style jadval (desktop) --}}
 <div class="d-none d-md-block">
 
+<div class="holat-tabs">
+    @foreach($holatTablari as $key => $h)
+    <a class="holat-tab {{ request('holat', '') === $key ? 'active' : '' }}"
+       href="{{ route('kreditlar.index', array_merge(request()->except(['holat', 'page']), $key !== '' ? ['holat' => $key] : [])) }}">
+        <i class="bi {{ $h['icon'] }}"></i> {{ $h['label'] }}
+    </a>
+    @endforeach
+</div>
+
 <div class="filter-bar mb-0">
     <form method="GET" class="d-flex align-items-end gap-2 flex-wrap">
+        <input type="hidden" name="holat" value="{{ request('holat') }}">
         <div class="d-flex align-items-center gap-2 me-2">
             <i class="bi bi-file-earmark-text" style="font-size:1.2rem;color:#1e3a8a"></i>
             <span class="fw-bold" style="color:#1e3a8a;font-size:1rem">Shartnomalar</span>
@@ -230,17 +264,6 @@
             </select>
         </div>
         @endif
-        <div>
-            <select name="holat" class="form-select" style="width:170px">
-                <option value="">Barcha holat</option>
-                <option value="faol"          {{ request('holat') === 'faol'          ? 'selected' : '' }}>AKTIV</option>
-                <option value="yopilgan"      {{ request('holat') === 'yopilgan'      ? 'selected' : '' }}>PASSIV</option>
-                <option value="muddati_otgan" {{ request('holat') === 'muddati_otgan' ? 'selected' : '' }}>Muddati o'tgan</option>
-                <option value="muzlatilgan"   {{ request('holat') === 'muzlatilgan'   ? 'selected' : '' }}>Muzlatilgan</option>
-                <option value="muddati_kelgan"     {{ request('holat') === 'muddati_kelgan'     ? 'selected' : '' }}>Muddati kelgan</option>
-                <option value="muddatidan_oldinda" {{ request('holat') === 'muddatidan_oldinda' ? 'selected' : '' }}>Muddatidan oldinda</option>
-            </select>
-        </div>
         <div>
             <select name="xodim_id" class="form-select" style="width:170px">
                 <option value="">Barcha xodimlar</option>
