@@ -1,16 +1,26 @@
 @extends('layouts.app')
-@section('title', 'Ish kuni — Kun holati')
+@section('title', 'Ish kuni')
 @section('breadcrumb')
 <li class="breadcrumb-item active">Ish kuni</li>
 @endsection
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="mb-0">Operatsion kun holati</h5>
-    <a href="{{ route('operatsion_kun.tarix') }}" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-clock-history me-1"></i> Yopish tarixi
-    </a>
+    <h5 class="mb-0">Ish kuni</h5>
 </div>
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link {{ $tab === 'holat' ? 'active' : '' }}" href="{{ route('operatsion_kun.index') }}">
+            <i class="bi bi-calendar-check me-1"></i> Kun holati
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {{ $tab === 'tarix' ? 'active' : '' }}" href="{{ route('operatsion_kun.index', ['tab' => 'tarix']) }}">
+            <i class="bi bi-clock-history me-1"></i> Yopish tarixi
+        </a>
+    </li>
+</ul>
 
 @if(session('muvaffaqiyat'))
 <div class="alert alert-success alert-dismissible fade show">{{ session('muvaffaqiyat') }}
@@ -23,6 +33,7 @@
 </div>
 @endif
 
+@if($tab === 'holat')
 <div class="table-responsive">
     <table class="table table-bordered align-middle">
         <thead class="table-light">
@@ -123,6 +134,76 @@
         </form>
     </div>
 </div>
+@else
+<form method="GET" class="row g-2 mb-3">
+    <input type="hidden" name="tab" value="tarix">
+    @if($tarixFiliallar->isNotEmpty())
+    <div class="col-auto">
+        <select name="filial_id" class="form-select form-select-sm">
+            <option value="">Barcha filiallar</option>
+            @foreach($tarixFiliallar as $f)
+            <option value="{{ $f->id }}" @selected($filialId == $f->id)>{{ $f->nomi }}</option>
+            @endforeach
+        </select>
+    </div>
+    @endif
+    <div class="col-auto">
+        <input type="date" name="sana_dan" class="form-control form-control-sm" value="{{ $sanaDan }}" placeholder="Sanadan">
+    </div>
+    <div class="col-auto">
+        <input type="date" name="sana_gacha" class="form-control form-control-sm" value="{{ $sanaGacha }}" placeholder="Sanagacha">
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-sm btn-primary"><i class="bi bi-search"></i> Qidirish</button>
+    </div>
+</form>
+
+<div class="table-responsive">
+    <table class="table table-bordered table-sm align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Vaqt</th>
+                <th>Filial</th>
+                <th>Sana</th>
+                <th>Amal</th>
+                <th>Foydalanuvchi</th>
+                <th>Natija / izoh</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($loglar as $log)
+            <tr>
+                <td>{{ $log->vaqt->format('d.m.Y H:i') }}</td>
+                <td>{{ $log->operatsionKun->filial->nomi ?? '—' }}</td>
+                <td>{{ $log->operatsionKun->sana->format('d.m.Y') ?? '—' }}</td>
+                <td>
+                    @if($log->amal === 'yopish')
+                        <span class="badge bg-danger">Yopish</span>
+                    @else
+                        <span class="badge bg-warning text-dark">Ochish</span>
+                    @endif
+                </td>
+                <td>{{ $log->user->ism_familiya ?? '—' }}</td>
+                <td class="small text-muted">
+                    @if($log->amal === 'yopish' && $log->natija_json)
+                        {{ $log->natija_json['jami_shartnomalar'] ?? 0 }} ta shartnoma,
+                        {{ $log->natija_json['kechikkan_shartnomalar'] ?? 0 }} ta kechikkan
+                    @elseif($log->natija_json['izoh'] ?? null)
+                        {{ $log->natija_json['izoh'] }}
+                    @else
+                        —
+                    @endif
+                </td>
+            </tr>
+            @empty
+            <tr><td colspan="6" class="text-center text-muted py-4">Yozuv topilmadi.</td></tr>
+            @endforelse
+        </tbody>
+    </table>
+</div>
+
+{{ $loglar->links() }}
+@endif
 @endsection
 
 @push('scripts')

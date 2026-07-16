@@ -758,13 +758,6 @@
                         <span class="nav-label">Ish kuni</span>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a href="{{ route('operatsion_kun.tarix') }}"
-                       class="nav-link text-white py-1 {{ request()->routeIs('operatsion_kun.tarix') ? 'active' : '' }}">
-                        <i class="bi bi-clock-history me-2" style="color:#22d3ee"></i>
-                        <span class="nav-label">Kun yopish tarixi</span>
-                    </a>
-                </li>
                 @endif
                 @if(Auth::user()->isAdmin() || Auth::user()->isHisobchi())
                 <li class="nav-item">

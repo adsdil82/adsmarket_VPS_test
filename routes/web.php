@@ -260,7 +260,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/oldin-korish', [OperatsionKunController::class, 'oldinKorish'])->name('oldin_korish');
         Route::post('/yopish',     [OperatsionKunController::class, 'yopish'])->middleware('ruxsat.check:operatsion_kun,yopish')->name('yopish');
         Route::post('/ochish',     [OperatsionKunController::class, 'ochish'])->middleware('ruxsat.check:operatsion_kun,eski_tahrirlash')->name('ochish');
-        Route::get('/tarix',       [OperatsionKunController::class, 'tarix'])->name('tarix');
+        Route::get('/tarix', fn () => redirect()->route('operatsion_kun.index', ['tab' => 'tarix']))->name('tarix');
     });
 
     // ─── Hisobotlar ───────────────────────────────────────────────

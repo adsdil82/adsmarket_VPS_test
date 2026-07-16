@@ -14,10 +14,12 @@ class OperatsionKunController extends Controller
 {
     public function __construct(private OperatsionKunService $svc) {}
 
-    /** Joriy kun holati — filiallar bo'yicha jadval. */
+    /** Joriy kun holati + yopish tarixi — bitta sahifada tab holida. */
     public function index(Request $request)
     {
-        $user      = Auth::user();
+        $tab  = $request->get('tab', 'holat') === 'tarix' ? 'tarix' : 'holat';
+        $user = Auth::user();
+
         $filiallar = $user->isAdmin() ? Filial::faol()->get() : Filial::where('id', $user->filial_id)->get();
 
         $kunlar = collect();
@@ -25,7 +27,28 @@ class OperatsionKunController extends Controller
             $kunlar->push($this->svc->joriyKun($filial->id));
         }
 
-        return view('operatsion_kun.index', compact('kunlar', 'filiallar'));
+        $loglar = null;
+        $filialId = $sanaDan = $sanaGacha = null;
+        $tarixFiliallar = collect();
+
+        if ($tab === 'tarix') {
+            $filialId  = $user->isAdmin() ? $request->get('filial_id') : $user->filial_id;
+            $sanaDan   = $request->get('sana_dan');
+            $sanaGacha = $request->get('sana_gacha');
+
+            $loglar = KunYopishLogi::with(['operatsionKun.filial', 'user'])
+                ->when($filialId, fn ($q) => $q->whereHas('operatsionKun', fn ($k) => $k->where('filial_id', $filialId)))
+                ->when($sanaDan, fn ($q) => $q->whereDate('vaqt', '>=', $sanaDan))
+                ->when($sanaGacha, fn ($q) => $q->whereDate('vaqt', '<=', $sanaGacha))
+                ->latest('vaqt')
+                ->paginate(30)->withQueryString();
+
+            $tarixFiliallar = $user->isAdmin() ? Filial::faol()->get() : collect();
+        }
+
+        return view('operatsion_kun.index', compact(
+            'kunlar', 'filiallar', 'tab', 'loglar', 'filialId', 'sanaDan', 'sanaGacha', 'tarixFiliallar'
+        ));
     }
 
     /** AJAX: yopishdan oldin oldindan ko'rish (statistika). */
@@ -88,25 +111,5 @@ class OperatsionKunController extends Controller
         }
 
         return back()->with('muvaffaqiyat', "Kun ({$request->sana}) qayta ochildi.");
-    }
-
-    /** Yopish/ochish tarixi — filtr (filial, sana oralig'i). */
-    public function tarix(Request $request)
-    {
-        $user      = Auth::user();
-        $filialId  = $user->isAdmin() ? $request->get('filial_id') : $user->filial_id;
-        $sanaDan   = $request->get('sana_dan');
-        $sanaGacha = $request->get('sana_gacha');
-
-        $loglar = KunYopishLogi::with(['operatsionKun.filial', 'user'])
-            ->when($filialId, fn ($q) => $q->whereHas('operatsionKun', fn ($k) => $k->where('filial_id', $filialId)))
-            ->when($sanaDan, fn ($q) => $q->whereDate('vaqt', '>=', $sanaDan))
-            ->when($sanaGacha, fn ($q) => $q->whereDate('vaqt', '<=', $sanaGacha))
-            ->latest('vaqt')
-            ->paginate(30)->withQueryString();
-
-        $filiallar = $user->isAdmin() ? Filial::faol()->get() : collect();
-
-        return view('operatsion_kun.tarix', compact('loglar', 'filiallar', 'filialId', 'sanaDan', 'sanaGacha'));
     }
 }
