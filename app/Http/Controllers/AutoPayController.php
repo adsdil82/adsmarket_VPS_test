@@ -98,7 +98,7 @@ class AutoPayController extends Controller
                 default    => null,
             };
 
-            $tranzaksiyalar = AutopayTranzaksiya::with(['shartnoma.mijoz', 'shartnoma.kredit.filial', 'tulov'])
+            $tranzaksiyalar = AutopayTranzaksiya::with(['shartnoma.mijoz', 'shartnoma.kredit.filial', 'shartnoma.kredit.mijoz', 'tulov'])
                 ->when($filialId, fn($q) => $q->whereHas('shartnoma.kredit', fn($k) => $k->where('filial_id', $filialId)))
                 ->when($manba, fn($q) => $q->whereHas('shartnoma', fn($s) => $s->where('manba', $manba)))
                 ->when($qidiruv, fn($q) => $q->whereHas('shartnoma', fn($s) => $s->where('loan_id', 'like', "%{$qidiruv}%")))
@@ -791,6 +791,18 @@ class AutoPayController extends Controller
                     'yuborgan_id'     => $shartnoma->yuborgan_id ?: Auth::id(),
                     'yuborilgan_vaqt' => $shartnoma->yuborilgan_vaqt ?: ($c['created_at'] ?? now()),
                 ])->save();
+
+                // "Qolda" (mijozga bog'lanmagan) yozuvlar uchun — pinfl bo'yicha
+                // lokal mijozlar bazasida mos keluvchi yozuv paydo bo'lgan bo'lsa,
+                // shu yerda avtomatik biriktiramiz (keyingi sinxronlashlarda ham
+                // ishlaydi, mijoz keyinroq tizimga kiritilgan bo'lsa ham topiladi).
+                if (!$shartnoma->mijoz_id && $shartnoma->pinfl) {
+                    $mosMijoz = \App\Models\Mijoz::where('pinfl', $shartnoma->pinfl)->first();
+                    if ($mosMijoz) {
+                        $shartnoma->mijoz_id = $mosMijoz->id;
+                        $shartnoma->save();
+                    }
+                }
 
                 if (!$mavjudEdi) {
                     $shartnoma->manba === 'qolda' ? $yangiQolda++ : $yangiApi++;

@@ -411,6 +411,7 @@ th.check-col { vertical-align:middle; }
                 <th class="check-col sticky-col"><input type="checkbox" class="form-check-input" id="hammaBelgilaYuborilgan"></th>
                 <th class="tl">Loan ID</th>
                 <th class="tl col-mijoz">Mijoz</th>
+                <th class="tl">PINFL</th>
                 <th class="col-filial">Filial</th>
                 <th class="tl col-telefon d-none">Telefon</th>
                 <th class="tl col-manzil d-none">Manzil</th>
@@ -441,12 +442,11 @@ th.check-col { vertical-align:middle; }
                         {{ $sh->mijoz->familiya }} {{ $sh->mijoz->ism }}
                     @elseif($sh->kredit?->mijoz)
                         {{ $sh->kredit->mijoz->familiya }} {{ $sh->kredit->mijoz->ism }}
-                    @elseif($sh->pinfl)
-                        <span class="text-muted small" title="Bu yozuv lokal mijoz bazasiga bog'lanmagan">PINFL: {{ $sh->pinfl }}</span>
                     @else
-                        <span class="text-muted">—</span>
+                        <span class="text-muted" title="Bu yozuv lokal mijoz bazasiga bog'lanmagan">—</span>
                     @endif
                 </td>
+                <td class="tl text-muted">{{ $sh->pinfl ?: '—' }}</td>
                 <td class="tl text-muted col-filial">{{ $sh->kredit?->filial?->nomi }}</td>
                 <td class="tl text-muted col-telefon d-none">{{ $sh->mijoz?->telefon }}</td>
                 <td class="tl text-muted col-manzil d-none">{{ Str::limit($sh->mijoz?->manzil, 30) ?: '—' }}</td>
@@ -566,7 +566,7 @@ th.check-col { vertical-align:middle; }
                 </td>
             </tr>
             @empty
-            <tr><td colspan="17" class="text-center text-muted py-5"><i class="bi bi-search fs-3 d-block mb-2"></i>Hali hech qanday shartnoma yuborilmagan</td></tr>
+            <tr><td colspan="18" class="text-center text-muted py-5"><i class="bi bi-search fs-3 d-block mb-2"></i>Hali hech qanday shartnoma yuborilmagan</td></tr>
             @endforelse
         </tbody>
     </table>
@@ -638,6 +638,7 @@ th.check-col { vertical-align:middle; }
                 <th class="tl">Sana</th>
                 <th class="tl sticky-col">Loan ID</th>
                 <th class="tl col-mijoz">Mijoz</th>
+                <th class="tl">PINFL</th>
                 <th>Summa</th>
                 <th class="tl">Holat</th>
                 <th class="tl">Manba</th>
@@ -652,7 +653,16 @@ th.check-col { vertical-align:middle; }
             <tr class="{{ $bogsiz ? 'row-bogsiz' : '' }}">
                 <td class="tl text-muted">{{ $tr->sana?->format('d.m.Y H:i') }}</td>
                 <td class="tl sticky-col"><code class="small">{{ $tr->shartnoma?->loan_id }}</code></td>
-                <td class="tl col-mijoz">{{ $tr->shartnoma?->mijoz?->familiya }} {{ $tr->shartnoma?->mijoz?->ism }}</td>
+                <td class="tl col-mijoz">
+                    @if($tr->shartnoma?->mijoz)
+                        {{ $tr->shartnoma->mijoz->familiya }} {{ $tr->shartnoma->mijoz->ism }}
+                    @elseif($tr->shartnoma?->kredit?->mijoz)
+                        {{ $tr->shartnoma->kredit->mijoz->familiya }} {{ $tr->shartnoma->kredit->mijoz->ism }}
+                    @else
+                        <span class="text-muted">—</span>
+                    @endif
+                </td>
+                <td class="tl text-muted">{{ $tr->shartnoma?->pinfl ?: '—' }}</td>
                 <td class="num">{{ number_format($tr->summa, 0, '.', ' ') }}</td>
                 <td class="tl">
                     @if($tr->holat === 'success')
@@ -716,7 +726,7 @@ th.check-col { vertical-align:middle; }
                 </td>
             </tr>
             @empty
-            <tr><td colspan="9" class="text-center text-muted py-5"><i class="bi bi-search fs-3 d-block mb-2"></i>Tranzaksiyalar topilmadi</td></tr>
+            <tr><td colspan="10" class="text-center text-muted py-5"><i class="bi bi-search fs-3 d-block mb-2"></i>Tranzaksiyalar topilmadi</td></tr>
             @endforelse
         </tbody>
     </table>
