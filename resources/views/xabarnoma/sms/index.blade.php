@@ -32,8 +32,8 @@
 .jami-row th.sticky-col { background:linear-gradient(180deg,#fde68a,#fbbf24) !important; z-index:8; }
 .jami-row th.num { font-family:'Roboto Mono','Courier New',monospace; }
 
-.bank-wrap { overflow:auto; max-height:calc(100vh - 320px); border:1px solid #93c5fd; border-radius:0 0 6px 6px; }
-@media (max-width: 768px) { .bank-wrap { max-height:calc(100vh - 260px); } }
+.bank-wrap { overflow:auto; max-height:calc(100vh - 340px); border:1px solid #93c5fd; border-radius:0 0 6px 6px; }
+@media (max-width: 768px) { .bank-wrap { max-height:calc(100vh - 280px); } }
 
 .badge-modern { font-size:.62rem; font-weight:800; padding:2px 7px; border-radius:4px; letter-spacing:.03em; }
 .filter-bar { background:linear-gradient(90deg,#dbeafe,#bfdbfe); border:1px solid #93c5fd; border-bottom:none; border-radius:8px 8px 0 0; padding:8px 12px; }
@@ -123,6 +123,11 @@ th.check-col { vertical-align:middle; }
         @if($qidiruv)
         <a href="{{ route('xabarnoma.sms.kutilayotgan', ['filtr' => $filtr, 'filial_id' => $filialId]) }}" class="btn btn-outline-secondary btn-sm px-2" style="height:32px"><i class="bi bi-x-lg"></i></a>
         @endif
+        <select name="per_page" class="form-select" style="width:90px" onchange="this.form.submit()" title="Sahifadagi qatorlar soni">
+            @foreach([5,15,20,25,30,50,100] as $pp)
+            <option value="{{ $pp }}" {{ ($perPage ?? 30) == $pp ? 'selected' : '' }}>{{ $pp }} ta</option>
+            @endforeach
+        </select>
         <div class="dropdown">
             <button type="button" class="btn btn-outline-secondary btn-sm px-2" style="height:32px" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Ustunlarni ko'rsatish/yashirish">
                 <i class="bi bi-layout-three-columns"></i>
@@ -570,6 +575,11 @@ th.check-col { vertical-align:middle; }
         @if($qidiruv || $holat || request('dan_sana') || request('gacha_sana'))
         <a href="{{ route('xabarnoma.sms.tarix') }}" class="btn btn-outline-secondary btn-sm px-2" style="height:32px"><i class="bi bi-x-lg"></i></a>
         @endif
+        <select name="per_page" class="form-select" style="width:90px" onchange="this.form.submit()" title="Sahifadagi qatorlar soni">
+            @foreach([5,15,20,25,30,50,100] as $pp)
+            <option value="{{ $pp }}" {{ ($perPage ?? 30) == $pp ? 'selected' : '' }}>{{ $pp }} ta</option>
+            @endforeach
+        </select>
         <div class="ms-auto d-flex align-items-center gap-3 small">
             <span>Jami: <strong>{{ $statistika['jami'] }}</strong></span>
             <span class="text-success">Yuborildi: <strong>{{ $statistika['yuborildi'] }}</strong></span>

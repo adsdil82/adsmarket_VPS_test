@@ -21,6 +21,7 @@ class HibritPochtaController extends Controller
     public function __construct(private HybridPochtaService $svc) {}
 
     private const TABLAR = ['kutilayotgan', 'loglar', 'shablonlar'];
+    private const PER_PAGE_VARIANTLARI = [5, 15, 20, 25, 30, 50, 100];
 
     public function index(Request $request)
     {
@@ -29,6 +30,7 @@ class HibritPochtaController extends Controller
         $tab      = in_array($request->get('tab'), self::TABLAR, true) ? $request->get('tab') : 'kutilayotgan';
         $qidiruv  = trim((string) $request->get('qidiruv'));
         $holat    = $request->get('holat');
+        $perPage  = in_array((int) $request->get('per_page'), self::PER_PAGE_VARIANTLARI, true) ? (int) $request->get('per_page') : 30;
 
         $kreditlar     = collect();
         $loglar        = collect();
@@ -62,7 +64,7 @@ class HibritPochtaController extends Controller
                 ->with(['mijoz', 'filial', 'xodim', 'oxirgiYuborilganPochta'])
                 ->addSelect($kechikkanSelect)
                 ->orderByDesc('qoldiq_qarz')
-                ->paginate(30)->withQueryString();
+                ->paginate($perPage)->withQueryString();
 
             $sorovJami = $kunPochtaBaseQuery()->addSelect($kechikkanSelect);
             $jamiSummalar = \Illuminate\Support\Facades\DB::table(\Illuminate\Support\Facades\DB::raw('(' . $sorovJami->toSql() . ') as t'))
@@ -86,7 +88,7 @@ class HibritPochtaController extends Controller
                 ->when($qidiruv, fn($q) => $q->where('receiver', 'like', "%{$qidiruv}%")
                     ->orWhereHas('kredit', fn($k) => $k->where('shartnoma_raqam', 'like', "%{$qidiruv}%")))
                 ->latest()
-                ->paginate(30)->withQueryString();
+                ->paginate($perPage)->withQueryString();
 
             $statistika = [
                 'jami'      => PochtaLog::count(),
@@ -115,7 +117,7 @@ class HibritPochtaController extends Controller
         $yoqilgan  = $this->svc->isEnabled();
 
         return view('hibrit_pochta.index', compact(
-            'tab', 'kreditlar', 'loglar', 'shablonlar', 'statistika', 'kechikkanJami', 'qoldiqJami', 'jamiSummalar',
+            'tab', 'kreditlar', 'loglar', 'shablonlar', 'statistika', 'kechikkanJami', 'qoldiqJami', 'jamiSummalar', 'perPage',
             'filiallar', 'filialId', 'qidiruv', 'holat', 'yoqilgan',
             'ozgaruvchilar'
         ));

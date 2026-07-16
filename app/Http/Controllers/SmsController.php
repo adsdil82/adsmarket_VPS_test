@@ -15,6 +15,14 @@ use Illuminate\Support\Facades\Auth;
 
 class SmsController extends Controller
 {
+    private const PER_PAGE_VARIANTLARI = [5, 15, 20, 25, 30, 50, 100];
+
+    private function perPageOl(Request $request): int
+    {
+        $qiymat = (int) $request->get('per_page');
+        return in_array($qiymat, self::PER_PAGE_VARIANTLARI, true) ? $qiymat : 30;
+    }
+
     public function __construct(
         private SmsService $smsService,
         private NotificationRecipientService $recipientService
@@ -95,6 +103,7 @@ class SmsController extends Controller
         $filialId = $user->isAdmin() ? ($request->filial_id ?: null) : $user->filial_id;
         $filtr    = in_array($request->get('filtr'), ['kechikkan', 'ertaga', 'hammasi'], true) ? $request->get('filtr') : 'kechikkan';
         $qidiruv  = trim((string) $request->get('qidiruv'));
+        $perPage  = $this->perPageOl($request);
 
         $kechikkanSelect = ['kechikkan_summa' => \App\Models\Grafik::selectRaw(
                 "CASE WHEN reg_kredit.holat = 'muddati_otgan' THEN reg_kredit.qoldiq_qarz ELSE COALESCE(SUM(tolov_summa - tolangan_summa),0) END"
@@ -131,7 +140,7 @@ class SmsController extends Controller
 
         $kreditlar = $baseQuery()->with(['mijoz', 'filial', 'xodim'])
             ->addSelect($kechikkanSelect)
-            ->orderByDesc('qoldiq_qarz')->paginate(30)->withQueryString();
+            ->orderByDesc('qoldiq_qarz')->paginate($perPage)->withQueryString();
 
         $sorovJami = $baseQuery()->addSelect($kechikkanSelect);
         $jamiSummalar = \Illuminate\Support\Facades\DB::table(\Illuminate\Support\Facades\DB::raw('(' . $sorovJami->toSql() . ') as t'))
@@ -159,7 +168,7 @@ class SmsController extends Controller
         $holat      = '';
 
         return view('xabarnoma.sms.index', compact(
-            'shablonlar', 'filiallar', 'tab', 'loglar', 'batchlar', 'kreditlar', 'kechikkanJami', 'qoldiqJami', 'jamiSummalar',
+            'shablonlar', 'filiallar', 'tab', 'loglar', 'batchlar', 'kreditlar', 'kechikkanJami', 'qoldiqJami', 'jamiSummalar', 'perPage',
             'statistika', 'qidiruv', 'holat', 'filtr', 'filialId'
         ));
     }
@@ -334,6 +343,7 @@ class SmsController extends Controller
     {
         $qidiruv = trim((string) $request->get('qidiruv'));
         $holat   = $request->get('status');
+        $perPage = $this->perPageOl($request);
 
         $loglar  = NotificationLog::with(['customer','template'])
             ->where('channel', 'sms')
@@ -345,7 +355,7 @@ class SmsController extends Controller
             }))
             ->when($request->dan_sana, fn($q) => $q->whereDate('created_at', '>=', $request->dan_sana))
             ->when($request->gacha_sana, fn($q) => $q->whereDate('created_at', '<=', $request->gacha_sana))
-            ->latest()->paginate(30)->withQueryString();
+            ->latest()->paginate($perPage)->withQueryString();
 
         $batchlar = NotificationBatch::where('channel','sms')->latest()->take(10)->get();
 
@@ -363,7 +373,7 @@ class SmsController extends Controller
         $filtr      = '';
         $filialId   = null;
 
-        return view('xabarnoma.sms.index', compact('loglar', 'batchlar', 'statistika', 'qidiruv', 'holat', 'tab', 'shablonlar', 'filiallar', 'kreditlar', 'filtr', 'filialId'));
+        return view('xabarnoma.sms.index', compact('loglar', 'batchlar', 'statistika', 'qidiruv', 'holat', 'tab', 'shablonlar', 'filiallar', 'kreditlar', 'filtr', 'filialId', 'perPage'));
     }
 
     // ── Sozlamalar ──────────────────────────────────────────
