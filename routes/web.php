@@ -10,7 +10,6 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\LitsenziyaController;
-use App\Http\Controllers\TransferController;
 use App\Http\Controllers\TransferHubController;
 use App\Http\Controllers\StockTransferController;
 use App\Http\Controllers\KassaTransferController;
