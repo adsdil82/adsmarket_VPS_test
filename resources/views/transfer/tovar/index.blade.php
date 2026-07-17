@@ -14,6 +14,30 @@
 @endif
 @endsection
 
+@push('styles')
+<style>
+.holat-tabs { display:flex; gap:5px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px; }
+.holat-tabs::-webkit-scrollbar { height:4px; }
+.holat-tab {
+    display:inline-flex; align-items:center; gap:5px; white-space:nowrap; text-decoration:none;
+    padding:6px 13px; border-radius:7px; font-size:.74rem; font-weight:700;
+    background:#eef4ff; color:#1e3a8a; border:1px solid #93c5fd;
+}
+.holat-tab:hover { background:#dbeafe; color:#1e3a8a; }
+.holat-tab.active { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
+</style>
+@endpush
+
+@php
+$holatTablari = [
+    ''              => ['label' => 'Barchasi',      'icon' => 'bi-list-ul'],
+    'qoralama'      => ['label' => 'Qoralama',      'icon' => 'bi-file-earmark'],
+    'yuborildi'     => ['label' => 'Yuborildi',     'icon' => 'bi-send'],
+    'qabul_qilindi' => ['label' => 'Qabul qilindi', 'icon' => 'bi-check-circle'],
+    'bekor'         => ['label' => 'Bekor',         'icon' => 'bi-x-circle'],
+];
+@endphp
+
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <h5 class="fw-bold mb-0">
@@ -33,18 +57,21 @@
 </div>
 @endif
 
+{{-- Holat tab --}}
+<div class="holat-tabs mb-2">
+    @foreach($holatTablari as $key => $h)
+    <a class="holat-tab {{ request('holat', '') === $key ? 'active' : '' }}"
+       href="{{ route('transfer.tovar.index', array_merge(request()->except(['holat', 'page']), $key !== '' ? ['holat' => $key] : [])) }}">
+        <i class="bi {{ $h['icon'] }}"></i> {{ $h['label'] }}
+    </a>
+    @endforeach
+</div>
+
 {{-- Filter --}}
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
         <form method="GET" class="row g-2 align-items-end">
-            <div class="col-sm-2">
-                <select name="holat" class="form-select form-select-sm">
-                    <option value="">Barcha holat</option>
-                    @foreach(['qoralama','yuborildi','qabul_qilindi','bekor'] as $h)
-                    <option value="{{ $h }}" {{ request('holat')===$h?'selected':'' }}>{{ ucfirst($h) }}</option>
-                    @endforeach
-                </select>
-            </div>
+            <input type="hidden" name="holat" value="{{ request('holat') }}">
             <div class="col-sm-2">
                 <input type="date" name="dan_sana"   class="form-control form-control-sm" value="{{ request('dan_sana') }}">
             </div>

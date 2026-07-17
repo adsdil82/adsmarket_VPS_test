@@ -51,6 +51,16 @@
 .col-resizer { position:absolute; right:0; top:0; bottom:0; width:5px; cursor:col-resize; background:transparent; z-index:2; }
 .col-resizer:hover { background:rgba(255,255,255,.3); }
 .bank-table thead th { position:relative; }
+
+.holat-tabs { display:flex; gap:5px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px; }
+.holat-tabs::-webkit-scrollbar { height:4px; }
+.holat-tab {
+    display:inline-flex; align-items:center; gap:5px; white-space:nowrap; text-decoration:none;
+    padding:6px 13px; border-radius:7px 7px 0 0; font-size:.74rem; font-weight:700;
+    background:#eef4ff; color:#1e3a8a; border:1px solid #93c5fd; border-bottom:none;
+}
+.holat-tab:hover { background:#dbeafe; color:#1e3a8a; }
+.holat-tab.active { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
 </style>
 @endpush
 
@@ -70,10 +80,26 @@
         if (request('sort')!==$col) return '<span class="sort-icon">⇅</span>';
         return request('dir')==='asc' ? '<span class="sort-icon on">▲</span>' : '<span class="sort-icon on">▼</span>';
     }
+
+    $holatTablari = [
+        ''       => ['label' => 'Barchasi', 'icon' => 'bi-list-ul'],
+        'faol'   => ['label' => 'Faol',     'icon' => 'bi-check-circle'],
+        'nofaol' => ['label' => 'Nofaol',   'icon' => 'bi-archive'],
+    ];
 @endphp
+
+<div class="holat-tabs">
+    @foreach($holatTablari as $key => $h)
+    <a class="holat-tab {{ request('holat', '') === $key ? 'active' : '' }}"
+       href="{{ route('taminotchi.hisobot', array_merge(request()->except(['holat', 'page']), $key !== '' ? ['holat' => $key] : [])) }}">
+        <i class="bi {{ $h['icon'] }}"></i> {{ $h['label'] }}
+    </a>
+    @endforeach
+</div>
 
 <div class="filter-bar mb-0">
     <form method="GET" class="d-flex align-items-end gap-2 flex-wrap">
+        <input type="hidden" name="holat" value="{{ request('holat') }}">
         <div class="d-flex align-items-center gap-2 me-2">
             <i class="bi bi-bar-chart-line text-warning" style="font-size:1.1rem"></i>
             <span class="fw-bold" style="color:#1e3a8a;font-size:.95rem">Ta'minotchilar hisoboti</span>
@@ -89,12 +115,6 @@
                 @endforeach
             </select></div>
         @endif
-        <div><label>Holat</label>
-            <select name="holat" class="form-select" style="width:110px">
-                <option value="">Barchasi</option>
-                <option value="faol" {{ request('holat')==='faol'?'selected':'' }}>Faol</option>
-                <option value="nofaol" {{ request('holat')==='nofaol'?'selected':'' }}>Nofaol</option>
-            </select></div>
         <div class="d-flex gap-1 align-items-end">
             <button type="submit" class="btn btn-primary btn-sm px-3" style="height:30px"><i class="bi bi-search me-1"></i>Filter</button>
             <a href="{{ route('taminotchi.hisobot') }}" class="btn btn-outline-secondary btn-sm px-2" style="height:30px"><i class="bi bi-x-lg"></i></a>

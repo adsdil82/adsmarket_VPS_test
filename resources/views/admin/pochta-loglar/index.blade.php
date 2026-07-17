@@ -1,5 +1,30 @@
 @extends('layouts.app')
 @section('title','Pochta Log Jurnali')
+
+@push('styles')
+<style>
+.holat-tabs { display:flex; gap:5px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px; }
+.holat-tabs::-webkit-scrollbar { height:4px; }
+.holat-tab {
+    display:inline-flex; align-items:center; gap:5px; white-space:nowrap; text-decoration:none;
+    padding:6px 13px; border-radius:7px; font-size:.74rem; font-weight:700;
+    background:#eef4ff; color:#1e3a8a; border:1px solid #93c5fd;
+}
+.holat-tab:hover { background:#dbeafe; color:#1e3a8a; }
+.holat-tab.active { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
+</style>
+@endpush
+
+@php
+$holatTablari = [
+    ''            => ['label' => 'Barchasi',   'icon' => 'bi-list-ul'],
+    'yuborildi'   => ['label' => 'Yuborildi',  'icon' => 'bi-check-circle'],
+    'xato'        => ['label' => 'Xato',       'icon' => 'bi-exclamation-triangle'],
+    'yaratildi'   => ['label' => 'Yaratildi',  'icon' => 'bi-file-earmark-plus'],
+    'kutilmoqda'  => ['label' => 'Kutilmoqda', 'icon' => 'bi-hourglass-split'],
+];
+@endphp
+
 @section('content')
 <div class="container-fluid px-3 py-3">
 
@@ -41,19 +66,21 @@
         </div>
     </div>
 
+    {{-- Holat tab --}}
+    <div class="holat-tabs mb-2">
+        @foreach($holatTablari as $key => $h)
+        <a class="holat-tab {{ request('holat', '') === $key ? 'active' : '' }}"
+           href="{{ route('admin.gibrid-pochta.pochta-loglar.index', array_merge(request()->except(['holat', 'page']), $key !== '' ? ['holat' => $key] : [])) }}">
+            <i class="bi {{ $h['icon'] }}"></i> {{ $h['label'] }}
+        </a>
+        @endforeach
+    </div>
+
     {{-- Filtr --}}
     <form method="GET" class="card border-0 shadow-sm mb-3">
         <div class="card-body py-2 px-3">
             <div class="row g-2 align-items-end">
-                <div class="col-md-2">
-                    <select name="holat" class="form-select form-select-sm">
-                        <option value="">Barcha holatlar</option>
-                        <option value="yuborildi" {{ request('holat')==='yuborildi' ? 'selected' : '' }}>Yuborildi</option>
-                        <option value="xato"      {{ request('holat')==='xato'      ? 'selected' : '' }}>Xato</option>
-                        <option value="yaratildi" {{ request('holat')==='yaratildi' ? 'selected' : '' }}>Yaratildi</option>
-                        <option value="kutilmoqda"{{ request('holat')==='kutilmoqda'? 'selected' : '' }}>Kutilmoqda</option>
-                    </select>
-                </div>
+                <input type="hidden" name="holat" value="{{ request('holat') }}">
                 <div class="col-md-2">
                     <input type="number" name="kredit_id" class="form-control form-control-sm"
                         placeholder="Kredit ID" value="{{ request('kredit_id') }}">

@@ -4,6 +4,29 @@
 <li class="breadcrumb-item active">Transfer</li>
 @endsection
 
+@push('styles')
+<style>
+.holat-tabs { display:flex; gap:5px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px; }
+.holat-tabs::-webkit-scrollbar { height:4px; }
+.holat-tab {
+    display:inline-flex; align-items:center; gap:5px; white-space:nowrap; text-decoration:none;
+    padding:6px 13px; border-radius:7px; font-size:.74rem; font-weight:700;
+    background:#eef4ff; color:#1e3a8a; border:1px solid #93c5fd;
+}
+.holat-tab:hover { background:#dbeafe; color:#1e3a8a; }
+.holat-tab.active { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
+</style>
+@endpush
+
+@php
+$holatTablari = [
+    ''             => ['label' => 'Barchasi',     'icon' => 'bi-list-ul'],
+    'kutilmoqda'   => ['label' => 'Kutilmoqda',   'icon' => 'bi-hourglass-split'],
+    'tasdiqlangan' => ['label' => 'Tasdiqlangan', 'icon' => 'bi-check-circle'],
+    'bekor'        => ['label' => 'Bekor',        'icon' => 'bi-x-circle'],
+];
+@endphp
+
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="fw-bold mb-0"><i class="bi bi-arrow-left-right me-2 text-info"></i>Filiallar arasi tovar transfer</h5>
@@ -12,17 +35,19 @@
     </a>
 </div>
 
+<div class="holat-tabs mb-2">
+    @foreach($holatTablari as $key => $h)
+    <a class="holat-tab {{ request('holat', '') === $key ? 'active' : '' }}"
+       href="{{ route('transfer.index', array_merge(request()->except(['holat', 'page']), $key !== '' ? ['holat' => $key] : [])) }}">
+        <i class="bi {{ $h['icon'] }}"></i> {{ $h['label'] }}
+    </a>
+    @endforeach
+</div>
+
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
         <form method="GET" class="row g-2 align-items-center">
-            <div class="col-sm-3">
-                <select name="holat" class="form-select form-select-sm">
-                    <option value="">Barcha holat</option>
-                    <option value="kutilmoqda" {{ request('holat')==='kutilmoqda'?'selected':'' }}>Kutilmoqda</option>
-                    <option value="tasdiqlangan" {{ request('holat')==='tasdiqlangan'?'selected':'' }}>Tasdiqlangan</option>
-                    <option value="bekor" {{ request('holat')==='bekor'?'selected':'' }}>Bekor</option>
-                </select>
-            </div>
+            <input type="hidden" name="holat" value="{{ request('holat') }}">
             <div class="col-sm-auto">
                 <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search me-1"></i>Filtr</button>
                 <a href="{{ route('transfer.index') }}" class="btn btn-sm btn-outline-secondary ms-1"><i class="bi bi-x"></i></a>

@@ -4,6 +4,24 @@
 <li class="breadcrumb-item active">Qurilmalar nazorati</li>
 @endsection
 
+@push('styles')
+<style>
+.holat-tabs { display:flex; gap:5px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px; }
+.holat-tabs::-webkit-scrollbar { height:4px; }
+.holat-tab {
+    display:inline-flex; align-items:center; gap:5px; white-space:nowrap; text-decoration:none;
+    padding:6px 13px; border-radius:7px; font-size:.74rem; font-weight:700;
+    background:#eef4ff; color:#1e3a8a; border:1px solid #93c5fd;
+}
+.holat-tab:hover { background:#dbeafe; color:#1e3a8a; }
+.holat-tab.active { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
+</style>
+@endpush
+
+@php
+$holatTablari = collect(['' => 'Barchasi'])->merge(\App\Models\Qurilma::$holatlar);
+@endphp
+
 @section('content')
 @if(session('muvaffaqiyat'))
 <div class="alert alert-success alert-dismissible fade show py-2 mb-3">
@@ -60,10 +78,21 @@
     @endforeach
 </div>
 
+{{-- Holat tab --}}
+<div class="holat-tabs mb-2">
+    @foreach($holatTablari as $key => $label)
+    <a class="holat-tab {{ request('holat', '') === $key ? 'active' : '' }}"
+       href="{{ route('qurilmalar.index', array_merge(request()->except(['holat', 'page']), $key !== '' ? ['holat' => $key] : [])) }}">
+        {{ $label }}
+    </a>
+    @endforeach
+</div>
+
 {{-- Filtr --}}
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
         <form method="GET" class="row g-2 align-items-center">
+            <input type="hidden" name="holat" value="{{ request('holat') }}">
             @if(Auth::user()->isAdmin())
             <div class="col-sm-2">
                 <select name="filial_id" class="form-select form-select-sm">
@@ -74,14 +103,6 @@
                 </select>
             </div>
             @endif
-            <div class="col-sm-2">
-                <select name="holat" class="form-select form-select-sm">
-                    <option value="">Barcha holat</option>
-                    @foreach(\App\Models\Qurilma::$holatlar as $h=>$n)
-                        <option value="{{ $h }}" {{ request('holat')===$h?'selected':'' }}>{{ $n }}</option>
-                    @endforeach
-                </select>
-            </div>
             <div class="col-sm-2">
                 <input type="text" name="brend" class="form-control form-control-sm" placeholder="Brend..." value="{{ request('brend') }}">
             </div>

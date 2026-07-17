@@ -28,8 +28,26 @@
 .b-yoq { background:#e2e8f0; color:#475569; } .b-kutilmoqda { background:#f59e0b; color:#fff; }
 .b-tasdiqlangan { background:#22c55e; color:#fff; } .b-rad_etildi { background:#ef4444; color:#fff; }
 .farq-ok { color:#15803d; font-weight:700; } .farq-yomon { color:#b91c1c; font-weight:700; }
+
+.holat-tabs { display:flex; gap:5px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px; }
+.holat-tabs::-webkit-scrollbar { height:4px; }
+.holat-tab {
+    display:inline-flex; align-items:center; gap:5px; white-space:nowrap; text-decoration:none;
+    padding:6px 13px; border-radius:7px 7px 0 0; font-size:.74rem; font-weight:700;
+    background:#eef4ff; color:#1e3a8a; border:1px solid #93c5fd; border-bottom:none;
+}
+.holat-tab:hover { background:#dbeafe; color:#1e3a8a; }
+.holat-tab.active { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
 </style>
 @endpush
+
+@php
+$holatTablari = [
+    ''      => ['label' => 'Barchasi', 'icon' => 'bi-list-ul'],
+    'ochiq' => ['label' => 'Ochiq',    'icon' => 'bi-unlock'],
+    'yopiq' => ['label' => 'Yopiq',    'icon' => 'bi-lock'],
+];
+@endphp
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -37,8 +55,18 @@
     <a href="{{ route('pos.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
 </div>
 
+<div class="holat-tabs">
+    @foreach($holatTablari as $key => $h)
+    <a class="holat-tab {{ request('holat', '') === $key ? 'active' : '' }}"
+       href="{{ route('pos.smena.royxat', array_merge(request()->except(['holat', 'page']), $key !== '' ? ['holat' => $key] : [])) }}">
+        <i class="bi {{ $h['icon'] }}"></i> {{ $h['label'] }}
+    </a>
+    @endforeach
+</div>
+
 <div class="filter-bar mb-0">
     <form method="GET" class="d-flex align-items-end gap-2 flex-wrap">
+        <input type="hidden" name="holat" value="{{ request('holat') }}">
         <div>
             <label class="form-label small mb-1">Dan</label>
             <input type="date" name="dan_sana" class="form-control form-control-sm" value="{{ request('dan_sana') }}">
@@ -58,14 +86,6 @@
             </select>
         </div>
         @endif
-        <div>
-            <label class="form-label small mb-1">Holat</label>
-            <select name="holat" class="form-select form-select-sm" style="width:140px">
-                <option value="">Barchasi</option>
-                <option value="ochiq" {{ request('holat')=='ochiq'?'selected':'' }}>Ochiq</option>
-                <option value="yopiq" {{ request('holat')=='yopiq'?'selected':'' }}>Yopiq</option>
-            </select>
-        </div>
         <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel me-1"></i>Filtrlash</button>
     </form>
 </div>
