@@ -129,6 +129,11 @@ class TaminotchiController extends Controller
 
     public function show(Taminotchi $taminotchi, Request $request)
     {
+        $user = Auth::user();
+        if (!$user->isAdmin() && $taminotchi->filial_id !== null && $taminotchi->filial_id !== $user->filial_id) {
+            abort(403, 'Bu ta\'minotchi sizning filialingizga tegishli emas.');
+        }
+
         $taminotchi->load(['filial']);
 
         $danSana   = $request->dan_sana   ?? now()->subMonths(3)->toDateString();

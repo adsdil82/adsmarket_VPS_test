@@ -228,6 +228,7 @@ class ChiqimController extends Controller
 
     public function show(OmbordanChiqim $chiqim)
     {
+        $this->filialRuxsatTekshir($chiqim->filial_id);
         $chiqim->load(['filial', 'xodim', 'tafsilot.tovar.guruh']);
         return view('ombor.chiqim.show', compact('chiqim'));
     }
@@ -235,6 +236,7 @@ class ChiqimController extends Controller
     /** Hujjat (yuk xati / akt / schyot-faktura) — PDF yuklab olish */
     public function hujjat(OmbordanChiqim $chiqim, string $tur)
     {
+        $this->filialRuxsatTekshir($chiqim->filial_id);
         $turlar = ['yuk_xati', 'akt', 'schyot'];
         if (!in_array($tur, $turlar)) abort(404);
 
@@ -246,10 +248,19 @@ class ChiqimController extends Controller
     /** Hujjatni HTML ko'rinishda (modal/iframe uchun) ko'rsatish */
     public function hujjatHtml(OmbordanChiqim $chiqim, string $tur)
     {
+        $this->filialRuxsatTekshir($chiqim->filial_id);
         $turlar = ['yuk_xati', 'akt', 'schyot'];
         if (!in_array($tur, $turlar)) abort(404);
 
         $chiqim->load(['filial', 'xodim', 'tafsilot.tovar.guruh']);
         return view('ombor.chiqim.hujjatlar.' . $tur, compact('chiqim'));
+    }
+
+    private function filialRuxsatTekshir(?int $chiqimFilialId): void
+    {
+        $user = Auth::user();
+        if (!$user->isAdmin() && $chiqimFilialId !== null && $chiqimFilialId !== $user->filial_id) {
+            abort(403, 'Bu chiqim sizning filialingizga tegishli emas.');
+        }
     }
 }

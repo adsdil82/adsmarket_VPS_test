@@ -189,6 +189,7 @@ class PosSmenaController extends Controller
     /** Bitta smena tafsiloti. */
     public function korish(PosSmena $smena)
     {
+        $this->egalikTekshir($smena);
         $smena->load(['filial', 'xodim', 'qabulQilgan', 'sotuvlar' => fn($q) => $q->where('holat', 'tugallangan')->latest()]);
         return view('ombor.pos.smena.korish', compact('smena'));
     }

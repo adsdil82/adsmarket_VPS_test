@@ -76,6 +76,11 @@ class StockTransferController extends Controller
 
     public function show(FilialTransfer $transfer)
     {
+        $user = Auth::user();
+        if (!$user->isAdmin() && $user->filial_id !== $transfer->from_filial_id && $user->filial_id !== $transfer->to_filial_id) {
+            abort(403, 'Bu transfer sizning filialingizga tegishli emas.');
+        }
+
         $transfer->load(['fromFilial','toFilial','xodim','tasdiqlagan','tafsilot.tovar']);
         $fromOmbor = $transfer->from_ombor_id ? Ombor::find($transfer->from_ombor_id) : null;
         $toOmbor   = $transfer->to_ombor_id   ? Ombor::find($transfer->to_ombor_id)   : null;
